@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+.next/
+
+# Test output / caches
+coverage/
+.vitest-cache/
+
+# Local secrets
+.secrets/
+.env
+.env.local
+.env.*.local
+
+# Wasp local workflow state (cross-pollinate config, state, history) — local-only
+.wasp/
+
+# Bee local workflow state (specs, phases, session artifacts) — local-only, not shipped
+.bee/
+
+# Claude Code per-checkout state
+.claude/
+
+# Editor + OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.swp
+*.swo
+Thumbs.db
+
+# TypeScript build info
+*.tsbuildinfo
