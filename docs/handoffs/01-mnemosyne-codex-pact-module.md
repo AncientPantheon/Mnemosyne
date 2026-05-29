@@ -160,30 +160,47 @@ The `IMMUTABLE-GOV` pattern is intentional. We're storing user-controlled identi
 
 ```pact
 (defschema stoictag-row
-  @doc "A human-readable name (StoicTag) tied to exactly one Ouronet \
-        \ account address. Format convention: prefixed with '§' when \
-        \ displayed (e.g. '§bytales'), but the prefix glyph is NOT \
-        \ stored on chain — only the bare name 'bytales' lives in \
-        \ tag-name. The single glyph '§' is used for both Standard and \
-        \ Smart accounts; the account-address field carries the actual \
-        \ Ouronet account address (which itself indicates Standard \
-        \ Ѻ. vs Smart Σ. prefix). One StoicTag per account; one \
-        \ account per StoicTag (bijection). \
+  @doc "A human-readable name (StoicTag) tied to exactly ONE Ouronet \
+        \ Account. STRICT BIJECTION: one StoicTag per Ouronet Account; \
+        \ one Ouronet Account per StoicTag (enforced via the two-table \
+        \ design below). \
+        \
+        \ Format convention: prefixed with '§' when displayed \
+        \ (e.g. '§bytales'), but the prefix glyph is NOT stored on chain \
+        \ — only the bare name 'bytales' lives in tag-name. The single \
+        \ glyph '§' is used for both Standard (Ѻ.) and Smart (Σ.) \
+        \ Ouronet Accounts; the account-address field carries the actual \
+        \ Ouronet Account address. \
         \
         \ StoicTags are codex-agnostic — the chain has no awareness of \
-        \ which codex (if any) registered the tag or controls the account. \
-        \ Anyone holding the account's keys can register/release, whether \
-        \ those keys live in a Mnemosyne codex, an OuronetUI codex, a CLI \
-        \ tool, or anywhere else. StoicTags work without Mnemosyne entirely."
+        \ which codex (if any) registered the tag or controls the Ouronet \
+        \ Account. Anyone holding the Ouronet Account's keys can \
+        \ register/release, whether those keys live in a Mnemosyne codex, \
+        \ an OuronetUI codex, a CLI tool, or anywhere else. StoicTags \
+        \ work without Mnemosyne entirely. \
+        \
+        \ IMPLEMENTATION QUESTION (see §10): how exactly does the chain \
+        \ verify ownership of an Ouronet Account at registration time? \
+        \ Ouronet accounts are layered above a Stoa-native Payment Key \
+        \ (k:account); the chain can directly verify the Payment Key's \
+        \ guard via coin.details, but the Ouronet-Account → Payment-Key \
+        \ mapping needs an on-chain registry (ouronet-ns.account or \
+        \ similar) for the capability check to work. Pact agent: confirm \
+        \ which on-chain Ouronet-account module to query, OR pivot the \
+        \ stored field to the underlying k:account Payment Key + treat \
+        \ the Ouronet-Account binding as a user-facing semantic that the \
+        \ SPA renders."
 
   tag-name:string
     @doc "The bare name without '§' prefix. Same value as the table key. \
-          \ Format: [a-z0-9.-]{3,30}. Lowercase only. IMMUTABLE."
+          \ Format: 3 to 256 glyphs from the Dalos character set. \
+          \ IMMUTABLE."
 
   account-address:string
-    @doc "The Ouronet account address (either Standard Ѻ.xxx or Smart \
+    @doc "The Ouronet Account address (either Standard Ѻ.xxx or Smart \
           \ Σ.xxx) that this StoicTag resolves to. Account MUST be \
-          \ activated on Stoa chain at registration time. IMMUTABLE."
+          \ activated on StoaChain at registration time. IMMUTABLE. \
+          \ See §10 open question on storage format vs Payment Key."
 
   registered-at:time
     @doc "Block time when register-stoictag was called. IMMUTABLE.")
@@ -198,18 +215,19 @@ The `IMMUTABLE-GOV` pattern is intentional. We're storing user-controlled identi
 
 ```pact
 (defschema stoictag-by-account-row
-  @doc "Reverse lookup index: account-address → tag-name. Lets the SPA \
-        \ answer 'does this account have a StoicTag?' without scanning \
-        \ the stoictags table. Also enforces the one-stoictag-per-account \
-        \ invariant via insert collision (an account that already has a \
-        \ row here cannot register a second StoicTag)."
+  @doc "Reverse lookup index: Ouronet-Account-address → tag-name. Lets \
+        \ any client answer 'does this Ouronet Account have a StoicTag?' \
+        \ without scanning the stoictags table. ALSO ENFORCES the \
+        \ one-StoicTag-per-Ouronet-Account invariant via insert collision \
+        \ (an Ouronet Account that already has a row here cannot register \
+        \ a second StoicTag)."
 
   account-address:string
-    @doc "The Ouronet account address. Same value as the table key. \
+    @doc "The Ouronet Account address. Same value as the table key. \
           \ IMMUTABLE."
 
   tag-name:string
-    @doc "The StoicTag name registered to this account. IMMUTABLE.")
+    @doc "The StoicTag name registered to this Ouronet Account. IMMUTABLE.")
 
 (deftable stoictags-by-account:{stoictag-by-account-row})
 ;; Key = account-address (the full Ouronet account string)
@@ -513,14 +531,20 @@ The chain only sees the Kadena CodexGuard signature. A bypass is possible if a u
 (defun register-stoictag:string
   ( tag-name:string
     account-address:string )
-  @doc "Register a new StoicTag. Anyone can call this function — there is no \
-        \ admin gate. Spam-gated by a STOA payment. Requires: \
+  @doc "Register a new StoicTag binding to a specific Ouronet Account. \
+        \ Enforces the strict bijection: one StoicTag per Ouronet Account, \
+        \ one Ouronet Account per StoicTag. \
+        \
+        \ Anyone can call this function — there is no admin gate. \
+        \ Spam-gated by a STOA payment. \
+        \
+        \ Requires: \
         \   1. tag-name format valid (validate-stoictag-name) \
         \   2. tag-name not already registered (insert collision on stoictags) \
-        \   3. account-address not already tagged (insert collision on stoictags-by-account) \
-        \   4. STOICTAG-ACCOUNT-OWNER capability satisfied (caller controls the account) \
-        \   5. Account is activated on-chain (implicit: coin.details succeeds) \
-        \   6. Registration fee paid (STOA transfer from account-address to STOICTAG-FEE-DESTINATION)"
+        \   3. Ouronet Account not already tagged (insert collision on stoictags-by-account) \
+        \   4. STOICTAG-ACCOUNT-OWNER capability satisfied (caller controls the Ouronet Account) \
+        \   5. Ouronet Account is activated on StoaChain (implicit) \
+        \   6. Registration fee paid (STOA transfer from the account's Payment Key to STOICTAG-FEE-DESTINATION)"
 
   (enforce (validate-stoictag-name tag-name) "invalid StoicTag name format")
 
@@ -555,15 +579,19 @@ The chain only sees the Kadena CodexGuard signature. A bypass is possible if a u
 
 (defun release-stoictag:string (tag-name:string)
   @doc "Release a StoicTag, freeing the name for re-registration by anyone. \
-        \ Authorized by the CURRENT owner of the tagged account (NOT \
-        \ necessarily the codex that originally registered it — account \
-        \ ownership may have transferred via key rotation). \
+        \ Authorized by the CURRENT owner of the tagged Ouronet Account \
+        \ (NOT necessarily the codex that originally registered it — \
+        \ Ouronet Account ownership may have transferred via key rotation \
+        \ since the StoicTag was claimed). \
         \
         \ No fee refund: the original registration fee is sunk. \
         \
         \ After release, the name is immediately available for re-registration \
-        \ at the standard fee. No cooldown period in v0.1 (could be added if \
-        \ griefing becomes an issue)."
+        \ at the standard fee. The same Ouronet Account that just released \
+        \ can register a DIFFERENT name immediately (the one-StoicTag-per- \
+        \ Ouronet-Account invariant is satisfied because the released row \
+        \ is gone). No cooldown period in v0.1 (could be added if griefing \
+        \ becomes an issue)."
 
   (with-read stoictags tag-name { "account-address" := account-address }
     (with-capability (STOICTAG-ACCOUNT-OWNER account-address)
@@ -815,11 +843,19 @@ If you hit ambiguity, surface here rather than guessing:
 
 9. **Row deletion semantics** — `release-stoictag` calls `(delete-row ...)`. Confirm the Pact version on Stoa supports this. If not, use whichever row-removal idiom that version provides.
 
+10. **CRITICAL — StoicTag bijection unit: Ouronet Account vs Payment Key.** The user-facing semantic is **"one StoicTag per Ouronet Account"** — the StoicTag binds to an Ouronet Account (Ѻ.xxx Standard or Σ.xxx Smart). However, the chain natively knows only about Stoa Payment Keys (k:accounts), not the Ouronet account layer above them. Two implementation paths to resolve with the Pact agent:
+
+   - **Path A — store Ouronet Account address as opaque string.** The `account-address` column holds the literal Ѻ.xxx or Σ.xxx string. Ownership verification at registration requires querying an on-chain Ouronet-account registry module (e.g. `ouronet-ns.account.get-payment-key(address)`) to find the underlying Payment Key, then `coin.details` on that to get the guard, then `enforce-guard`. Cleaner user-facing semantic; requires the Ouronet-account registry module to exist and expose a guard-lookup function.
+
+   - **Path B — store Payment Key (k:account) directly.** The `account-address` column holds the k:xxx Payment Key of the Ouronet Account. Verification is direct `coin.details` + `enforce-guard`, no registry hop needed. User-facing layer (Mnemosyne web app / Codex Consumers) translates between StoicTag → Payment Key → Ouronet Account at display time via the user's local Codex. Simpler on-chain implementation; the "one StoicTag per Ouronet Account" semantic is enforced by the fact that each Ouronet Account has exactly one Payment Key, so the bijection still holds.
+
+   Owner preference is Path A (matches the user-facing semantic exactly), but Path B is acceptable if the Ouronet-account registry isn't ready for v0.1 deployment. Pact agent: pick based on what's actually available in the deployed `ouronet-ns.*` module set, surface the choice to the owner before locking the implementation.
+
 **Items locked since first handoff draft** (no implementer action needed):
 - Apollo glyph validation is OUT of Pact (handled off-chain by dalos-crypto primitives + ADMIN gate)
 - `rotate-codex-guard` requires BOTH old AND new guard signatures (implemented in §5.2)
 - `validate-arweave-tx-id` is the standard Arweave format (43 chars, base64url charset) — full validation required, not length-only
-- StoicTag table design — locked: single glyph `§` for all (display only, not stored), one tag per account address, cost-gated (not admin-gated) registration, anyone can register, account must be activated, account-guard-based release authority, **codex-agnostic on chain (no codex reference stored)**
+- StoicTag table design — locked: single glyph `§` for all (display only, not stored), **one StoicTag per Ouronet Account** (strict bijection), cost-gated (not admin-gated) registration, anyone can register, Ouronet Account must be activated, account-guard-based release authority, **codex-agnostic on chain (no codex reference stored)**
 
 ---
 
