@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mnemosyne — The one stop location for your StoaChain™/Ouronet™ Codex Management</title>
+<meta name="description" content="Cloud-hosted Codex vault for the StoaChain™/Ouronet™ ecosystem. Self-custody by default, four identity modes, three-layer storage, decentralization where it matters." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          'classical': ['Cinzel', 'serif'],
+          'sans': ['Inter', 'sans-serif'],
+          'mono': ['JetBrains Mono', 'monospace'],
+        },
+        colors: {
+          'parchment': '#f5ecd9',
+          'ink': '#1a1612',
+          'bronze': '#b8860b',
+          'bronze-dim': '#8b6914',
+          'gold': '#d4a04a',
+          'stoa-stone': '#2a2520',
+          'stoa-stone-light': '#3d3530',
+          'stoa-deep': '#0d0a07',
+          'ouronet-blue': '#5b8ec2',
+          'ouronet-blue-deep': '#3d6c9c',
+        }
+      }
+    }
+  }
+</script>
+
+<style>
+  html { scroll-behavior: smooth; }
+  body {
+    background: linear-gradient(180deg, #0d0a07 0%, #1a1612 100%);
+    color: #f5ecd9;
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+  .font-classical { letter-spacing: 0.05em; }
+  .text-glow {
+    text-shadow: 0 0 30px rgba(184, 134, 11, 0.4);
+  }
+  .card {
+    background: rgba(42, 37, 32, 0.6);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(184, 134, 11, 0.2);
+    transition: all 0.3s ease;
+  }
+  .card:hover {
+    border-color: rgba(184, 134, 11, 0.5);
+    background: rgba(42, 37, 32, 0.85);
+  }
+  .greek-divider {
+    background: linear-gradient(90deg, transparent 0%, rgba(184, 134, 11, 0.5) 50%, transparent 100%);
+    height: 1px;
+  }
+  .glyph {
+    font-family: 'Cinzel', serif;
+    color: #b8860b;
+  }
+  code {
+    background: rgba(13, 10, 7, 0.6);
+    padding: 0.125rem 0.4rem;
+    border-radius: 0.25rem;
+    font-size: 0.875em;
+    color: #d4a04a;
+  }
+  pre code { padding: 0; background: transparent; color: inherit; }
+  pre {
+    background: rgba(13, 10, 7, 0.8);
+    border: 1px solid rgba(184, 134, 11, 0.2);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    overflow-x: auto;
+    font-size: 0.85rem;
+  }
+  .mode-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem; height: 2.5rem;
+    border-radius: 50%;
+    font-family: 'Cinzel', serif;
+    font-weight: 600;
+    border: 2px solid #b8860b;
+    color: #b8860b;
+    background: rgba(184, 134, 11, 0.1);
+  }
+  .layer-block {
+    background: rgba(42, 37, 32, 0.5);
+    border-left: 3px solid #b8860b;
+    padding: 1rem 1.5rem;
+    margin: 0.5rem 0;
+  }
+  .pill {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: rgba(184, 134, 11, 0.15);
+    color: #d4a04a;
+    border: 1px solid rgba(184, 134, 11, 0.3);
+  }
+  .pill-warn {
+    background: rgba(220, 100, 50, 0.15);
+    color: #e89a6f;
+    border-color: rgba(220, 100, 50, 0.3);
+  }
+  .pill-good {
+    background: rgba(100, 180, 100, 0.15);
+    color: #8fd18f;
+    border-color: rgba(100, 180, 100, 0.3);
+  }
+  nav a:hover { color: #b8860b; }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+  th, td { padding: 0.6rem 0.8rem; text-align: left; border-bottom: 1px solid rgba(184, 134, 11, 0.15); }
+  th { color: #d4a04a; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  td { font-size: 0.92rem; }
+  details summary { cursor: pointer; padding: 0.5rem 0; color: #d4a04a; font-weight: 500; }
+  details summary:hover { color: #b8860b; }
+
+  /* StoaChain™ branded mention — always bold golden */
+  .stoachain {
+    color: #d4a04a;
+    font-weight: 700;
+  }
+  .stoachain::after {
+    content: '™';
+    font-size: 0.65em;
+    vertical-align: super;
+    margin-left: 1px;
+    color: #d4a04a;
+  }
+
+  /* Ouronet™ branded mention — always bold blue */
+  .ouronet {
+    color: #5b8ec2;
+    font-weight: 700;
+  }
+  .ouronet::after {
+    content: '™';
+    font-size: 0.65em;
+    vertical-align: super;
+    margin-left: 1px;
+    color: #5b8ec2;
+  }
+
+  /* Sidebar info block */
+  .sidebar {
+    background: rgba(184, 134, 11, 0.08);
+    border-left: 4px solid #b8860b;
+    border-radius: 0 0.5rem 0.5rem 0;
+    padding: 1.25rem 1.5rem;
+    margin: 1rem 0;
+  }
+  .sidebar-title {
+    color: #d4a04a;
+    font-family: 'Cinzel', serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.05em;
+  }
+
+  /* OS key combo display */
+  kbd {
+    display: inline-block;
+    padding: 0.15rem 0.45rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    background: rgba(13, 10, 7, 0.8);
+    border: 1px solid rgba(184, 134, 11, 0.4);
+    border-radius: 0.25rem;
+    color: #d4a04a;
+    margin: 0 0.1rem;
+  }
+
+  /* ─── Hero Codex Identity display with braces ─── */
+  .identity-display {
+    display: inline-block;
+    margin: 0 auto;
+  }
+  .identity-glyphs {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.6rem;
+    color: #d4a04a;
+    letter-spacing: 0.06em;
+    line-height: 1.3;
+    display: block;
+    text-shadow: 0 0 25px rgba(184, 134, 11, 0.5);
+  }
+  @media (min-width: 768px) {
+    .identity-glyphs { font-size: 2rem; }
+  }
+  .identity-braces {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 0.75rem;
+  }
+  .brace-section {
+    text-align: center;
+  }
+  .brace-u {
+    border-left: 2px solid #b8860b;
+    border-right: 2px solid #b8860b;
+    border-bottom: 2px solid #b8860b;
+    border-radius: 0 0 14px 14px;
+    height: 12px;
+    margin: 0 4px 0.5rem 4px;
+  }
+  .brace-label {
+    font-size: 0.78rem;
+    color: rgba(245, 236, 217, 0.7);
+    font-family: 'Inter', sans-serif;
+  }
+  .brace-sublabel {
+    font-size: 0.7rem;
+    color: rgba(245, 236, 217, 0.4);
+    font-family: 'Inter', sans-serif;
+    display: block;
+    margin-top: 0.15rem;
+  }
+</style>
+</head>
+
+<body>
+
+<!-- ──────────────────── NAV ──────────────────── -->
+<nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-stoa-deep/80 border-b border-bronze/20">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <a href="#top" class="font-classical text-xl text-bronze">Mnemosyne</a>
+    <div class="hidden md:flex gap-6 text-sm">
+      <a href="#what" class="text-parchment/70 transition">What it is</a>
+      <a href="#codex" class="text-parchment/70 transition">The Codex</a>
+      <a href="#modes" class="text-parchment/70 transition">Four modes</a>
+      <a href="#storage" class="text-parchment/70 transition">Storage</a>
+      <a href="#identity" class="text-parchment/70 transition">Identity</a>
+      <a href="#stoictags" class="text-parchment/70 transition">StoicTags</a>
+      <a href="#security" class="text-parchment/70 transition">Security</a>
+    </div>
+    <span class="pill">v0.1 design</span>
+  </div>
+</nav>
+
+<!-- ──────────────────── HERO ──────────────────── -->
+<section id="top" class="pt-32 pb-20 px-6">
+  <div class="max-w-5xl mx-auto text-center">
+
+    <!-- Codex Identity display with braces -->
+    <div class="identity-display mb-8">
+      <code class="identity-glyphs">₱.мIĂ…óYэ.Π.ПÍ…FgЫ</code>
+      <div class="identity-braces">
+        <div class="brace-section">
+          <div class="brace-u"></div>
+          <div class="brace-label">Standard half</div>
+          <span class="brace-sublabel">160 glyphs · 1024 bits</span>
+        </div>
+        <div class="brace-section">
+          <div class="brace-u"></div>
+          <div class="brace-label">Smart half</div>
+          <span class="brace-sublabel">160 glyphs · 1024 bits</span>
+        </div>
+      </div>
+    </div>
+
+    <h1 class="font-classical text-5xl md:text-7xl mb-6 text-glow text-parchment">
+      Mnemosyne
+    </h1>
+    <p class="text-2xl md:text-3xl text-bronze mb-4 font-light">
+      The one stop location for your <span class="stoachain">StoaChain</span>/<span class="ouronet">Ouronet</span> Codex Management
+    </p>
+    <p class="text-lg text-parchment/70 max-w-3xl mx-auto leading-relaxed">
+      A cloud-hosted vault for the <span class="stoachain">StoaChain</span>/<span class="ouronet">Ouronet</span> ecosystem.
+      The Codex is your single instrument for managing every cryptographic asset on chain;
+      Mnemosyne is where that Codex lives, syncs across devices, and reaches every Codex Consumer app you use.
+    </p>
+    <div class="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+      <a href="#codex" class="px-8 py-3 bg-bronze text-stoa-deep font-semibold rounded hover:bg-bronze-dim transition">
+        What is the Codex?
+      </a>
+      <a href="#modes" class="px-8 py-3 border border-bronze/50 text-parchment rounded hover:border-bronze hover:bg-bronze/10 transition">
+        Pick your mode
+      </a>
+    </div>
+    <p class="mt-8 text-sm text-parchment/40">
+      Mnemosyne — Greek goddess of memory, mother of the nine Muses.
+    </p>
+  </div>
+</section>
+
+<div class="greek-divider max-w-3xl mx-auto my-12"></div>
+
+<!-- ──────────────────── WHAT IT IS ──────────────────── -->
+<section id="what" class="py-20 px-6">
+  <div class="max-w-6xl mx-auto">
+    <h2 class="font-classical text-3xl md:text-4xl text-bronze mb-4 text-center">What Mnemosyne is</h2>
+    <p class="text-center text-parchment/70 max-w-3xl mx-auto mb-6">
+      Mnemosyne is a Software-as-a-Service platform (a cloud-hosted service you reach
+      through a web browser) that stores your Codex encrypted-at-rest and serves it
+      to Codex Consumer apps under a unified credential.
+    </p>
+    <p class="text-center text-parchment/70 max-w-3xl mx-auto mb-12">
+      Architecturally, Mnemosyne converges on the same zero-knowledge cloud-storage
+      pattern that Bitwarden landed on for password management — encrypted blob
+      server-side, decryption keys never visible to the operator, multi-wrap envelope
+      for credential rotation. Different problem, same shape — and arriving there
+      independently is reassuring: the design space has a clean local optimum and
+      this is it.
+    </p>
+
+    <div class="grid md:grid-cols-3 gap-6 mb-12">
+      <div class="card p-6 rounded-lg">
+        <div class="glyph text-3xl mb-3">Ⅰ</div>
+        <h3 class="font-classical text-xl text-bronze mb-3">Privacy by construction</h3>
+        <p class="text-parchment/80 text-sm leading-relaxed">
+          The operator cannot decrypt your Codex with anything it holds. Cryptographic
+          impossibility for self-custody modes, documented operator-trust trade-offs for
+          accessibility-first modes.
+        </p>
+      </div>
+      <div class="card p-6 rounded-lg">
+        <div class="glyph text-3xl mb-3">Ⅱ</div>
+        <h3 class="font-classical text-xl text-bronze mb-3">Permanence on opt-in</h3>
+        <p class="text-parchment/80 text-sm leading-relaxed">
+          Pay once to pin your encrypted Codex to Arweave. The <span class="stoachain">StoaChain</span>
+          stores the pointer. Even if Mnemosyne disappears entirely, you recover with just
+          your seed and a chain read.
+        </p>
+      </div>
+      <div class="card p-6 rounded-lg">
+        <div class="glyph text-3xl mb-3">Ⅲ</div>
+        <h3 class="font-classical text-xl text-bronze mb-3">Portability across consumers</h3>
+        <p class="text-parchment/80 text-sm leading-relaxed">
+          One Codex, many apps. OuronetUI, AncientHoldings, the upcoming Demiourgos
+          Streaming Platform — every Codex Consumer reads the same Codex.
+          Switch devices freely.
+        </p>
+      </div>
+    </div>
+
+    <!-- Bidirectional sync explanation -->
+    <div class="sidebar max-w-4xl mx-auto">
+      <div class="sidebar-title">How Mnemosyne talks to Codex Consumers</div>
+      <p class="text-parchment/80 text-sm mb-3">
+        You can manage your Codex directly through Mnemosyne (add seed words, mint
+        accounts, store keys, edit your address book) <strong>or</strong> through any
+        Codex Consumer app that uses your Codex. The two stay in sync, but in different
+        directions:
+      </p>
+      <ul class="space-y-2 text-sm text-parchment/80">
+        <li>
+          <span class="text-bronze font-semibold">Mnemosyne &rarr; Consumers:</span>
+          modifications you make here appear <em>automatically</em> on every Codex
+          Consumer using your Codex. No upload prompt — the changes are already there
+          the next time the consumer reads.
+        </li>
+        <li>
+          <span class="text-bronze font-semibold">Consumers &rarr; Mnemosyne:</span>
+          modifications you make on a Codex Consumer (e.g. OuronetUI) cause that app's
+          interface to prompt you: "upload your modified Codex to Mnemosyne." You confirm;
+          the changes propagate.
+        </li>
+      </ul>
+      <p class="text-parchment/60 text-xs mt-3">
+        This asymmetry is deliberate. Mnemosyne is the authoritative store, so pulls
+        from it are trusted. Pushes from consumers are user-confirmed because consumers
+        run in less-trusted environments (browser extensions, partner apps, third-party
+        tools).
+      </p>
+    </div>
+
+    <h3 class="font-classical text-2xl text-bronze mb-4 text-center mt-16">What Mnemosyne is NOT</h3>
+    <div class="grid md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+      <div class="card p-4 rounded">
+        <p class="text-sm text-parchment/80">
+          <span class="pill-warn pill">Not</span> a decentralized protocol — v0.1 is a
+          centralized Software-as-a-Service. Decentralization happens in layers
+          (see <a href="#storage" class="text-bronze underline">Storage</a>).
+        </p>
+      </div>
+      <div class="card p-4 rounded">
+        <p class="text-sm text-parchment/80">
+          <span class="pill-warn pill">Not</span> a custodial wallet in the regulatory
+          sense. The cryptographic design makes it <em>technically</em> non-custodial.
+        </p>
+      </div>
+      <div class="card p-4 rounded">
+        <p class="text-sm text-parchment/80">
+          <span class="pill-warn pill">Not</span> a replacement for
+          <code>@stoachain/ouronet-codex</code>. It's a new adapter for the existing
+          package.
+        </p>
+      </div>
+      <div class="card p-4 rounded">
+        <p class="text-sm text-parchment/80">
+          <span class="pill-warn pill">Not</span> an identity provider for non-Codex
+          purposes at v0.1. Single sign-on flows and broader identity uses are future
+          possibilities.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="greek-divider max-w-3xl mx-auto my-12"></div>
+
+<!-- ──────────────────── WHAT IS THE CODEX ──────────────────── -->
+<section id="codex" class="py-20 px-6 bg-stoa-stone/30">
+  <div class="max-w-6xl mx-auto">
+    <h2 class="font-classical text-3xl md:text-4xl text-bronze mb-4 text-center">What is the Codex?</h2>
+    <p class="text-center text-parchment/70 max-w-3xl mx-auto mb-12">
+      The Codex is the single entity that holds <em>everything</em> cryptographic you
+      have on <span class="stoachain">StoaChain</span> and <span class="ouronet">Ouronet</span>.
+      One file. One vault. Encrypted on disk, decrypted only in your browser. Everything
+      an account, key, or identity needs to be controlled lives here.
+    </p>
+
+    <div class="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+
+      <div class="card p-5 rounded-lg">
+        <div class="glyph text-2xl mb-2">①</div>
+        <h3 class="font-classical text-lg text-bronze mb-2">Unlimited seed words</h3>
+        <p class="text-sm text-parchment/80">
+          Store as many seed sets as you need. <strong>Koala</strong> (24-word),
+          <strong>Chainweaver</strong> (12-word), and <strong>Eckowallet</strong> seeds
+          are all supported.
+        </p>
+      </div>
+
+      <div class="card p-5 rounded-lg">
+        <div class="glyph text-2xl mb-2">②</div>
+        <h3 class="font-classical text-lg text-bronze mb-2">Unlimited <span class="ouronet">Ouronet</span> accounts</h3>
+        <p class="text-sm text-parchment/80">
+          Standard accounts (<code>Ѻ.xxx</code>) and Smart accounts (<code>Σ.xxx</code>)
+          alike. Mint as many as you need; the Codex tracks them all.
+        </p>
+      </div>
+
+      <div class="card p-5 rounded-lg">
+        <div class="glyph text-2xl mb-2">③</div>
+        <h3 class="font-classical text-lg text-bronze mb-2">Unlimited <span class="stoachain">StoaChain</span> keys + accounts</h3>
+        <p class="text-sm text-parchment/80">
+          Store any number of <span class="stoachain">StoaChain</span> public keys and
+          their corresponding <code>k:</code> accounts. You can also <em>observe</em>
+          any other named <span class="stoachain">StoaChain</span> account
+          (<code>k:</code>, <code>c:</code>, <code>u:</code>, <code>w:</code>) for
+          read-only viewing.
+        </p>
+      </div>
+
+      <div class="card p-5 rounded-lg">
+        <div class="glyph text-2xl mb-2">④</div>
+        <h3 class="font-classical text-lg text-bronze mb-2">Flexible key derivation</h3>
+        <p class="text-sm text-parchment/80">
+          Add keys to a seed word set continuously (positions 0, 1, 2, …) or jump
+          straight to any specific position you need. Your seed sets are not
+          fixed-shape — they grow as you do.
+        </p>
+      </div>
+
+      <div class="card p-5 rounded-lg">
+        <div class="glyph text-2xl mb-2">⑤</div>
+        <h3 class="font-classical text-lg text-bronze mb-2">Pure keys (no seed required)</h3>
+        <p class="text-sm text-parchment/80">
+          Store standalone Stoa keypairs that aren't derived from any seed phrase. The
+          keypair IS the entity — useful for one-off accounts, ephemeral signers, and
+          system keys like the CodexGuard.
+        </p>
+      </div>
+
+      <div class="card p-5 rounded-lg">
+        <div class="glyph text-2xl mb-2">⑥</div>
+        <h3 class="font-classical text-lg text-bronze mb-2">Address book</h3>
+        <p class="text-sm text-parchment/80">
+          As many <span class="ouronet">Ouronet</span> and <span class="stoachain">StoaChain</span>
+          accounts as you want to remember — friends, business contacts, common
+          destinations. Tagged, searchable, ready when you need them.
+        </p>
+      </div>
+
+      <div class="card p-5 rounded-lg">
+        <div class="glyph text-2xl mb-2">⑦</div>
+        <h3 class="font-classical text-lg text-bronze mb-2">Codex Consumer settings</h3>
+        <p class="text-sm text-parchment/80">
+          Each recognised Codex Consumer (OuronetUI, AncientHoldings, future apps)
+          stores its own settings inside your Codex — interface preferences, node
+          choices, feature flags. One Codex, many apps, consistent preferences everywhere.
+        </p>
+      </div>
+
+      <div class="card p-5 rounded-lg">
+        <div class="glyph text-2xl mb-2">⑧</div>
+        <h3 class="font-classical text-lg text-bronze mb-2">Your unified cryptographic instrument</h3>
+        <p class="text-sm text-parchment/80">
+          The Codex is the single entity holding every cryptographic asset you have on
+          <span class="stoachain">StoaChain</span>/<span class="ouronet">Ouronet</span>.
+          Architecturally, the same model could be extended to support any other seed
+          derivation scheme and any other blockchain's address types — but for v0.1 the
+          scope is <span class="stoachain">StoaChain</span>/<span class="ouronet">Ouronet</span>.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="greek-divider max-w-3xl mx-auto my-12"></div>
+
+<!-- ──────────────────── FOUR MODES ──────────────────── -->
+<section id="modes" class="py-20 px-6">
+  <div class="max-w-6xl mx-auto">
+    <h2 class="font-classical text-3xl md:text-4xl text-bronze mb-4 text-center">The four identity modes</h2>
+    <p class="text-center text-parchment/70 max-w-3xl mx-auto mb-12">
+      Pick your mode at signup. Each higher mode is a strict superset of the lower one —
+      Mode 2 has everything Mode 1 has plus a wallet-signature login; Mode 4 has
+      everything from Modes 1–3 plus phone recovery and personal facts. Switch modes
+      later without re-encrypting the Codex.
+    </p>
+
+    <div class="grid md:grid-cols-2 gap-6">
+
+      <!-- Mode 1 -->
+      <div class="card p-6 rounded-lg">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="mode-badge">Ⅰ</div>
+          <div>
+            <h3 class="font-classical text-2xl text-bronze">Privacy</h3>
+            <p class="text-sm text-parchment/60">Zero personal information, maximum anonymity</p>
+          </div>
+        </div>
+        <p class="text-parchment/80 text-sm leading-relaxed mb-4">
+          The base mode. Sign up with a username and password — no email, no phone, no
+          tracking. Two unwrap paths: your password (daily) and your Codex Identity seed
+          (recovery).
+        </p>
+        <table class="text-xs mb-2">
+          <tr><th>Login</th><td>username + password</td></tr>
+          <tr><th>Recovery</th><td>Codex Identity seed</td></tr>
+          <tr><th>Custody</th><td><span class="pill pill-good">strict self-custody</span></td></tr>
+          <tr><th>For</th><td>crypto-natives, privacy-conscious users</td></tr>
+        </table>
+      </div>
+
+      <!-- Mode 2 -->
+      <div class="card p-6 rounded-lg">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="mode-badge">Ⅱ</div>
+          <div>
+            <h3 class="font-classical text-2xl text-bronze">Wallet</h3>
+            <p class="text-sm text-parchment/60">Sign in with your CodexPrime</p>
+          </div>
+        </div>
+        <p class="text-parchment/80 text-sm leading-relaxed mb-4">
+          Adds wallet-signature login. Type your <code>Ѻ.xxx</code> address; sign a
+          challenge with your CodexPrime Standard <span class="ouronet">Ouronet</span>
+          Account's private key; server verifies. No new password to invent if you don't
+          want one. Mode 1's username + password also remains available.
+        </p>
+        <table class="text-xs mb-2">
+          <tr><th>Login</th><td>Mode 1 <em>or</em> Schnorr signature</td></tr>
+          <tr><th>Recovery</th><td>Codex Identity seed</td></tr>
+          <tr><th>Custody</th><td><span class="pill pill-good">strict self-custody</span></td></tr>
+          <tr><th>For</th><td>users who want their wallet to be their identity</td></tr>
+        </table>
+      </div>
+
+      <!-- Mode 3 -->
+      <div class="card p-6 rounded-lg">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="mode-badge">Ⅲ</div>
+          <div>
+            <h3 class="font-classical text-2xl text-bronze">Convenience</h3>
+            <p class="text-sm text-parchment/60">Email reset that actually works</p>
+          </div>
+        </div>
+        <p class="text-parchment/80 text-sm leading-relaxed mb-4">
+          Adds email-based password reset. At signup, Mnemosyne emails you a one-shot
+          Recovery Email Secret — save it like you'd save any important credential.
+          "Forgot password" works for real.
+        </p>
+        <table class="text-xs mb-2">
+          <tr><th>Login</th><td>Mode 1/2 methods</td></tr>
+          <tr><th>Recovery</th><td>seed <em>or</em> email magic link + Email Recovery Secret</td></tr>
+          <tr><th>Custody</th><td><span class="pill">hybrid (3 user-held paths)</span></td></tr>
+          <tr><th>For</th><td>power users who want multi-device + reset</td></tr>
+        </table>
+      </div>
+
+      <!-- Mode 4 -->
+      <div class="card p-6 rounded-lg">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="mode-badge">Ⅳ</div>
+          <div>
+            <h3 class="font-classical text-2xl text-bronze">Streamlined</h3>
+            <p class="text-sm text-parchment/60">Built for non-technical users</p>
+          </div>
+        </div>
+        <p class="text-parchment/80 text-sm leading-relaxed mb-4">
+          Adds phone identity, SMS Recovery Secret, and personal facts recovery
+          (mother's maiden name, first pet, plus a chosen secret word). The upcoming
+          Demiourgos Streaming Platform's onboarding preset uses this with full
+          autopilot — a user signs up for streaming, gets a fully-functional Codex as
+          a byproduct.
+        </p>
+        <table class="text-xs mb-2">
+          <tr><th>Login</th><td>Mode 1/2 methods</td></tr>
+          <tr><th>Recovery</th><td>seed / email / SMS Recovery Secret / facts</td></tr>
+          <tr><th>Custody</th><td><span class="pill pill-warn">hybrid, accessibility-leaning</span></td></tr>
+          <tr><th>For</th><td>Demiourgos Streaming Platform, non-technical users</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Cumulative table -->
+    <div class="mt-12 card p-6 rounded-lg">
+      <h4 class="font-classical text-xl text-bronze mb-4">Strict cumulative supersets</h4>
+      <p class="text-parchment/70 text-sm mb-4">
+        Each mode includes every login + recovery surface of the lower modes. You can
+        add a mode any time (adds new wraps of your Codex Key). You can remove a mode
+        after a 24-hour cooling-off (deletes those wraps). The encrypted Codex blob is
+        byte-identical across all your mode changes.
+      </p>
+      <div class="overflow-x-auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Mode</th>
+              <th>Identifier(s)</th>
+              <th>Login methods</th>
+              <th>Recovery surfaces</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="mode-badge" style="width:1.8rem;height:1.8rem;font-size:0.85rem;">Ⅰ</span></td>
+              <td>username</td>
+              <td>username+password</td>
+              <td>seed</td>
+            </tr>
+            <tr>
+              <td><span class="mode-badge" style="width:1.8rem;height:1.8rem;font-size:0.85rem;">Ⅱ</span></td>
+              <td>username, CodexPrime addr</td>
+              <td>username+password, wallet-sig</td>
+              <td>seed</td>
+            </tr>
+            <tr>
+              <td><span class="mode-badge" style="width:1.8rem;height:1.8rem;font-size:0.85rem;">Ⅲ</span></td>
+              <td>username, addr, email</td>
+              <td>username+password, wallet-sig</td>
+              <td>seed, email-secret</td>
+            </tr>
+            <tr>
+              <td><span class="mode-badge" style="width:1.8rem;height:1.8rem;font-size:0.85rem;">Ⅳ</span></td>
+              <td>username, addr, email, phone</td>
+              <td>username+password, wallet-sig</td>
+              <td>seed, email-secret, SMS-secret, facts</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="greek-divider max-w-3xl mx-auto my-12"></div>
+
+<!-- ──────────────────── ONBOARDING ──────────────────── -->
+<section id="onboarding" class="py-20 px-6 bg-stoa-stone/30">
+  <div class="max-w-6xl mx-auto">
+    <h2 class="font-classical text-3xl md:text-4xl text-bronze mb-4 text-center">How you onboard</h2>
+    <p class="text-center text-parchment/70 max-w-3xl mx-auto mb-12">
+      Three paths into Mnemosyne, orthogonal to your mode choice. The wizard adapts.
+    </p>
+
+    <div class="grid md:grid-cols-3 gap-6 mb-12">
+      <div class="card p-6 rounded-lg">
+        <div class="glyph text-3xl mb-3">Α</div>
+        <h3 class="font-classical text-xl text-bronze mb-3">A. New Codex</h3>
+        <p class="text-parchment/80 text-sm leading-relaxed">
+          You have nothing yet. The wizard generates everything from scratch — Codex
+          Identity, CodexPrime Standard <span class="ouronet">Ouronet</span> Account,
+          on-chain registration, the lot.
+        </p>
+      </div>
+      <div class="card p-6 rounded-lg">
+        <div class="glyph text-3xl mb-3">Β</div>
+        <h3 class="font-classical text-xl text-bronze mb-3">B. Import from browser</h3>
+        <p class="text-parchment/80 text-sm leading-relaxed">
+          You already have an OuronetUI Codex in your browser. The wizard reads it,
+          adds the Mnemosyne-only pieces (Codex Identity, CodexGuard), uploads. The
+          hard-cutoff migration preset uses this.
+        </p>
+      </div>
+      <div class="card p-6 rounded-lg">
+        <div class="glyph text-3xl mb-3">Γ</div>
+        <h3 class="font-classical text-xl text-bronze mb-3">C. Import from JSON</h3>
+        <p class="text-parchment/80 text-sm leading-relaxed">
+          You have a JSON backup of a Codex (OuronetUI export or Mnemosyne export).
+          Upload, decrypt locally, re-encrypt under Mnemosyne, done.
+        </p>
+      </div>
+    </div>
+
+    <div class="card p-6 rounded-lg max-w-4xl mx-auto">
+      <h4 class="font-classical text-xl text-bronze mb-4">The three wizard primitives</h4>
+      <p class="text-parchment/70 text-sm mb-4">
+        Every Codex creation walks you through these three choices. Each has an
+        "I-don't-care-just-do-it" autopilot variant and a "I-want-to-pick-this-myself"
+        custom variant.
+      </p>
+      <ol class="space-y-3 text-sm">
+        <li class="flex gap-3">
+          <span class="text-bronze font-bold">1.</span>
+          <div>
+            <span class="text-bronze font-semibold">Codex Identity seed</span>
+            — generates your Apollo address (<code>₱.STANDARD.Π.SMART</code>). Autopilot:
+            24 random Dalos words. Custom: bring your own words, bitstring, bitmap,
+            base-10 or base-49 scalar.
+          </div>
+        </li>
+        <li class="flex gap-3">
+          <span class="text-bronze font-bold">2.</span>
+          <div>
+            <span class="text-bronze font-semibold">CodexPrime Standard <span class="ouronet">Ouronet</span> Account seed</span>
+            — generates your primary account. Autopilot: reuse Primitive 1's seed via
+            the Dalos curve. Custom: provide a separate seed.
+          </div>
+        </li>
+        <li class="flex gap-3">
+          <span class="text-bronze font-bold">3.</span>
+          <div>
+            <span class="text-bronze font-semibold">CodexGuard + Duo Pure Prime</span>
+            — generates the three Stoa keys (1 for on-chain operations, 2 backing your
+            CodexPrime account). Autopilot: pure-mode random generation. Custom:
+            derive from a Koala Seed (positions #0, #1, #2 marked undeletable).
+          </div>
+        </li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<div class="greek-divider max-w-3xl mx-auto my-12"></div>
+
+<!-- ──────────────────── STORAGE ──────────────────── -->
+<section id="storage" class="py-20 px-6">
+  <div class="max-w-6xl mx-auto">
+    <h2 class="font-classical text-3xl md:text-4xl text-bronze mb-4 text-center">Three-layer storage architecture</h2>
+    <p class="text-center text-parchment/70 max-w-3xl mx-auto mb-12">
+      Mnemosyne separates the storage layer from the trust anchor. Your encrypted Codex
+      lives in the database (always) and optionally on Arweave (opt-in, paid). The
+      <span class="stoachain">StoaChain</span> stores the immutable identity entry plus
+      a pointer to your latest Arweave backup.
+    </p>
+
+    <div class="max-w-4xl mx-auto">
+      <div class="layer-block">
+        <div class="flex items-center gap-3 mb-2">
+          <span class="pill">Layer 3</span>
+          <h3 class="font-classical text-lg text-bronze"><span class="stoachain">StoaChain</span> — immutable trust anchor</h3>
+        </div>
+        <p class="text-parchment/80 text-sm mb-2">
+          The <code>ouronet-ns.CODEX</code> Pact module on <span class="stoachain">StoaChain</span>.
+          Holds your Codex Identity registration (immutable), your CodexGuard
+          (rotatable), and pointers to all your Arweave backups (append-only history).
+        </p>
+        <p class="text-parchment/60 text-xs">
+          Cost: tiny gas per pointer update. Trust anchor: CodexGuard signs all
+          mutations. Censorship-resistant: any Mnemosyne-compatible client can read.
+        </p>
+      </div>
+
+      <div class="layer-block">
+        <div class="flex items-center gap-3 mb-2">
+          <span class="pill">Layer 2</span>
+          <h3 class="font-classical text-lg text-bronze">Arweave — optional permanent backup</h3>
+        </div>
+        <p class="text-parchment/80 text-sm mb-2">
+          Per-Codex encrypted blob, paid once via Bundlr/Irys, stored forever. The
+          <span class="stoachain">StoaChain</span> pointer tells the world which Arweave
+          tx-id is canonically yours.
+        </p>
+        <p class="text-parchment/60 text-xs">
+          Cost: one-time AR payment per upload, no recurring. Encryption: same Codex
+          Key that wraps L1. Use case: disaster recovery if Mnemosyne ever disappears.
+        </p>
+      </div>
+
+      <div class="layer-block">
+        <div class="flex items-center gap-3 mb-2">
+          <span class="pill">Layer 1</span>
+          <h3 class="font-classical text-lg text-bronze">Mnemosyne database — hot path</h3>
+        </div>
+        <p class="text-parchment/80 text-sm mb-2">
+          Live encrypted blob, mutated on every Codex change. Server-side PostgreSQL.
+          Single concatenated format: wraps + encrypted Codex in one binary file.
+        </p>
+        <p class="text-parchment/60 text-xs">
+          Cost: Mnemosyne operational. Deletable on user request (the European General
+          Data Protection Regulation's "right to be forgotten" actually works here).
+        </p>
+      </div>
+    </div>
+
+    <!-- Arweave intro sidebar -->
+    <div class="sidebar max-w-4xl mx-auto mt-12">
+      <div class="sidebar-title">What is Arweave, and why we chose it for permanence</div>
+      <p class="text-parchment/80 text-sm mb-3">
+        Arweave is a decentralized data-storage protocol with a single, unusual
+        promise: <strong>pay once, stored forever</strong>. There's no monthly bill,
+        no annual renewal, no risk of your storage provider going under and taking
+        your data with them. The protocol's economics are designed around a 200-year
+        endowment that funds the network's storage operators indefinitely.
+      </p>
+      <p class="text-parchment/80 text-sm mb-3">
+        For Mnemosyne, that property makes Arweave the right tool for the optional
+        permanence layer. Storing your Codex there means:
+      </p>
+      <ul class="space-y-2 text-sm text-parchment/80 mb-3 ml-4">
+        <li><span class="text-bronze">•</span> The encrypted blob outlives Mnemosyne. If <strong>AncientHoldings GmbH</strong> as an operator ever ceases to exist, your Codex still does.</li>
+        <li><span class="text-bronze">•</span> No subscription liability. You're not renting space; you bought it.</li>
+        <li><span class="text-bronze">•</span> Multiple gateways can serve your blob (<code>arweave.net</code>, <code>ar.io</code>, others). You're not bound to any single distribution point.</li>
+        <li><span class="text-bronze">•</span> Combined with the <span class="stoachain">StoaChain</span> pointer (Layer 3), Arweave becomes a <em>verifiable</em> backup — not just "some blob somewhere claiming to be yours."</li>
+      </ul>
+      <p class="text-parchment/60 text-xs">
+        Arweave is optional, not default. The base Mnemosyne service stores your
+        Codex in its own database (Layer 1) — fast, free, deletable. Arweave is
+        what you reach for when you want belt-and-suspenders permanence.
+      </p>
+    </div>
+
+    <div class="mt-12 card p-6 rounded-lg max-w-4xl mx-auto">
+      <h4 class="font-classical text-xl text-bronze mb-4">Why three layers, not one?</h4>
+      <ul class="space-y-2 text-sm text-parchment/80">
+        <li><span class="text-bronze">•</span> <strong>L1 alone</strong> = standard cloud service. Fast, cheap, but Mnemosyne dying = data lost.</li>
+        <li><span class="text-bronze">•</span> <strong>L1 + L2</strong> = backup story. But no way to <em>trust</em> that a fetched L2 blob is the right one.</li>
+        <li><span class="text-bronze">•</span> <strong>L1 + L2 + L3</strong> = full trust anchor. The chain proves which Arweave blob is canonically yours.</li>
+      </ul>
+      <p class="text-parchment/70 text-sm mt-4">
+        The chain pointer is what makes Arweave a <em>backup</em> rather than just
+        <em>another place data sits</em>. Without L3, an attacker could publish decoy
+        blobs and a recovering user would have no way to tell which one was theirs.
+      </p>
+    </div>
+  </div>
+</section>
+
+<div class="greek-divider max-w-3xl mx-auto my-12"></div>
+
+<!-- ──────────────────── IDENTITY ──────────────────── -->
+<section id="identity" class="py-20 px-6 bg-stoa-stone/30">
+  <div class="max-w-6xl mx-auto">
+    <h2 class="font-classical text-3xl md:text-4xl text-bronze mb-4 text-center">Codex Identity — the double-Apollo construction</h2>
+    <p class="text-center text-parchment/70 max-w-3xl mx-auto mb-12">
+      Every Codex has a public identity on the <span class="stoachain">StoaChain</span>.
+      It's a <em>pair</em> of Apollo-curve keys — a Standard half for daily operations
+      and a Smart half for sensitive ones.
+    </p>
+
+    <!-- Apollo curve sidebar -->
+    <div class="sidebar max-w-4xl mx-auto mb-8">
+      <div class="sidebar-title">Our own cryptography — the Apollo Elliptic Curve</div>
+      <p class="text-parchment/80 text-sm mb-3">
+        The Codex Identity is built on the <strong>Apollo Elliptic Curve</strong> — our
+        own cryptographic curve, designed and implemented for the
+        <span class="stoachain">StoaChain</span>/<span class="ouronet">Ouronet</span>
+        ecosystem and shipped as part of the <code>@stoachain/dalos-crypto</code>
+        package. Apollo gives us the derivation properties we need (deterministic
+        keypairs from arbitrary entropy, Schnorr signatures, address-format glyphs)
+        without depending on any external curve library.
+      </p>
+      <p class="text-parchment/80 text-sm mb-3">
+        Apollo addresses use distinct prefix glyphs: <code>₱.</code> for Standard,
+        <code>Π.</code> for Smart. A complete Codex Identity therefore reads
+        <code>₱.STANDARD.Π.SMART</code> — two pubkeys, one identifier, mirroring
+        <span class="stoachain">StoaChain</span>'s own Standard/Smart account model.
+      </p>
+      <p class="text-parchment/60 text-xs">
+        Apollo signatures are verified off-chain (in Mnemosyne's web app and backend).
+        On-chain signing uses the Stoa-native ED25519 curve via the CodexGuard key.
+        The two curves serve different layers and don't compete.
+      </p>
+    </div>
+
+    <!-- Entropy comparison sidebar -->
+    <div class="sidebar max-w-4xl mx-auto mb-10">
+      <div class="sidebar-title">The number of possible Codex Identities</div>
+      <p class="text-parchment/80 text-sm mb-3">
+        With 2048 bits of entropy per Codex Identity (1024 per Apollo half), the total
+        number of distinct possible Codex Identities is <code>2<sup>2048</sup></code>
+        — roughly <code>10<sup>616</sup></code>.
+      </p>
+      <p class="text-parchment/80 text-sm mb-3">
+        For context: the observable universe contains an estimated <code>10<sup>80</sup></code>
+        atoms. The number of possible Codex Identities exceeds the number of atoms
+        in the observable universe by a factor of <code>10<sup>536</sup></code>.
+      </p>
+      <p class="text-parchment/80 text-sm mb-3">
+        Put differently: if every atom in the observable universe were itself an
+        entire observable universe, and every atom in <em>those</em> universes were
+        themselves observable universes, and you repeated this nesting six more times
+        — the total atom count would still fall vastly short of the Codex Identity
+        space.
+      </p>
+      <p class="text-parchment/60 text-xs">
+        Random collision between two Codex Identities is not "extremely improbable" —
+        it is unphysical. The space is too large for the universe to fit examples
+        of, let alone two that match.
+      </p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-8">
+      <div class="card p-6 rounded-lg">
+        <h3 class="font-classical text-xl text-bronze mb-3">Standard half — the "PIN"</h3>
+        <ul class="text-sm text-parchment/80 space-y-2">
+          <li>• Used at every login (wraps your Codex Key)</li>
+          <li>• Kept online — cached on your daily device</li>
+          <li>• Authorizes daily-use operations</li>
+          <li>• If compromised: bad day, but Smart half can limit damage</li>
+        </ul>
+      </div>
+      <div class="card p-6 rounded-lg">
+        <h3 class="font-classical text-xl text-bronze mb-3">Smart half — the "Guardian"</h3>
+        <ul class="text-sm text-parchment/80 space-y-2">
+          <li>• Rarely used in normal operation</li>
+          <li>• Kept offline by design (printed, vaulted, cold storage)</li>
+          <li>• Required to cosign sensitive operations</li>
+          <li>• Does NOT wrap CK — never touches the Codex blob</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card p-6 rounded-lg max-w-4xl mx-auto">
+      <h4 class="font-classical text-xl text-bronze mb-4">What requires Smart cosign?</h4>
+      <div class="grid md:grid-cols-2 gap-6 text-sm">
+        <div>
+          <p class="text-bronze font-semibold mb-2">Standard alone authorizes:</p>
+          <ul class="space-y-1 text-parchment/80">
+            <li>• Login + view Codex contents</li>
+            <li>• Add/remove address book entries</li>
+            <li>• Add/remove regular accounts and seeds</li>
+            <li>• Change Mnemosyne password</li>
+            <li>• Update Arweave backup pointer</li>
+          </ul>
+        </div>
+        <div>
+          <p class="text-bronze font-semibold mb-2">Standard + Smart cosign required:</p>
+          <ul class="space-y-1 text-parchment/80">
+            <li>• Rotate the CodexGuard</li>
+            <li>• Rotate the Duo Pure Prime keys</li>
+            <li>• Add/remove identity modes</li>
+            <li>• Claim or release a StoicTag</li>
+            <li>• Codex-level destructive operations</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-8 card p-6 rounded-lg max-w-4xl mx-auto">
+      <h4 class="font-classical text-xl text-bronze mb-4">Off-chain Schnorr verification</h4>
+      <p class="text-parchment/70 text-sm mb-3">
+        Apollo signatures are verified off-chain by Mnemosyne's web app and backend.
+        This enables cross-domain identity proofs without chain calls:
+      </p>
+      <ul class="space-y-2 text-sm text-parchment/80 ml-4">
+        <li><span class="text-bronze">•</span> Visit a new Codex Consumer (e.g., OuronetUI at <code>wallet.ouro.network</code>) — sign a challenge with Standard, consumer verifies against on-chain pubkey, accepts your Codex Identity.</li>
+        <li><span class="text-bronze">•</span> Issue session tokens bound to Standard pubkey.</li>
+        <li><span class="text-bronze">•</span> Prove identity in StoicTag-based messaging.</li>
+        <li><span class="text-bronze">•</span> Sign-in-with-Codex-Identity on third-party services.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<div class="greek-divider max-w-3xl mx-auto my-12"></div>
+
+<!-- ──────────────────── STOICTAGS ──────────────────── -->
+<section id="stoictags" class="py-20 px-6">
+  <div class="max-w-6xl mx-auto">
+    <h2 class="font-classical text-3xl md:text-4xl text-bronze mb-4 text-center">StoicTags — human-readable account names</h2>
+    <p class="text-center text-parchment/70 max-w-3xl mx-auto mb-12">
+      Optional convenience: tie a name like <code>§bytales</code> to an
+      <span class="ouronet">Ouronet</span> account address. Lives on the
+      <span class="stoachain">StoaChain</span>. Codex-agnostic — works without
+      Mnemosyne entirely.
+    </p>
+
+    <!-- Layering explanation sidebar -->
+    <div class="sidebar max-w-4xl mx-auto mb-8">
+      <div class="sidebar-title">How a StoicTag sits in the stack</div>
+      <p class="text-parchment/80 text-sm mb-4">
+        A StoicTag is a human-readable handle at the top of a three-layer stack:
+      </p>
+      <div class="space-y-3 text-sm">
+        <div class="flex items-start gap-3">
+          <code class="shrink-0" style="min-width: 7rem">§bytales</code>
+          <div>
+            <span class="text-bronze">StoicTag</span> — what a human types or shares.
+            Resolves to an <span class="ouronet">Ouronet</span> account address.
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <code class="shrink-0" style="min-width: 7rem">Ѻ.xxx</code>
+          <div>
+            <span class="ouronet">Ouronet</span> account — Standard or Smart. The
+            account the StoicTag binds to. Has its own logic, guards, and (for Smart
+            accounts) multi-branch authorization.
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <code class="shrink-0" style="min-width: 7rem">k:abc…</code>
+          <div>
+            <span class="stoachain">StoaChain</span> Payment Key — the underlying
+            <code>k:</code> account that pays the gas. Every
+            <span class="ouronet">Ouronet</span> account has one of these as its
+            Payment Key. This is the actual on-chain entity that signs and pays.
+          </div>
+        </div>
+      </div>
+      <p class="text-parchment/60 text-xs mt-4">
+        Resolution order at the chain level: StoicTag → <span class="ouronet">Ouronet</span>
+        account → Payment Key (<span class="stoachain">StoaChain</span> account). All
+        three layers visible; each layer's authorization rules apply at its own layer.
+      </p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-8">
+      <div class="card p-6 rounded-lg">
+        <h3 class="font-classical text-xl text-bronze mb-3">How it works</h3>
+        <ul class="space-y-2 text-sm text-parchment/80">
+          <li><span class="text-bronze">•</span> Pick any name (3–256 glyphs from the Dalos character set)</li>
+          <li><span class="text-bronze">•</span> Pay a <span class="stoachain">StoaChain</span> fee (spam-gate, no operator gatekeeping)</li>
+          <li><span class="text-bronze">•</span> Sign with the account's keys (proves ownership)</li>
+          <li><span class="text-bronze">•</span> Name registered on chain, resolvable by anyone</li>
+        </ul>
+      </div>
+      <div class="card p-6 rounded-lg">
+        <h3 class="font-classical text-xl text-bronze mb-3">Properties</h3>
+        <ul class="space-y-2 text-sm text-parchment/80">
+          <li><span class="text-bronze">•</span> One StoicTag per account; one account per StoicTag (bijection)</li>
+          <li><span class="text-bronze">•</span> Account must be activated on <span class="stoachain">StoaChain</span> at registration</li>
+          <li><span class="text-bronze">•</span> Single glyph <code>§</code> works for both Standard and Smart accounts</li>
+          <li><span class="text-bronze">•</span> Releasable by the current account owner (frees the name)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Character set sidebar -->
+    <div class="sidebar max-w-4xl mx-auto mb-8">
+      <div class="sidebar-title">StoicTag character set and length</div>
+      <p class="text-parchment/80 text-sm mb-3">
+        StoicTags accept <strong>any glyph from the Dalos character set</strong> — the
+        same 256-glyph alphabet that powers Codex Identity seed words. This means
+        StoicTags can be as expressive or as conventional as you want:
+      </p>
+      <ul class="space-y-2 text-sm text-parchment/80 mb-3 ml-4">
+        <li><span class="text-bronze">•</span> <code>§bytales</code> — conventional, lowercase Latin</li>
+        <li><span class="text-bronze">•</span> <code>§мiha1</code> — mixed scripts</li>
+        <li><span class="text-bronze">•</span> <code>§ΣyzantiumImperialPalaceArchives.AD867</code> — long, descriptive, unique</li>
+        <li><span class="text-bronze">•</span> <code>§ŻЪłΘ̃ψøŔд₿αжWòŠ…</code> — maximally obscure if uniqueness matters more than memorability</li>
+      </ul>
+      <p class="text-parchment/80 text-sm mb-3">
+        Length: <strong>3 glyphs minimum, 256 glyphs maximum</strong>. The 3-glyph floor
+        reserves the absolute-shortest namespace for things like protocol-reserved
+        names. The 256-glyph ceiling matches the Codex Identity per-word maximum and
+        gives users a wide creative space without making the on-chain row gigantic.
+      </p>
+      <p class="text-parchment/60 text-xs">
+        StoicTags are case-sensitive at the glyph level. <code>§bytales</code> and
+        <code>§Bytales</code> are distinct registrable names.
+      </p>
+    </div>
+
+    <!-- How to type § -->
+    <div class="sidebar max-w-4xl mx-auto mb-8">
+      <div class="sidebar-title">Typing the StoicTag glyph (§)</div>
+      <p class="text-parchment/80 text-sm mb-4">
+        The <code>§</code> glyph (the section sign, Unicode U+00A7) is on every modern
+        operating system, but the input method varies:
+      </p>
+      <ul class="space-y-2 text-sm text-parchment/80">
+        <li>
+          <strong class="text-bronze">Windows:</strong>
+          hold <kbd>Alt</kbd> and type <kbd>0167</kbd> on the numpad, then release
+          <kbd>Alt</kbd>.
+        </li>
+        <li>
+          <strong class="text-bronze">macOS:</strong>
+          <kbd>⌥</kbd> + <kbd>6</kbd> (Option + 6).
+        </li>
+        <li>
+          <strong class="text-bronze">Linux (X11/Wayland):</strong>
+          <kbd>Compose</kbd> + <kbd>s</kbd> + <kbd>o</kbd>, or
+          <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>u</kbd> then type
+          <kbd>00a7</kbd> and press <kbd>Enter</kbd>.
+        </li>
+        <li>
+          <strong class="text-bronze">iOS / Android:</strong>
+          open the symbol keyboard; long-press the symbol panel until
+          <code>§</code> appears.
+        </li>
+        <li>
+          <strong class="text-bronze">European keyboard layouts:</strong>
+          Italian, Nordic, and several others have <code>§</code> as a direct key
+          (often <kbd>Shift</kbd> + a number row key).
+        </li>
+      </ul>
+      <p class="text-parchment/60 text-xs mt-3">
+        Most users will rarely type StoicTags by hand — Codex Consumers offer
+        click-to-pick selectors. The above is for when you do need to type one.
+      </p>
+    </div>
+
+    <div class="card p-6 rounded-lg max-w-4xl mx-auto">
+      <h4 class="font-classical text-xl text-bronze mb-3">Why "StoicTag"?</h4>
+      <p class="text-parchment/80 text-sm">
+        StoicTags are the <span class="stoachain">StoaChain</span> ecosystem's
+        human-readable name registry. The terminology and the prefix glyph
+        (<code>§</code>) tie to the philosophical roots of the project — "stoic"
+        carries connotations of permanence, discipline, restraint, properties that
+        fit an immutable on-chain identity claim.
+      </p>
+    </div>
+  </div>
+</section>
+
+<div class="greek-divider max-w-3xl mx-auto my-12"></div>
+
+<!-- ──────────────────── SECURITY ──────────────────── -->
+<section id="security" class="py-20 px-6 bg-stoa-stone/30">
+  <div class="max-w-6xl mx-auto">
+    <h2 class="font-classical text-3xl md:text-4xl text-bronze mb-4 text-center">Security &amp; custody — what the operator can &amp; cannot do</h2>
+    <p class="text-center text-parchment/70 max-w-3xl mx-auto mb-12">
+      Cryptographic guarantees are real. Operational risks are standard for the
+      zero-knowledge cloud-storage pattern and accepted as part of the trade-off.
+    </p>
+
+    <div class="overflow-x-auto max-w-5xl mx-auto card rounded-lg p-2">
+      <table>
+        <thead>
+          <tr>
+            <th>Action</th>
+            <th>Self-custody modes (1, 2)</th>
+            <th>Hybrid modes (3, 4)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Decrypt your Codex from server data alone</td>
+            <td><span class="pill pill-good">Impossible</span></td>
+            <td><span class="pill pill-good">Impossible</span> (Modes 1–3) / <span class="pill pill-warn">Possible if facts weak</span> (Mode 4)</td>
+          </tr>
+          <tr>
+            <td>Initiate a password reset on your behalf</td>
+            <td><span class="pill pill-good">Impossible</span> — would require forging a Schnorr signature</td>
+            <td><span class="pill pill-warn">Possible</span> if operator controls email or SMS channel</td>
+          </tr>
+          <tr>
+            <td>Tamper with Codex contents undetectably</td>
+            <td><span class="pill">Detected on next decrypt</span> (authenticated encryption)</td>
+            <td>Same</td>
+          </tr>
+          <tr>
+            <td>Refuse to serve you (denial of service)</td>
+            <td><span class="pill pill-warn">Possible</span> — but you have your seed; self-host or migrate</td>
+            <td>Same</td>
+          </tr>
+          <tr>
+            <td>Brute-force your password from the verifier</td>
+            <td><span class="pill pill-warn">Theoretically</span> — Argon2id makes it slow for weak passwords, infeasible for strong</td>
+            <td>Same</td>
+          </tr>
+          <tr>
+            <td>See which Codices exist</td>
+            <td><span class="pill pill-warn">Yes</span> — metadata isn't encrypted, only payload</td>
+            <td>Same</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-3 gap-6">
+      <div class="card p-6 rounded-lg">
+        <h4 class="font-classical text-lg text-bronze mb-3">AES-256-GCM</h4>
+        <p class="text-sm text-parchment/80">
+          Authenticated encryption for the Codex blob. Standard. Unbreakable in any
+          relevant time horizon without the Codex Key.
+        </p>
+      </div>
+      <div class="card p-6 rounded-lg">
+        <h4 class="font-classical text-lg text-bronze mb-3">Argon2id</h4>
+        <p class="text-sm text-parchment/80">
+          Modern password-hashing function. Tunable to be slow and memory-expensive.
+          Winner of the 2015 Password Hashing Competition.
+        </p>
+      </div>
+      <div class="card p-6 rounded-lg">
+        <h4 class="font-classical text-lg text-bronze mb-3">Apollo + Schnorr</h4>
+        <p class="text-sm text-parchment/80">
+          Our own elliptic curve with Schnorr signatures, verified off-chain. Two
+          halves (Standard + Smart) enable tiered authorization without needing
+          on-chain Apollo verification.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="greek-divider max-w-3xl mx-auto my-12"></div>
+
+<!-- ──────────────────── ROADMAP / STATUS ──────────────────── -->
+<section id="roadmap" class="py-20 px-6">
+  <div class="max-w-6xl mx-auto">
+    <h2 class="font-classical text-3xl md:text-4xl text-bronze mb-4 text-center">Status &amp; roadmap</h2>
+    <p class="text-center text-parchment/70 max-w-3xl mx-auto mb-12">
+      Mnemosyne is in the design-locked phase. Implementation begins after v0.3.0 of
+      the <code>@stoachain/ouronet-codex</code> package ships.
+    </p>
+
+    <div class="space-y-4 max-w-4xl mx-auto">
+      <div class="card p-4 rounded-lg flex items-center gap-4">
+        <span class="pill pill-good">in progress</span>
+        <div>
+          <span class="text-parchment font-semibold">Phase 0 — Design lock</span>
+          <span class="text-parchment/60 text-sm"> • 4 modes, 3-layer storage, double-Apollo identity, StoicTags, <code>ouronet-ns.CODEX</code> Pact module</span>
+        </div>
+      </div>
+      <div class="card p-4 rounded-lg flex items-center gap-4">
+        <span class="pill">next</span>
+        <div>
+          <span class="text-parchment font-semibold">Phase 1 — Codex package v0.3.0</span>
+          <span class="text-parchment/60 text-sm"> • IPrimePureKey, IStoicTag, Guardians, Arweave actions, schema migration</span>
+        </div>
+      </div>
+      <div class="card p-4 rounded-lg flex items-center gap-4">
+        <span class="pill">queued</span>
+        <div>
+          <span class="text-parchment font-semibold">Phase 2 — Mnemosyne v0.1 scaffold</span>
+          <span class="text-parchment/60 text-sm"> • backend, frontend, auth, Codex CRUD</span>
+        </div>
+      </div>
+      <div class="card p-4 rounded-lg flex items-center gap-4">
+        <span class="pill">queued</span>
+        <div>
+          <span class="text-parchment font-semibold">Phase 3 — OuronetUI integration</span>
+          <span class="text-parchment/60 text-sm"> • hard-cutoff migration from devwallet.ouronetwork.io to wallet.ouro.network</span>
+        </div>
+      </div>
+      <div class="card p-4 rounded-lg flex items-center gap-4">
+        <span class="pill">later</span>
+        <div>
+          <span class="text-parchment font-semibold">Phase 4+ — Demiourgos Streaming Platform integration, Arweave snapshots, on-chain pointers</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────── FOOTER ──────────────────── -->
+<footer class="py-12 px-6 border-t border-bronze/20 bg-stoa-deep">
+  <div class="max-w-6xl mx-auto text-center">
+    <div class="glyph text-3xl mb-4">₱</div>
+    <p class="font-classical text-xl text-bronze mb-2">Mnemosyne</p>
+    <p class="text-sm text-parchment/60 mb-6">
+      Part of the <span class="stoachain">StoaChain</span>/<span class="ouronet">Ouronet</span> ecosystem.
+      Built by <a href="https://ancientholdings.eu" class="text-bronze hover:text-gold transition">AncientHoldings GmbH</a>.
+    </p>
+    <div class="flex flex-wrap justify-center gap-6 text-sm">
+      <a href="https://github.com/orgs/OuroborosNetwork/repositories" class="text-parchment/70 hover:text-bronze transition">GitHub — OuroborosNetwork</a>
+      <a href="https://github.com/OuroborosNetwork/Mnemosyne" class="text-parchment/70 hover:text-bronze transition">Mnemosyne repository</a>
+      <a href="https://ancientholdings.eu" class="text-parchment/70 hover:text-bronze transition">AncientHoldings.eu</a>
+    </div>
+    <p class="text-xs text-parchment/40 mt-8">
+      v0.1 design preview &middot; codex.ancientholdings.eu &middot; design-lock 2026-05-28
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
