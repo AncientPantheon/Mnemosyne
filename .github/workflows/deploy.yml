@@ -1,0 +1,85 @@
+name: Deploy to codex.ancientholdings.eu
+
+# Mnemosyne v0.1 — static-site auto-deploy.
+# Triggers on every push to main (and manual workflow_dispatch). Rsyncs the
+# web/ folder to /var/www/codex.ancientholdings.eu/public/ on the Hetzner VPS
+# at 85.215.141.198. nginx already configured server-side; TLS via Let's Encrypt.
+#
+# Required GitHub secrets (configured in repo Settings → Secrets and variables → Actions):
+#   - DEPLOY_SSH_KEY  — private half of the mnemosyne_deploy_ed25519 keypair
+#                       (the .pub half is already in /root/.ssh/authorized_keys on the VPS)
+#   - DEPLOY_HOST     — the VPS IP or hostname (e.g. "85.215.141.198")
+#
+# The deploy is non-atomic (direct rsync) because this is a static docs site
+# with no concurrent-session concerns. If we ever need atomic releases, switch
+# to the OuronetUI release-symlink pattern (releases/<ts>/ + current symlink).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare SSH key
+        # Write the deploy private key + scan host key. Pattern lifted from
+        # OuronetUI's deploy-dev.yml; same SSH pattern works for both sites.
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: SSH auth probe (fail fast if key is wrong)
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes root@${DEPLOY_HOST} \
+            'echo "SSH auth OK as $(whoami) on $(hostname)"'
+
+      - name: Rsync web/ to the VPS
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          # --delete removes files on the server that no longer exist in web/;
+          # excludes prevent leaking dev artifacts (serve.json is just for local
+          # preview, .secrets/ is git-ignored but belt-and-suspenders, and we
+          # never want the .git directory pushed to a webroot).
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=no" \
+            --exclude='serve.json' \
+            --exclude='.secrets' \
+            --exclude='.git' \
+            web/ root@${DEPLOY_HOST}:/var/www/codex.ancientholdings.eu/public/
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes root@${DEPLOY_HOST} \
+            "chown -R www-data:www-data /var/www/codex.ancientholdings.eu/public/"
+
+      - name: Smoke test the deploy
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          # Probe HTTPS direct (origin SSL is Let's Encrypt). Expect 200 on /
+          # and on /docs/index.html. Fail the job loudly if either is missing.
+          STATUS_ROOT=$(curl -sI https://codex.ancientholdings.eu/ | head -1 | awk '{print $2}')
+          STATUS_DOCS=$(curl -sI https://codex.ancientholdings.eu/docs/index.html | head -1 | awk '{print $2}')
+          echo "/ -> $STATUS_ROOT"
+          echo "/docs/index.html -> $STATUS_DOCS"
+          if [ "$STATUS_ROOT" != "200" ] || [ "$STATUS_DOCS" != "200" ]; then
+            echo "::error::Smoke test failed — landing or docs not serving 200"
+            exit 1
+          fi
+          # Sanity check: the served HTML should contain the brand wordmark.
+          curl -s https://codex.ancientholdings.eu/ | grep -q "brand-lambda" \
+            || (echo "::error::Landing HTML missing brand-lambda — wrong file deployed?" && exit 1)
+          echo "Deploy smoke-tests passed ✓"
+
+      - name: Cleanup ephemeral SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
