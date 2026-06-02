@@ -145,17 +145,17 @@
       deviates produces incompatible keys.
     </p>
 
-    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Why two halves for Codex Identity</h2>
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Why two keys for Codex Identity</h2>
 
     <p class="text-parchment/80 mb-4 leading-relaxed">
-      A Codex Identity is not a single Apollo keypair — it's <strong>two</strong>.
-      The 2048-bit seed material splits in half (1024 bits each), and each half
-      runs through Apollo independently to produce a separate keypair:
+      A Codex Identity is not a single Apollo keypair — it's <strong>two</strong>,
+      each derived from its own independent seed (Seed-A and Seed-B, 1024 bits each),
+      run through Apollo to produce a separate keypair:
     </p>
 
     <ul class="text-parchment/80 space-y-2 ml-6 mb-6">
-      <li>• <strong class="text-bronze">Standard half</strong> (<code>₱.</code> prefix) — daily-use signing, wraps the Codex Key, used at every login.</li>
-      <li>• <strong class="text-bronze">Smart half</strong> (<code>Π.</code> prefix) — Guardian role, kept offline, cosigns sensitive operations.</li>
+      <li>• <strong class="text-bronze">Standard key</strong> (<code>₱.</code> prefix, from Seed-A) — daily-use signing, wraps the Codex Key, bootstraps a new device and recovers the Codex.</li>
+      <li>• <strong class="text-bronze">Smart key</strong> (<code>Π.</code> prefix, from Seed-B) — Guardian role, kept offline; a second recovery root, and required alongside Standard to enroll a device or cosign sensitive operations.</li>
     </ul>
 
     <p class="text-parchment/80 mb-4 leading-relaxed">
