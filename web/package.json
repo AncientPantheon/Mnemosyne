@@ -1,0 +1,9 @@
+{
+  "name": "mnemosyne-web-local",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local static serving for the Mnemosyne site, bound to the LocalHost registry port.",
+  "scripts": {
+    "dev": "node serve-local.mjs mnemosyne 3005"
+  }
+}

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>StoicTags — Mnemosyne Documentation</title>
+<meta name="description" content="On-chain human-readable name registry for Ouronet Accounts. Cost-gated, codex-agnostic, anyone-can-register." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/assets/styles.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: {
+      fontFamily: { 'classical': ['Cinzel','serif'], 'sans': ['Inter','sans-serif'], 'mono': ['JetBrains Mono','monospace'] },
+      colors: { 'parchment':'#f5ecd9','bronze':'#b8860b','bronze-dim':'#8b6914','gold':'#d4a04a','stoa-stone':'#2a2520','stoa-deep':'#0d0a07' }
+    }}
+  }
+</script>
+</head>
+<body>
+
+<nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-stoa-deep/80 border-b border-bronze/20">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <a href="/index.html" class="font-classical text-xl text-bronze"><span class="brand-lambda">ΛΛ</span>nemosyne</a>
+    <div class="hidden md:flex gap-6 text-sm">
+      <a href="/index.html" class="text-parchment/70 transition">Landing</a>
+      <a href="/docs/index.html" class="text-bronze">Documentation</a>
+      <a href="https://github.com/OuroborosNetwork/Mnemosyne" class="text-parchment/70 transition">GitHub</a>
+    </div>
+    <span class="pill">v0.1 design</span>
+  </div>
+</nav>
+
+<section class="pt-32 pb-8 px-6">
+  <div class="max-w-4xl mx-auto">
+    <div class="doc-breadcrumb">
+      <a href="/index.html"><span class="brand-lambda">ΛΛ</span>nemosyne</a> &nbsp;/&nbsp;
+      <a href="/docs/index.html">Documentation</a> &nbsp;/&nbsp;
+      StoicTags
+    </div>
+    <div class="doc-header">
+      <h1 class="font-classical text-4xl md:text-5xl text-bronze mb-3">StoicTags</h1>
+      <p class="text-parchment/70 text-lg">
+        Human-readable on-chain name registry for
+        <span class="ouronet">Ouronet</span> Accounts. Optional, cost-gated,
+        codex-agnostic. <code>§bytales</code> resolves to a specific
+        <span class="ouronet">Ouronet</span> Account on the
+        <span class="stoachain">StoaChain</span>.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="pb-12 px-6">
+  <div class="max-w-4xl mx-auto">
+
+    <h2 class="font-classical text-2xl text-bronze mb-4">What a StoicTag is</h2>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      A StoicTag is a globally-unique human-readable name registered on the
+      <span class="stoachain">StoaChain</span>'s
+      <code>ouronet-ns.CODEX</code> Pact module. Each StoicTag points to
+      exactly one <span class="ouronet">Ouronet</span> Account — strict
+      bijection: one StoicTag per <span class="ouronet">Ouronet</span> Account,
+      one <span class="ouronet">Ouronet</span> Account per StoicTag.
+    </p>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      The display convention prefixes every StoicTag with the section sign
+      <code>§</code> — e.g. <code>§bytales</code>, <code>§μιχαήλ</code>,
+      <code>§ŻЪłΘψ</code>. The prefix is a display convention only; the
+      registered name itself is the bare string after the <code>§</code>.
+    </p>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">How it works</h2>
+
+    <ol class="text-parchment/80 space-y-3 ml-6 mb-6 list-decimal">
+      <li>Pick a name (3–256 glyphs from the Dalos Character Set).</li>
+      <li>Pick which of your <span class="ouronet">Ouronet</span> Accounts the StoicTag should point to. Must be activated on chain.</li>
+      <li>Sign the registration transaction with the <span class="ouronet">Ouronet</span> Account's keys.</li>
+      <li>Pay the registration fee in STOA (spam-gate, no operator gatekeeping).</li>
+      <li>The chain records the StoicTag → <span class="ouronet">Ouronet</span> Account binding.</li>
+    </ol>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      Once registered, anyone can resolve <code>§yourname</code> via a free
+      chain read — they get back the <span class="ouronet">Ouronet</span>
+      Account address you bound it to. Pay them by typing <code>§yourname</code>
+      instead of <code>Ѻ.xxxxxxx</code>. Share <code>§yourname</code> as your
+      identity in any context where typing a 160-glyph account address would
+      be impractical.
+    </p>
+
+    <div class="sidebar mb-8">
+      <div class="sidebar-title">How a StoicTag sits in the stack</div>
+      <p class="text-parchment/80 text-sm mb-4">
+        A StoicTag binds to exactly one <span class="ouronet">Ouronet</span> Account.
+        It's a human-readable handle at the top of a three-layer stack:
+      </p>
+      <div class="space-y-3 text-sm">
+        <div class="flex items-start gap-3">
+          <code class="shrink-0" style="min-width: 7rem">§bytales</code>
+          <div>
+            <span class="text-bronze">StoicTag</span> — what a human types or shares.
+            Resolves to an <span class="ouronet">Ouronet</span> Account address.
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <code class="shrink-0" style="min-width: 7rem">Ѻ.xxx</code>
+          <div>
+            <span class="ouronet">Ouronet</span> Account — Standard or Smart.
+            The account the StoicTag binds to. Has its own logic, guards,
+            and (for Smart accounts) multi-branch authorization.
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <code class="shrink-0" style="min-width: 7rem">k:abc…</code>
+          <div>
+            <span class="stoachain">StoaChain</span> Payment Key — the
+            underlying <code>k:</code> account that pays the gas. Every
+            <span class="ouronet">Ouronet</span> Account has one of these
+            as its Payment Key. This is the actual on-chain entity that
+            signs and pays.
+          </div>
+        </div>
+      </div>
+      <p class="text-parchment/60 text-xs mt-4">
+        Resolution order at the chain level: StoicTag →
+        <span class="ouronet">Ouronet</span> Account → Payment Key
+        (<span class="stoachain">StoaChain</span> account). All three layers
+        are visible; each layer's authorization rules apply at its own layer.
+      </p>
+    </div>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Properties</h2>
+
+    <ul class="text-parchment/80 space-y-2 ml-6 mb-6">
+      <li><span class="text-bronze">•</span> <strong>Strict bijection:</strong> one StoicTag per <span class="ouronet">Ouronet</span> Account, one <span class="ouronet">Ouronet</span> Account per StoicTag — enforced on chain by the two-table design (primary name table + reverse-lookup index)</li>
+      <li><span class="text-bronze">•</span> <strong>Account must be activated:</strong> the <span class="ouronet">Ouronet</span> Account must already exist on the <span class="stoachain">StoaChain</span> at registration time</li>
+      <li><span class="text-bronze">•</span> <strong>Single glyph:</strong> <code>§</code> works for both Standard (<code>Ѻ.</code>) and Smart (<code>Σ.</code>) <span class="ouronet">Ouronet</span> Accounts — the glyph is a display convention, not a kind-discriminator</li>
+      <li><span class="text-bronze">•</span> <strong>Codex-agnostic:</strong> the chain has no awareness of which Codex (if any) registered the StoicTag. Anyone with the <span class="ouronet">Ouronet</span> Account's keys can register or release, whether those keys live in a Mnemosyne Codex, an OuronetUI Codex, a CLI tool, or anywhere else. StoicTags work without Mnemosyne entirely.</li>
+      <li><span class="text-bronze">•</span> <strong>Releasable:</strong> the current owner of the tagged <span class="ouronet">Ouronet</span> Account can release the StoicTag, freeing the name for re-registration by anyone (no fee refund — the original registration fee is sunk)</li>
+      <li><span class="text-bronze">•</span> <strong>Cost-gated, not admin-gated:</strong> the only barrier to registration is paying the fee. No operator approval, no review, no waitlist</li>
+    </ul>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Character set and length</h2>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      StoicTags accept <strong>any glyph from the Dalos Character Set</strong>
+      — the same 256-glyph alphabet that powers Codex Identity seed words
+      (see <a href="/docs/dalos-character-set.html" class="text-bronze hover:text-gold">The Dalos Character Set</a>).
+      This means StoicTags can be as expressive or as conventional as you want:
+    </p>
+
+    <div class="card p-5 rounded mb-6">
+      <div class="space-y-3 text-sm">
+        <div>
+          <div class="text-bronze text-xs mb-1">Conventional, lowercase Latin</div>
+          <code>§bytales</code>
+        </div>
+        <div>
+          <div class="text-bronze text-xs mb-1">Mixed scripts</div>
+          <code>§мiha1</code>
+        </div>
+        <div>
+          <div class="text-bronze text-xs mb-1">Greek</div>
+          <code>§μιχαήλ</code>
+        </div>
+        <div>
+          <div class="text-bronze text-xs mb-1">Long, descriptive, unique</div>
+          <code>§ΣyzantiumImperialPalaceArchivesAnnoDomini867</code>
+        </div>
+        <div>
+          <div class="text-bronze text-xs mb-1">Maximally obscure (uniqueness over memorability)</div>
+          <code>§ŻЪłΘ̃ψøŔд₿αжWòŠ</code>
+        </div>
+      </div>
+    </div>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      <strong>Length:</strong> 3 glyphs minimum, 256 glyphs maximum. The
+      3-glyph floor reserves the absolute-shortest namespace for things like
+      protocol-reserved names. The 256-glyph ceiling matches the Codex
+      Identity per-word maximum and gives users a wide creative space without
+      making the on-chain row gigantic.
+    </p>
+
+    <p class="text-parchment/60 text-sm mb-4">
+      StoicTags are case-sensitive at the glyph level. <code>§bytales</code>
+      and <code>§Bytales</code> are distinct registrable names.
+    </p>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Typing the § glyph</h2>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      The <code>§</code> glyph (the section sign, Unicode U+00A7) is on every
+      modern operating system, but the input method varies:
+    </p>
+
+    <div class="card p-5 rounded mb-8">
+      <ul class="space-y-3 text-sm text-parchment/80">
+        <li>
+          <strong class="text-bronze">Windows:</strong>
+          hold <kbd>Alt</kbd> and type <kbd>0167</kbd> on the numpad, then release
+          <kbd>Alt</kbd>.
+        </li>
+        <li>
+          <strong class="text-bronze">macOS:</strong>
+          <kbd>⌥</kbd> + <kbd>6</kbd> (Option + 6).
+        </li>
+        <li>
+          <strong class="text-bronze">Linux (X11/Wayland):</strong>
+          <kbd>Compose</kbd> + <kbd>s</kbd> + <kbd>o</kbd>, or
+          <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>u</kbd> then type
+          <kbd>00a7</kbd> and press <kbd>Enter</kbd>.
+        </li>
+        <li>
+          <strong class="text-bronze">iOS / Android:</strong>
+          open the symbol keyboard; long-press the symbol panel until
+          <code>§</code> appears.
+        </li>
+        <li>
+          <strong class="text-bronze">European keyboard layouts:</strong>
+          Italian, Nordic, and several others have <code>§</code> as a direct
+          key (often <kbd>Shift</kbd> + a number row key).
+        </li>
+      </ul>
+    </div>
+
+    <p class="text-parchment/60 text-sm mb-4">
+      Most users will rarely type StoicTags by hand — Codex Consumers offer
+      click-to-pick selectors. The above is for when you do need to type one.
+    </p>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Why "StoicTag"?</h2>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      StoicTags are the <span class="stoachain">StoaChain</span> ecosystem's
+      human-readable name registry. The terminology and the prefix glyph
+      (<code>§</code>) tie to the philosophical roots of the project —
+      "stoic" carries connotations of permanence, discipline, restraint,
+      properties that fit an immutable on-chain identity claim. The Greek
+      Stoa (Στοά) gives the chain its name; StoicTags name the identities
+      that move on that chain.
+    </p>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Pact module reference</h2>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      StoicTags live in the <code>ouronet-ns.CODEX</code> Pact module on the
+      <span class="stoachain">StoaChain</span>, in two tables:
+    </p>
+
+    <ul class="text-parchment/80 space-y-3 ml-6 mb-6">
+      <li>
+        <strong class="text-bronze">stoictags</strong> — primary table, keyed
+        by <code>tag-name</code>. Stores the bare name, the bound
+        <span class="ouronet">Ouronet</span> Account address, and the
+        registration block-time. Insert collisions enforce name uniqueness.
+      </li>
+      <li>
+        <strong class="text-bronze">stoictags-by-account</strong> — reverse-lookup
+        index, keyed by <span class="ouronet">Ouronet</span> Account address.
+        Insert collisions enforce the one-StoicTag-per-account invariant.
+      </li>
+    </ul>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      The module exposes four operations:
+    </p>
+
+    <ul class="text-parchment/80 space-y-2 ml-6 mb-6">
+      <li>• <code>register-stoictag(name, account-address)</code> — anyone can call; requires fee + account guard + name validity + name uniqueness + account uniqueness</li>
+      <li>• <code>release-stoictag(name)</code> — current owner of the tagged <span class="ouronet">Ouronet</span> Account releases the name; both rows deleted atomically</li>
+      <li>• <code>resolve-stoictag(name)</code> — free chain read; returns the bound <span class="ouronet">Ouronet</span> Account address</li>
+      <li>• <code>get-stoictag-by-account(account-address)</code> — reverse lookup; returns the StoicTag (if any) bound to a given <span class="ouronet">Ouronet</span> Account</li>
+    </ul>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Related</h2>
+
+    <div class="grid md:grid-cols-2 gap-4 mb-8">
+      <a href="/docs/dalos-character-set.html" class="card p-4 rounded block">
+        <div class="text-bronze font-semibold">The Dalos Character Set →</div>
+        <div class="text-xs text-parchment/70 mt-1">The 256-glyph alphabet StoicTag names are composed from.</div>
+      </a>
+      <a href="/docs/dalos-curve.html" class="card p-4 rounded block">
+        <div class="text-bronze font-semibold">The Dalos Elliptic Curve →</div>
+        <div class="text-xs text-parchment/70 mt-1">The 1600-bit curve that backs every <span class="ouronet">Ouronet</span> Account a StoicTag points to.</div>
+      </a>
+    </div>
+
+  </div>
+</section>
+
+<footer class="py-12 px-6 border-t border-bronze/20 bg-stoa-deep mt-16">
+  <div class="max-w-6xl mx-auto text-center">
+    <div class="glyph text-3xl mb-4">ΛΛ</div>
+    <p class="font-classical text-xl text-bronze mb-2"><span class="brand-lambda">ΛΛ</span>nemosyne</p>
+    <p class="text-sm text-parchment/60">
+      Part of the <span class="stoachain">StoaChain</span>/<span class="ouronet">Ouronet</span> ecosystem.
+      Built by <a href="https://ancientholdings.eu" class="text-bronze hover:text-gold transition">AncientHoldings GmbH</a>.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>

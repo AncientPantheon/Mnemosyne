@@ -42,21 +42,38 @@
 
 <body>
 
-<!-- ──────────────────── NAV ──────────────────── -->
-<nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-stoa-deep/80 border-b border-bronze/20">
-  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-    <a href="#top" class="font-classical text-xl text-bronze"><span class="brand-lambda">ΛΛ</span>nemosyne</a>
-    <div class="hidden md:flex gap-5 text-sm">
-      <a href="#what" class="text-parchment/70 transition">What it is</a>
-      <a href="#codex" class="text-parchment/70 transition">The Codex</a>
-      <a href="#modes" class="text-parchment/70 transition">Four modes</a>
-      <a href="#storage" class="text-parchment/70 transition">Storage</a>
-      <a href="#identity" class="text-parchment/70 transition">Identity</a>
-      <a href="#stoictags" class="text-parchment/70 transition">StoicTags</a>
-      <a href="#security" class="text-parchment/70 transition">Security</a>
-      <a href="/docs/index.html" class="text-bronze font-semibold transition">Documentation →</a>
+<!-- ──────────────────── NAV (two rows) ──────────────────── -->
+<nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-stoa-deep/85 border-b border-bronze/20">
+  <div class="max-w-7xl mx-auto px-6">
+
+    <!-- Row 1 — brand + running version | operator identity + launch -->
+    <div class="flex items-center justify-between py-3">
+      <a href="#top" class="flex items-baseline gap-2 shrink-0">
+        <span class="font-classical text-xl text-bronze"><span class="brand-lambda">ΛΛ</span>nemosyne</span>
+        <span class="font-mono text-[11px] text-parchment/45 border border-bronze/25 rounded px-1.5 py-0.5" title="running Mnemosyne version">v{{MNEMOSYNE_VERSION}}</span>
+      </a>
+      <div class="flex items-center gap-3">
+        <!-- Auth control: "Login with AncientHub" when logged out; swapped to
+             "Signed in as … · role · Log out" by the script below when a session
+             exists (mirrors Pythia). -->
+        <div id="mnemo-auth" class="flex items-center">
+          <a href="/admin/login" class="px-4 py-2 border border-bronze/50 text-bronze font-semibold rounded hover:border-bronze hover:bg-bronze/10 transition text-sm whitespace-nowrap">Login with AncientHub</a>
+        </div>
+        <a href="/codex" class="px-4 py-2 bg-bronze text-stoa-deep font-semibold rounded hover:bg-bronze-dim transition text-sm whitespace-nowrap">Launch Codex</a>
+      </div>
     </div>
-    <span class="pill">v0.1 design</span>
+
+    <!-- Row 2 — section navigation -->
+    <div class="hidden md:flex items-center gap-6 text-sm border-t border-bronze/10 py-2.5">
+      <a href="#what" class="text-parchment/60 hover:text-bronze transition">What it is</a>
+      <a href="#codex" class="text-parchment/60 hover:text-bronze transition">The Codex</a>
+      <a href="#modes" class="text-parchment/60 hover:text-bronze transition">Four modes</a>
+      <a href="#storage" class="text-parchment/60 hover:text-bronze transition">Storage</a>
+      <a href="#identity" class="text-parchment/60 hover:text-bronze transition">Identity</a>
+      <a href="#stoictags" class="text-parchment/60 hover:text-bronze transition">StoicTags</a>
+      <a href="#security" class="text-parchment/60 hover:text-bronze transition">Security</a>
+      <a href="/docs/index.html" class="text-bronze font-semibold hover:text-gold transition ml-auto">Documentation →</a>
+    </div>
   </div>
 </nav>
 
@@ -107,7 +124,10 @@
       Mnemosyne is where that Codex lives, syncs across devices, and reaches every Codex Consumer app you use.
     </p>
     <div class="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-      <a href="#codex" class="px-8 py-3 bg-bronze text-stoa-deep font-semibold rounded hover:bg-bronze-dim transition">
+      <a href="/codex" class="px-8 py-3 bg-bronze text-stoa-deep font-semibold rounded hover:bg-bronze-dim transition">
+        Launch Codex
+      </a>
+      <a href="#codex" class="px-8 py-3 border border-bronze/50 text-parchment rounded hover:border-bronze hover:bg-bronze/10 transition">
         What is the Codex?
       </a>
       <a href="#modes" class="px-8 py-3 border border-bronze/50 text-parchment rounded hover:border-bronze hover:bg-bronze/10 transition">
@@ -1043,6 +1063,85 @@
     </p>
   </div>
 </footer>
+
+<script>
+  /* When this landing is shown INSIDE the Mnemosyne codex "Back to Mnemosyne"
+     overlay (an iframe), a codex is already loaded — so the "Launch Codex"
+     buttons should return to it, not start a fresh load. Detect the iframe and
+     rewrite every /codex CTA into a "Back to Codex" control that messages the
+     parent to close the overlay. On the top-level site this script is a no-op. */
+  (function () {
+    if (window.self === window.top) return; // not embedded — leave CTAs as-is
+    document.querySelectorAll('a[href="/codex"]').forEach(function (a) {
+      a.textContent = "↩ Back to Codex";
+      a.addEventListener("click", function (e) {
+        e.preventDefault();
+        window.parent.postMessage("mnemo:back-to-codex", "*");
+      });
+    });
+  })();
+</script>
+
+<script>
+  /* Header auth control: swap "Login with AncientHub" for the signed-in operator
+     identity ("Signed in as … · role · Log out") when a hub session exists
+     (mirrors Pythia). Reads /api/me. DOM is built with textContent (no innerHTML)
+     so the hub-supplied name/role can never inject markup. No-op when logged out
+     or unconfigured (/api/me → {authenticated:false}). */
+  (function () {
+    var host = document.getElementById("mnemo-auth");
+    if (!host) return;
+    fetch("/api/me", { credentials: "same-origin" })
+      .then(function (r) { return r.json(); })
+      .then(function (me) {
+        if (!me || !me.authenticated) return; // keep the Login button
+        var name = me.name || me.sub || "operator";
+        var role = (me.roles && me.roles[0]) || "";
+        var isAncient = !!(me.roles && me.roles.indexOf("ancient") !== -1);
+        host.textContent = "";
+
+        var info = document.createElement("span");
+        info.className = "text-sm text-parchment/70 whitespace-nowrap";
+        info.appendChild(document.createTextNode("Signed in as "));
+        var strong = document.createElement("strong");
+        strong.className = "text-parchment";
+        strong.textContent = name;
+        info.appendChild(strong);
+        if (role) {
+          info.appendChild(document.createTextNode(" · "));
+          var r = document.createElement("span");
+          r.className = "text-bronze font-semibold";
+          r.textContent = role;
+          info.appendChild(r);
+        }
+
+        // Admin Dashboard button — a real link only for ancient operators;
+        // otherwise a disabled, greyed-out chip (visible but not clickable).
+        var admin;
+        if (isAncient) {
+          admin = document.createElement("a");
+          admin.href = "/admin";
+          admin.className = "ml-3 px-3 py-1.5 border border-bronze/50 text-bronze font-semibold rounded hover:border-bronze hover:bg-bronze/10 transition text-sm";
+        } else {
+          admin = document.createElement("span");
+          admin.className = "ml-3 px-3 py-1.5 border border-parchment/15 text-parchment/30 rounded text-sm cursor-not-allowed select-none";
+          admin.title = "Requires the ancient role";
+          admin.setAttribute("aria-disabled", "true");
+        }
+        admin.textContent = "Admin Dashboard";
+
+        var out = document.createElement("a");
+        out.href = "/admin/logout";
+        out.className = "ml-2 px-3 py-1.5 border border-bronze/30 text-parchment/70 rounded hover:border-bronze hover:bg-bronze/10 transition text-sm";
+        out.textContent = "Log out";
+
+        host.appendChild(info);
+        host.appendChild(admin);
+        host.appendChild(out);
+      })
+      .catch(function () { /* leave the Login button on any error */ });
+  })();
+</script>
 
 </body>
 </html>

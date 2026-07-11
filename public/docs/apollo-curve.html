@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Apollo Elliptic Curve — Mnemosyne Documentation</title>
+<meta name="description" content="A 1024-bit Twisted Edwards Curve used for Codex Identity. Two halves give 2048 bits of total entropy per Codex." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/assets/styles.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: {
+      fontFamily: { 'classical': ['Cinzel','serif'], 'sans': ['Inter','sans-serif'], 'mono': ['JetBrains Mono','monospace'] },
+      colors: { 'parchment':'#f5ecd9','bronze':'#b8860b','bronze-dim':'#8b6914','gold':'#d4a04a','stoa-stone':'#2a2520','stoa-deep':'#0d0a07' }
+    }}
+  }
+</script>
+</head>
+<body>
+
+<nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-stoa-deep/80 border-b border-bronze/20">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <a href="/index.html" class="font-classical text-xl text-bronze"><span class="brand-lambda">ΛΛ</span>nemosyne</a>
+    <div class="hidden md:flex gap-6 text-sm">
+      <a href="/index.html" class="text-parchment/70 transition">Landing</a>
+      <a href="/docs/index.html" class="text-bronze">Documentation</a>
+      <a href="https://github.com/OuroborosNetwork/Mnemosyne" class="text-parchment/70 transition">GitHub</a>
+    </div>
+    <span class="pill">v0.1 design</span>
+  </div>
+</nav>
+
+<section class="pt-32 pb-8 px-6">
+  <div class="max-w-4xl mx-auto">
+    <div class="doc-breadcrumb">
+      <a href="/index.html"><span class="brand-lambda">ΛΛ</span>nemosyne</a> &nbsp;/&nbsp;
+      <a href="/docs/index.html">Documentation</a> &nbsp;/&nbsp;
+      The Apollo Elliptic Curve
+    </div>
+    <div class="doc-header">
+      <h1 class="font-classical text-4xl md:text-5xl text-bronze mb-3">The Apollo Elliptic Curve</h1>
+      <p class="text-parchment/70 text-lg">
+        A 1024-bit Twisted Edwards Curve from the dalos-crypto family.
+        Used for Codex Identity. Two halves give 2048 bits of total entropy per Codex.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="pb-12 px-6">
+  <div class="max-w-4xl mx-auto">
+
+    <h2 class="font-classical text-2xl text-bronze mb-4">At a glance</h2>
+    <div class="card p-5 rounded mb-8">
+      <table class="param-table text-sm">
+        <tr><th>Curve family</th><td>Twisted Edwards Curve (TEC)</td></tr>
+        <tr><th>Formal name</th><td>TEC_S1024_Pr1029p639_m729</td></tr>
+        <tr><th>Common name</th><td>Apollo</td></tr>
+        <tr><th>Used for</th><td>Codex Identity (Standard + Smart halves)</td></tr>
+        <tr><th>Safe scalar size</th><td>1024 bits per curve invocation</td></tr>
+        <tr><th>Possible private keys per half</th><td>2<sup>1024</sup> ≈ 1.8 × 10<sup>308</sup></td></tr>
+        <tr><th>Address encoding</th><td>160 glyphs from the Dalos Character Set</td></tr>
+        <tr><th>Reference impl.</th><td><a href="https://github.com/StoaChain/DALOS_Crypto/blob/main/Elliptic/Parameters.go" class="text-bronze hover:text-gold">DALOS_Crypto/Elliptic/Parameters.go</a> (Go), <code>@stoachain/dalos-crypto</code> (TypeScript)</td></tr>
+      </table>
+    </div>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">The curve equation, at a glance</h2>
+    <div class="sidebar mb-6">
+      <div class="sidebar-title">Twisted Edwards form — instantiated for Apollo</div>
+      <p class="text-bronze font-mono text-xl text-center my-4">
+        x<sup>2</sup> + y<sup>2</sup> &nbsp;=&nbsp; 1 &nbsp;&minus;&nbsp; 729 &middot; x<sup>2</sup> &middot; y<sup>2</sup>
+      </p>
+      <p class="text-parchment/70 text-sm text-center">
+        General Twisted Edwards form: <code>a · x² + y² = 1 + d · x² · y²</code>.
+        Apollo plugs in <code>a = 1</code>, <code>d = −729</code>, and works over the
+        prime field defined below.
+      </p>
+    </div>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Curve parameters</h2>
+    <div class="card p-5 rounded mb-8">
+      <table class="param-table text-sm">
+        <tr>
+          <th>Prime field <code>P</code></th>
+          <td>
+            2<sup>1029</sup> + 639
+            <span class="text-xs text-parchment/60 block mt-1">(1030-bit prime defining the finite field the curve lives in)</span>
+          </td>
+        </tr>
+        <tr>
+          <th>Subgroup order <code>Q</code></th>
+          <td>
+            2<sup>1027</sup> + 9418258840691661048958693280848051387209299408194089012775090979625514940291099061879232380228215863338991692577868713164205283324554730781862605682126581
+            <span class="text-xs text-parchment/60 block mt-1">(1028-bit prime — the order of the generator's subgroup; private-key scalars are reduced mod this)</span>
+          </td>
+        </tr>
+        <tr>
+          <th>Trace <code>T</code></th>
+          <td>
+            −37673035362766644195834773123392205548837197632776356051100363918502059761164396247516929520912863453355966770311474852656821133298218923127450422728505684
+            <span class="text-xs text-parchment/60 block mt-1">(curve trace — relates to cofactor via R · Q = P + 1 − T)</span>
+          </td>
+        </tr>
+        <tr>
+          <th>Cofactor <code>R</code></th>
+          <td>
+            4
+            <span class="text-xs text-parchment/60 block mt-1">(computed from R = (P + 1 − T) / Q; small cofactor required for safe Schnorr)</span>
+          </td>
+        </tr>
+        <tr>
+          <th><code>a</code> coefficient</th>
+          <td>1</td>
+        </tr>
+        <tr>
+          <th><code>d</code> coefficient</th>
+          <td>−729</td>
+        </tr>
+        <tr>
+          <th>Safe scalar <code>S</code></th>
+          <td>
+            1024 bits
+            <span class="text-xs text-parchment/60 block mt-1">(size of the private-key search space, after cofactor accounting)</span>
+          </td>
+        </tr>
+        <tr>
+          <th>Generator <code>G</code></th>
+          <td>
+            G<sub>x</sub> = 18<br/>
+            G<sub>y</sub> = 215278369951571488896917596155404324026002302190181825431681175816997859909367143653000579666656344456792257669605762582468610930751115704301503268336066379058325768607564533090162357247378501333085803173440477981455490888754538866823680129180124913908161391361773138634347515375569488540295649449731695734303
+            <span class="text-xs text-parchment/60 block mt-1">(public base point — every Apollo public key is a scalar multiple of G)</span>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <p class="text-parchment/80 text-sm leading-relaxed mb-6">
+      Apollo's specific coefficients give it the strong properties required for
+      Schnorr signatures: complete addition formulas (no edge cases), constant-time
+      scalar multiplication, and resistance to side-channel attacks. The frozen
+      parameters above are the canonical reference — any implementation that
+      deviates produces incompatible keys.
+    </p>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Why two keys for Codex Identity</h2>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      A Codex Identity is not a single Apollo keypair — it's <strong>two</strong>,
+      each derived from its own independent seed (Seed-A and Seed-B, 1024 bits each),
+      run through Apollo to produce a separate keypair:
+    </p>
+
+    <ul class="text-parchment/80 space-y-2 ml-6 mb-6">
+      <li>• <strong class="text-bronze">Standard key</strong> (<code>₱.</code> prefix, from Seed-A) — daily-use signing, wraps the Codex Key, bootstraps a new device and recovers the Codex.</li>
+      <li>• <strong class="text-bronze">Smart key</strong> (<code>Π.</code> prefix, from Seed-B) — Guardian role, kept offline; a second recovery root, and required alongside Standard to enroll a device or cosign sensitive operations.</li>
+    </ul>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      The full Codex Identity address is the concatenation:
+      <code>₱.STANDARD_160_GLYPHS:Π.SMART_160_GLYPHS</code>. See the
+      <a href="/index.html#identity" class="text-bronze hover:text-gold">landing page section</a>
+      for the cosign authorization model.
+    </p>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Entropy scale</h2>
+
+    <div class="sidebar mb-8">
+      <div class="sidebar-title">Combined Codex Identity entropy</div>
+      <p class="text-parchment/80 text-sm mb-2">
+        With two independent Apollo halves, the total Codex Identity space is:
+      </p>
+      <p class="text-bronze font-mono text-lg mb-2">
+        2<sup>1024</sup> × 2<sup>1024</sup> = 2<sup>2048</sup> ≈ 10<sup>616</sup>
+      </p>
+      <p class="text-parchment/80 text-sm">
+        For context: the observable universe is estimated to contain
+        <code>10<sup>80</sup></code> atoms. The Codex Identity space exceeds the
+        atom count by a factor of <code>10<sup>536</sup></code>. Random collision
+        between two Codex Identities is not "extremely improbable" — it is
+        unphysical.
+      </p>
+    </div>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Comparison to other curves</h2>
+
+    <div class="overflow-x-auto card p-2 rounded mb-8">
+      <table class="text-sm">
+        <thead>
+          <tr>
+            <th>Curve</th>
+            <th>Safe scalar (bits)</th>
+            <th>Approx. key space</th>
+            <th>Used for</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Ed25519 (Bitcoin, Ethereum, Solana, Kadena)</td>
+            <td>~252</td>
+            <td>≈ 10<sup>75</sup></td>
+            <td>Most modern blockchains</td>
+          </tr>
+          <tr>
+            <td>secp256k1 (Bitcoin original)</td>
+            <td>~256</td>
+            <td>≈ 10<sup>77</sup></td>
+            <td>Bitcoin, Ethereum legacy</td>
+          </tr>
+          <tr style="background: rgba(184, 134, 11, 0.05);">
+            <td><strong class="text-bronze">Apollo</strong></td>
+            <td><strong>1024</strong></td>
+            <td>≈ 10<sup>308</sup></td>
+            <td>Codex Identity (this curve)</td>
+          </tr>
+          <tr style="background: rgba(184, 134, 11, 0.05);">
+            <td><strong class="text-bronze">Apollo × 2 (Codex Identity)</strong></td>
+            <td><strong>2048</strong></td>
+            <td>≈ 10<sup>616</sup></td>
+            <td>Codex Identity total</td>
+          </tr>
+          <tr>
+            <td><a href="/docs/dalos-curve.html" class="text-bronze hover:text-gold">Dalos</a></td>
+            <td>1600</td>
+            <td>≈ 10<sup>481</sup></td>
+            <td>Ouronet accounts</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="text-parchment/80 text-sm leading-relaxed mb-4">
+      Apollo's 1024-bit safe scalar puts it firmly in the "post-classical-computing-infinity"
+      tier. Even speculative quantum attacks (Shor's algorithm on elliptic-curve discrete log)
+      require a quantum computer with thousands of stable logical qubits to break — far
+      beyond current or near-term hardware. The 2048-bit Codex Identity total puts the
+      identity layer comfortably ahead of the underlying Ouronet account layer.
+    </p>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Signatures: Schnorr on Apollo</h2>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      Apollo signatures use the Schnorr scheme — simpler, more provably-secure, and
+      more efficient than ECDSA. Each signature is a pair <code>(R, s)</code> where
+      <code>R</code> is an Apollo point and <code>s</code> is a scalar mod
+      <code>Q</code>. Standard Schnorr verification: check that
+      <code>s·G = R + e·P</code>, where <code>P</code> is the public key,
+      <code>G</code> is the generator, and <code>e</code> is the challenge hash.
+    </p>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      Apollo Schnorr signatures are verified <strong>off-chain</strong> — by
+      Mnemosyne's web app and backend, by Codex Consumers, and by any third-party
+      tool that wants to validate a Codex Identity proof. The
+      <span class="stoachain">StoaChain</span> Pact runtime does not natively
+      verify Apollo signatures (Pact's native verifier is for Stoa-native ED25519
+      via the CodexGuard key). The two curves serve different layers and don't
+      compete.
+    </p>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Why not just use Ed25519?</h2>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      Ed25519 (~252-bit safe scalar) is excellent for blockchain account keys
+      — fast, small signatures, well-understood, hardware-supported. Apollo isn't
+      trying to replace it. Apollo exists for one specific role:
+      <strong>cryptographic identity that needs to outlive everything else</strong>.
+    </p>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      A Codex Identity is meant to be the user's permanent public handle — the
+      thing they register on chain, the thing other people address them by. If
+      it ever needs to be replaced because the curve was broken, the user
+      effectively loses their identity. That makes "extra cryptographic margin"
+      worth far more for identity than for an everyday signing key.
+    </p>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      Apollo's 4× larger safe scalar (1024 vs 256 bits) gives the identity layer
+      a permanence ceiling that exceeds any individual blockchain account by an
+      enormous margin. Even if quantum or algebraic attacks chip away at
+      smaller curves over decades, Apollo identities should still stand.
+    </p>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Related</h2>
+
+    <div class="grid md:grid-cols-2 gap-4 mb-8">
+      <a href="/docs/dalos-character-set.html" class="card p-4 rounded block">
+        <div class="text-bronze font-semibold">The Dalos Character Set →</div>
+        <div class="text-xs text-parchment/70 mt-1">The 256-glyph alphabet that addresses are encoded in.</div>
+      </a>
+      <a href="/docs/dalos-curve.html" class="card p-4 rounded block">
+        <div class="text-bronze font-semibold">The Dalos Elliptic Curve →</div>
+        <div class="text-xs text-parchment/70 mt-1">The 1600-bit twin used for Ouronet account keys.</div>
+      </a>
+    </div>
+
+    <p class="text-parchment/60 text-sm">
+      Reference implementation:
+      <a href="https://github.com/StoaChain/DALOS_Crypto" class="text-bronze hover:text-gold">github.com/StoaChain/DALOS_Crypto</a>
+    </p>
+
+  </div>
+</section>
+
+<footer class="py-12 px-6 border-t border-bronze/20 bg-stoa-deep mt-16">
+  <div class="max-w-6xl mx-auto text-center">
+    <div class="glyph text-3xl mb-4">ΛΛ</div>
+    <p class="font-classical text-xl text-bronze mb-2"><span class="brand-lambda">ΛΛ</span>nemosyne</p>
+    <p class="text-sm text-parchment/60">
+      Part of the <span class="stoachain">StoaChain</span>/<span class="ouronet">Ouronet</span> ecosystem.
+      Built by <a href="https://ancientholdings.eu" class="text-bronze hover:text-gold transition">AncientHoldings GmbH</a>.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>

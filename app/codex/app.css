@@ -1,0 +1,645 @@
+/* ==========================================================================
+   codex-playground chrome — the standalone Codex product shell.
+   Scoped to `.cxpg-*` so it never collides with the codex-ui dashboard styles
+   (which live under their own `.codex-ui` scope inside <CodexUiRoot>).
+   ========================================================================== */
+
+/* Mnemosyne palette (mirrors public/index.html tailwind config):
+   parchment #f5ecd9 · bronze #b8860b · bronze-dim #8b6914 · gold #d4a04a
+   stoa-stone #2a2520 · stoa-stone-light #3d3530 · stoa-deep #0d0a07 */
+:root {
+  --cxpg-bg: #0d0a07;            /* stoa-deep */
+  --cxpg-bg-soft: #b8860b12;     /* bronze tint */
+  --cxpg-surface: #2a2520;       /* stoa-stone */
+  --cxpg-surface-2: #1a1612;     /* ink */
+  --cxpg-border: #3d3530;        /* stoa-stone-light */
+  --cxpg-text: #f5ecd9;          /* parchment */
+  --cxpg-text-dim: #c9bfa8;      /* dim parchment */
+  --cxpg-accent: #b8860b;        /* bronze */
+  --cxpg-accent-soft: #b8860b22;
+  --cxpg-danger: #ff6b7d;
+  --cxpg-radius: 14px;
+  --cxpg-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+}
+
+/* ---- Override the codex-ui package background tokens with Mnemosyne colours.
+   codex-ui declares `--codex-*` on `:root, .codex-ui`; `body .codex-ui`
+   (specificity 0,1,1) beats that (0,1,0) regardless of stylesheet load order,
+   so the loaded dashboard, its cards and inputs pick up the Mnemosyne palette. */
+:root,
+body .codex-ui {
+  --codex-bg: #0d0a07;           /* stoa-deep */
+  --codex-surface: #2a2520;      /* stoa-stone */
+  --codex-surface-2: #1a1612;    /* ink */
+  --codex-accent: #d4a04a;       /* gold */
+  --codex-accent-strong: #b8860b;/* bronze */
+}
+
+/* Global page background — the loaded-dashboard shell is now the centered
+   `.cxpg-container` (no full-bleed wrapper), so the dark base must live on
+   body/html or the viewport paints browser-default white behind + beside it. */
+html,
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--cxpg-bg);
+}
+
+/* ---- Landing / status screens -------------------------------------------- */
+
+.cxpg-app {
+  font-family: var(--cxpg-font);
+  color: var(--cxpg-text);
+  box-sizing: border-box;
+}
+
+.cxpg-landing {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(1200px 600px at 50% -10%, #2a2520 0%, transparent 60%),
+    radial-gradient(900px 500px at 90% 110%, #1a1612 0%, transparent 55%),
+    var(--cxpg-bg);
+}
+
+/* ==========================================================================
+   Mnemosyne chrome — the host nav that wraps the mounted Codex.
+   ========================================================================== */
+
+/* Slim top bar shown while a codex session is active (Back to Mnemosyne / Logout). */
+.mnemo-bar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 20px;
+  background: #0d0a07ee;
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid #b8860b33;
+  font-family: var(--cxpg-font);
+}
+/* Match the landing wordmark: Cinzel (renders as inscriptional caps), gold ΛΛ
+   (.brand-lambda: #d4a04a, letter-spacing -0.12em), bronze word + bronze glow. */
+.mnemo-bar-brand {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0;
+  font-family: "Cinzel", Georgia, "Times New Roman", serif;
+  font-weight: 600;
+  font-size: 1.15rem;
+  letter-spacing: 0.06em;
+  color: #b8860b;
+  text-shadow: 0 0 22px rgba(184, 134, 11, 0.35);
+}
+.mnemo-bar-brand .mnemo-lambda {
+  font-family: "Cinzel", serif;
+  color: #d4a04a;
+  font-weight: 700;
+  letter-spacing: -0.12em;
+  margin-right: 0.06em;
+}
+.mnemo-bar-actions {
+  display: inline-flex;
+  gap: 10px;
+}
+.mnemo-btn {
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: var(--cxpg-font);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.mnemo-btn--ghost {
+  background: transparent;
+  border: 1px solid #b8860b66;
+  color: #f5ecd9;
+}
+.mnemo-btn--ghost:hover {
+  border-color: #b8860b;
+  background: #b8860b1a;
+}
+.mnemo-btn--solid {
+  background: #b8860b;
+  border: 1px solid #b8860b;
+  color: #0d0a07;
+}
+.mnemo-btn--solid:hover {
+  background: #8b6914;
+}
+
+/* A back link for the "Load your Codex" screen (top-left, leaves to Mnemosyne). */
+.mnemo-loadback {
+  position: fixed;
+  top: 18px;
+  left: 18px;
+  z-index: 40;
+}
+
+/* The "Back to Mnemosyne" overlay — an iframe of the landing shown ON TOP of the
+   still-mounted codex, so the loaded codex is preserved in memory. */
+.mnemo-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: #0d0a07;
+  display: flex;
+  flex-direction: column;
+}
+.mnemo-overlay-frame {
+  flex: 1 1 auto;
+  width: 100%;
+  border: 0;
+}
+/* Hide (but keep mounted) the codex tree while the Mnemosyne overlay is open. */
+.mnemo-hidden {
+  display: none !important;
+}
+
+.cxpg-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--cxpg-surface);
+  border: 1px solid var(--cxpg-border);
+  border-radius: 20px;
+  padding: 40px 36px;
+  text-align: center;
+  box-shadow:
+    0 30px 80px -40px #000000cc,
+    0 0 0 1px #ffffff08 inset;
+}
+
+.cxpg-card--status {
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.cxpg-logo {
+  font-size: 34px;
+  line-height: 1;
+  color: var(--cxpg-accent);
+  margin-bottom: 14px;
+  filter: drop-shadow(0 0 18px var(--cxpg-accent-soft));
+}
+
+.cxpg-title {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.cxpg-subtitle {
+  margin: 8px 0 28px;
+  color: var(--cxpg-text-dim);
+  font-size: 14.5px;
+}
+
+/* The upload zone — the whole label is clickable; the native input is hidden. */
+.cxpg-upload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 30px 20px;
+  border: 1.5px dashed var(--cxpg-border);
+  border-radius: var(--cxpg-radius);
+  background: var(--cxpg-bg-soft);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.05s ease;
+}
+
+.cxpg-upload:hover {
+  border-color: var(--cxpg-accent);
+  background: var(--cxpg-accent-soft);
+}
+
+.cxpg-upload:active {
+  transform: translateY(1px);
+}
+
+.cxpg-upload:focus-within {
+  outline: 2px solid var(--cxpg-accent);
+  outline-offset: 2px;
+}
+
+.cxpg-upload-icon {
+  font-size: 26px;
+  color: var(--cxpg-accent);
+}
+
+.cxpg-upload-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.cxpg-upload-hint {
+  font-size: 12.5px;
+  color: var(--cxpg-text-dim);
+}
+
+.cxpg-upload-hint code {
+  font-size: 12px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: #ffffff12;
+  color: var(--cxpg-text);
+}
+
+/* Visually-hidden native file input (kept in the a11y tree via the label). */
+.cxpg-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.cxpg-note {
+  margin: 22px 0 0;
+  font-size: 12px;
+  color: var(--cxpg-text-dim);
+}
+
+.cxpg-status {
+  margin: 0;
+  color: var(--cxpg-text-dim);
+  font-size: 15px;
+}
+
+.cxpg-error {
+  margin: 0;
+  color: var(--cxpg-danger);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* ---- Loaded shell -------------------------------------------------------- */
+
+.cxpg-shell {
+  min-height: 100vh;
+  background: var(--cxpg-bg);
+}
+
+.cxpg-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 22px;
+  background: #0b0e17e6;
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--cxpg-border);
+}
+
+.cxpg-brand {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--cxpg-text);
+}
+
+.cxpg-brand-mark {
+  color: var(--cxpg-accent);
+  font-size: 16px;
+}
+
+.cxpg-header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.cxpg-btn {
+  font-family: var(--cxpg-font);
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.cxpg-btn--primary {
+  background: var(--cxpg-accent);
+  color: #0a0d16;
+}
+
+.cxpg-btn--primary:hover {
+  background: #85a0ff;
+}
+
+.cxpg-btn--ghost {
+  background: transparent;
+  color: var(--cxpg-text-dim);
+  border-color: var(--cxpg-border);
+}
+
+.cxpg-btn--ghost:hover {
+  color: var(--cxpg-text);
+  border-color: var(--cxpg-text-dim);
+}
+
+/* Codex UI / Codex UI Settings view toggle (segmented control). */
+.cxpg-viewtabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: #0e1220;
+  border: 1px solid var(--cxpg-border);
+}
+
+.cxpg-viewtab {
+  font-family: var(--cxpg-font);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--cxpg-text-dim);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.cxpg-viewtab:hover {
+  color: var(--cxpg-text);
+}
+
+.cxpg-viewtab--active {
+  background: var(--cxpg-accent);
+  color: #0a0d16;
+}
+
+/* CodexID bar — identity display (left) + debouncer/lock (right), above the tabs. */
+.cxpg-codexbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.cxpg-codexbar-id {
+  flex: 1 1 340px;
+  min-width: 0;
+}
+
+.cxpg-codexbar-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+/* Export / Load, stacked to the LEFT of the debouncer + lock. */
+.cxpg-codexbar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cxpg-btn--sm {
+  font-size: 12px;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+
+/* Codex version pill in the header + the centered view-toggle wrapper. */
+.cxpg-version {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: var(--cxpg-text-dim);
+  border: 1px solid var(--cxpg-border);
+  font-family: var(--cxpg-font-mono, ui-monospace, monospace);
+}
+
+.cxpg-viewtabs-wrap {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.cxpg-main {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 22px;
+}
+
+/* ── OuronetUI-mirrored layout (container mx-auto + header + unified body card) ── */
+.cxpg-container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px 20px 64px;
+  box-sizing: border-box;
+}
+
+.cxpg-topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  margin: 8px 0 24px;
+}
+
+.cxpg-topbar-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+}
+
+.cxpg-titlerow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.cxpg-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: var(--cxpg-accent);
+  background: color-mix(in srgb, var(--cxpg-accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cxpg-accent) 40%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.cxpg-tagline {
+  margin: 0;
+  font-size: 12px;
+  color: var(--cxpg-text-dim);
+}
+
+.cxpg-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.cxpg-bodycard {
+  border-radius: 16px;
+  border: 1px solid var(--cxpg-border);
+  background: #0a0a0a;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.6);
+}
+
+.cxpg-separator {
+  height: 1px;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, transparent, #ceac5f, transparent);
+}
+
+/* The Foreign Chains section sits below the dashboard as its own panel. */
+.cxpg-foreign {
+  margin-top: 22px;
+  padding: 18px 20px 22px;
+  background: var(--cxpg-surface);
+  border: 1px solid var(--cxpg-border);
+  border-radius: var(--cxpg-radius);
+}
+
+.cxpg-foreign-title {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* ---- Forms (unlock screen) ----------------------------------------------- */
+
+.cxpg-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+  margin-top: 6px;
+}
+
+.cxpg-field-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--cxpg-text-dim);
+  letter-spacing: 0.01em;
+}
+
+.cxpg-input {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--cxpg-font);
+  font-size: 15px;
+  color: var(--cxpg-text);
+  padding: 12px 14px;
+  border-radius: var(--cxpg-radius);
+  border: 1px solid var(--cxpg-border);
+  background: var(--cxpg-bg-soft);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.cxpg-input::placeholder {
+  color: #64708c;
+}
+
+.cxpg-input:hover {
+  border-color: #38446a;
+}
+
+.cxpg-input:focus {
+  outline: none;
+  border-color: var(--cxpg-accent);
+  background: var(--cxpg-surface-2);
+  box-shadow: 0 0 0 3px var(--cxpg-accent-soft);
+}
+
+.cxpg-btn--block {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 14.5px;
+  margin-top: 4px;
+}
+
+/* Password field with a reveal (eye) toggle. */
+.cxpg-input-wrap {
+  position: relative;
+  display: block;
+}
+
+.cxpg-input--eye {
+  padding-right: 46px;
+}
+
+.cxpg-eye {
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--cxpg-text-dim);
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.cxpg-eye:hover {
+  color: var(--cxpg-text);
+  background: #ffffff12;
+}
+
+.cxpg-eye:active {
+  color: var(--cxpg-accent);
+}

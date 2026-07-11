@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ouronet Accounts — Mnemosyne Documentation</title>
+<meta name="description" content="Anatomy of an Ouronet Account — Payment Key, Guard, and (for Smart accounts) Governor + Sovereign. The flexibility model behind the Σ. and Ѻ. account prefixes." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/assets/styles.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: {
+      fontFamily: { 'classical': ['Cinzel','serif'], 'sans': ['Inter','sans-serif'], 'mono': ['JetBrains Mono','monospace'] },
+      colors: { 'parchment':'#f5ecd9','bronze':'#b8860b','bronze-dim':'#8b6914','gold':'#d4a04a','stoa-stone':'#2a2520','stoa-deep':'#0d0a07' }
+    }}
+  }
+</script>
+<style>
+  .slot {
+    background: rgba(42, 37, 32, 0.5);
+    border-left: 3px solid #b8860b;
+    border-radius: 0 0.5rem 0.5rem 0;
+    padding: 1rem 1.25rem;
+    margin: 0.75rem 0;
+  }
+  .slot-rotatable { border-left-color: #d4a04a; }
+  .slot-smart-only { border-left-color: #5b8ec2; background: rgba(91, 142, 194, 0.06); }
+  .slot-title {
+    color: #d4a04a;
+    font-family: 'Cinzel', serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.4rem;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .slot-smart-only .slot-title { color: #8eb8d6; }
+  .example-account {
+    background: rgba(13, 10, 7, 0.6);
+    border: 1px solid rgba(184, 134, 11, 0.3);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    font-family: 'Cinzel', serif;
+    font-size: 0.9rem;
+    color: #d4a04a;
+    text-shadow: 0 0 8px rgba(184, 134, 11, 0.4);
+    letter-spacing: 0.03em;
+    margin: 0.5rem 0;
+    word-break: break-all;
+    line-height: 1.5;
+  }
+  .badge-rotatable {
+    background: rgba(212, 160, 74, 0.15);
+    color: #d4a04a;
+    border: 1px solid rgba(212, 160, 74, 0.3);
+    padding: 0.1rem 0.4rem;
+    border-radius: 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+  }
+  .badge-immutable {
+    background: rgba(220, 100, 50, 0.15);
+    color: #e89a6f;
+    border: 1px solid rgba(220, 100, 50, 0.3);
+    padding: 0.1rem 0.4rem;
+    border-radius: 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+  }
+  .badge-smart {
+    background: rgba(91, 142, 194, 0.15);
+    color: #8eb8d6;
+    border: 1px solid rgba(91, 142, 194, 0.3);
+    padding: 0.1rem 0.4rem;
+    border-radius: 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+  }
+</style>
+</head>
+<body>
+
+<nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-stoa-deep/80 border-b border-bronze/20">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <a href="/index.html" class="font-classical text-xl text-bronze"><span class="brand-lambda">ΛΛ</span>nemosyne</a>
+    <div class="hidden md:flex gap-6 text-sm">
+      <a href="/index.html" class="text-parchment/70 transition">Landing</a>
+      <a href="/docs/index.html" class="text-bronze">Documentation</a>
+      <a href="https://github.com/OuroborosNetwork/Mnemosyne" class="text-parchment/70 transition">GitHub</a>
+    </div>
+    <span class="pill">v0.1 design</span>
+  </div>
+</nav>
+
+<section class="pt-32 pb-8 px-6">
+  <div class="max-w-4xl mx-auto">
+    <div class="doc-breadcrumb">
+      <a href="/index.html"><span class="brand-lambda">ΛΛ</span>nemosyne</a> &nbsp;/&nbsp;
+      <a href="/docs/index.html">Documentation</a> &nbsp;/&nbsp;
+      Ouronet Accounts
+    </div>
+    <div class="doc-header">
+      <h1 class="font-classical text-4xl md:text-5xl text-bronze mb-3">Ouronet Accounts</h1>
+      <p class="text-parchment/70 text-lg">
+        Anatomy of an <span class="ouronet">Ouronet</span> Account — the
+        <strong>Public Key</strong>, <strong>Payment Key</strong>, and
+        <strong>Guard</strong>, plus the Smart-account-only <strong>Governor</strong>
+        and <strong>Sovereign</strong> slots. The architecture behind the
+        <code>Ѻ.</code> and <code>Σ.</code> address prefixes.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="pb-12 px-6">
+  <div class="max-w-4xl mx-auto">
+
+    <h2 class="font-classical text-2xl text-bronze mb-4">Two flavours, one architecture</h2>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      An <span class="ouronet">Ouronet</span> Account is built on the
+      <a href="/docs/dalos-curve.html" class="text-bronze hover:text-gold">Dalos Elliptic Curve</a>
+      and lives <em>above</em> the <span class="stoachain">StoaChain</span>
+      native account layer. Every <span class="ouronet">Ouronet</span> Account
+      has a 160-glyph Dalos public key that <strong>does not change</strong> for
+      the account's lifetime — that's the immutable identifier you see as
+      <code>Ѻ.xxx</code> or <code>Σ.xxx</code>.
+    </p>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      Around that immutable public key, an account composes a small set of
+      <strong>rotatable slots</strong>. Each slot points at on-chain entities
+      (keys, accounts, guards) that the account uses to authorize behaviour.
+      Slots can be rotated independently as your security posture changes.
+    </p>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-8">
+      <div class="card p-5 rounded">
+        <div class="font-classical text-xl text-bronze mb-2">Ѻ. &mdash; Standard Account</div>
+        <p class="text-sm text-parchment/80">
+          The simpler flavour. Has Public Key, Payment Key, and Guard. Designed
+          for everyday usage — single-account, single-flow operations.
+        </p>
+      </div>
+      <div class="card p-5 rounded">
+        <div class="font-classical text-xl text-bronze mb-2">Σ. &mdash; Smart Account</div>
+        <p class="text-sm text-parchment/80">
+          Standard + two extra slots: <strong>Governor</strong> (for non-key-based
+          authorization patterns) and <strong>Sovereign</strong> (a Standard
+          Account that has sovereignty over this Smart Account). Designed for
+          governance, multi-party authorization, and protocol-level integrations.
+        </p>
+      </div>
+    </div>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">The slots</h2>
+
+    <div class="slot">
+      <div class="slot-title">
+        Public Key
+        <span class="badge-immutable">immutable</span>
+      </div>
+      <p class="text-sm text-parchment/80 mb-2">
+        The Dalos 160-glyph public key derived from the account's seed at creation.
+        Defines the account's identity. <strong>Never changes</strong> — this is
+        what <code>Ѻ.xxx</code> / <code>Σ.xxx</code> visually encodes.
+      </p>
+      <p class="text-xs text-parchment/60">
+        Stored on chain immutably. If the codex's local copy and the chain disagree,
+        the chain wins. Mnemosyne's UI shows a "codex matches chain" check next to
+        the public-key panel to surface drift.
+      </p>
+    </div>
+
+    <div class="slot slot-rotatable">
+      <div class="slot-title">
+        Payment Key
+        <span class="badge-rotatable">rotatable</span>
+        <span class="text-parchment/50 font-normal text-xs">— STOA</span>
+      </div>
+      <p class="text-sm text-parchment/80 mb-3">
+        The <span class="stoachain">StoaChain</span>-native account that pays gas
+        for any operation involving this <span class="ouronet">Ouronet</span> Account.
+        At creation this is a <code>k:</code> account — a simple keyset-backed account.
+        It can be <strong>rotated to any <span class="stoachain">StoaChain</span> account type</strong>:
+      </p>
+      <ul class="text-sm text-parchment/80 space-y-1 ml-4 mb-3">
+        <li>• <code>k:</code> — single-key keyset (the default at creation)</li>
+        <li>• <code>w:</code> — multi-key keyset (multi-sig: 2-of-2, 3-of-5, any-of-N, all-of-N)</li>
+        <li>• <code>c:</code> — capability-guarded (autonomous accounts whose payment is authorized by Pact module logic, not a private key)</li>
+        <li>• <code>u:</code> — user-guarded (custom Pact predicate functions)</li>
+        <li>• <code>r:</code> — keyset-reference (points to a named on-chain keyset)</li>
+        <li>• Any named <span class="stoachain">StoaChain</span> account</li>
+      </ul>
+      <p class="text-xs text-parchment/60">
+        Rotating the Payment Key changes <em>who pays</em> and <em>what authorizes the payment</em>,
+        without changing the <span class="ouronet">Ouronet</span> Account's identity. Common rotation:
+        keyset → capability-guard, to make the account fully autonomous under a Pact module.
+      </p>
+    </div>
+
+    <div class="slot slot-rotatable">
+      <div class="slot-title">
+        Guard
+        <span class="badge-rotatable">rotatable</span>
+      </div>
+      <p class="text-sm text-parchment/80 mb-3">
+        At creation: a single-key keyset (one Stoa key, <code>keys-all</code> predicate),
+        making the account behave as a normal single-signature wallet. The Guard
+        slot is <strong>technically any Pact guard</strong> — Pact recognises four
+        guard types, and the slot accepts all of them:
+      </p>
+      <ul class="text-sm text-parchment/80 space-y-1 ml-4 mb-3">
+        <li>• <strong>keyset</strong> — defined inline at transaction-upload time (e.g. <code>{ keys: [...], pred: keys-any }</code>)</li>
+        <li>• <strong>keyset-ref</strong> — a reference to a keyset already defined on chain in some namespace (e.g. <code>ouronet-ns.dh_sc_dalos-keyset</code>); the keys can be updated separately from the account</li>
+        <li>• <strong>user-guard</strong> — any Pact function returning <code>bool</code> can be wrapped as a guard; whatever logic the function enforces becomes the authorization rule</li>
+        <li>• <strong>capability-guard</strong> — a Pact capability can itself be wrapped as a guard; when that capability is composed in a transaction, the guard is satisfied</li>
+      </ul>
+      <p class="text-sm text-parchment/80">
+        That said, the Guard slot is <em>mentally designed</em> for the first two —
+        <strong>keysets and keyset-refs</strong>. It's the "who has the keys" slot.
+        For the more programmable guard types (user-guards and capability-guards),
+        Smart accounts give you a separate slot — the Governor — to keep the
+        authorization structure easy to read at a glance.
+      </p>
+    </div>
+
+    <div class="slot slot-smart-only">
+      <div class="slot-title">
+        Governor
+        <span class="badge-smart">Smart only</span>
+        <span class="badge-rotatable">rotatable</span>
+      </div>
+      <p class="text-sm text-parchment/80 mb-3">
+        Smart-account-only. Another guard slot, mentally designated for the
+        <strong>programmable</strong> guard types — user-guards and
+        capability-guards. Where you put authorization logic that says "this
+        account is authorized when these on-chain conditions hold" rather
+        than "this account is authorized when these specific keys sign."
+      </p>
+      <p class="text-sm text-parchment/80 mb-3">
+        Common patterns:
+      </p>
+      <ul class="text-sm text-parchment/80 space-y-1 ml-4 mb-3">
+        <li>• <strong>user-guard</strong> composing multiple capability-guards (any-of, all-of)</li>
+        <li>• <strong>capability-guard</strong> tied to a specific Pact-module capability (e.g. <code>REMOTE-GOV</code>)</li>
+        <li>• Module-defined autonomous logic</li>
+      </ul>
+      <p class="text-xs text-parchment/60">
+        Technically Pact would accept the same content in the Guard slot —
+        nothing about the chain stops you from putting a complex user-guard
+        there. The Guard / Governor separation is a <em>human-readability</em>
+        choice (see the design-rationale sidebar below).
+      </p>
+    </div>
+
+    <div class="slot slot-smart-only">
+      <div class="slot-title">
+        Sovereign
+        <span class="badge-smart">Smart only</span>
+        <span class="badge-rotatable">rotatable</span>
+      </div>
+      <p class="text-sm text-parchment/80 mb-3">
+        Smart-account-only. Points to a <strong>Standard <span class="ouronet">Ouronet</span> Account</strong>
+        (<code>Ѻ.xxx</code>) that has <em>sovereignty</em> over this Smart Account.
+      </p>
+      <p class="text-sm text-parchment/80 mb-3">
+        Satisfying the Sovereign account's ownership rules = satisfying the Smart
+        Account's sovereignty. In practice: if you can sign on behalf of the
+        Sovereign, you can authorize sovereign operations on the Smart Account too.
+      </p>
+      <p class="text-xs text-parchment/60">
+        Why exist: it gives a clean "override path" for Smart accounts. The day-to-day
+        authorization runs through Guard + Governor; deep / structural changes
+        (rotations, mode changes, module upgrades) route through the Sovereign as
+        a human-controllable escape hatch.
+      </p>
+    </div>
+
+    <!-- Design rationale sidebar -->
+    <div class="sidebar mt-8">
+      <div class="sidebar-title">Why three slots instead of one — the design rationale</div>
+      <p class="text-parchment/80 text-sm mb-3">
+        Technically, <strong>a single guard slot would have been enough</strong>.
+        Pact lets you compose arbitrarily complex guards — you could put a single
+        user-guard in the Guard slot that internally composes a keyset, capability
+        checks, sovereign overrides, and any other logic you need. One slot,
+        infinite expressiveness.
+      </p>
+      <p class="text-parchment/80 text-sm mb-3">
+        The Guard / Governor / Sovereign separation exists because
+        <strong>the system was designed for humans, not for machines</strong>.
+        A machine doesn't care whether your authorization rules live in one
+        compound guard or three discrete slots — it just runs the predicates.
+        A human reading an account's structure needs to see, at a glance, what
+        authorizes what. The three slots answer three distinct questions:
+      </p>
+      <ul class="text-parchment/80 text-sm space-y-2 ml-4 mb-3">
+        <li>
+          <strong class="text-bronze">Guard</strong> — &ldquo;<em>Who has the keys?</em>&rdquo;
+          A keyset or keyset-ref. The "wallet" semantic — direct
+          private-key-based control.
+        </li>
+        <li>
+          <strong class="text-bronze">Governor</strong> — &ldquo;<em>What programmable conditions authorize this?</em>&rdquo;
+          A user-guard or capability-guard. The "logic" semantic — autonomous,
+          contract-driven, governance-pattern authorization.
+        </li>
+        <li>
+          <strong class="text-bronze">Sovereign</strong> — &ldquo;<em>Whose human override sits above this?</em>&rdquo;
+          A Standard Ouronet Account. The "escape hatch" semantic — when
+          something at the Guard or Governor layer needs structural change.
+        </li>
+      </ul>
+      <p class="text-parchment/70 text-sm mb-2">
+        You're free to ignore the mental separation entirely. Pact treats all
+        guard types as just "a guard" — you can put a capability-guard in the
+        Guard slot, a single-key keyset in the Governor slot, anything you
+        want. The slots are conventions to help you build accounts whose
+        ownership structure is readable, not constraints the chain enforces.
+      </p>
+      <p class="text-parchment/60 text-xs">
+        The trade-off accepted: more slots = slightly more setup complexity at
+        account creation, in exchange for an ownership structure a human can
+        understand without unwrapping a deeply-nested compound guard.
+      </p>
+    </div>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Worked example — a real Smart Account from a codex</h2>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      This is an actual <span class="ouronet">Ouronet</span> Account viewed
+      through OuronetUI's account panel. It demonstrates the full flexibility
+      of the slot model:
+    </p>
+
+    <div class="card p-5 rounded mb-6">
+      <div class="text-bronze font-classical mb-3">DALOS &middot; Smart Account &middot; Active</div>
+
+      <p class="text-xs text-parchment/60 mb-1">Ouronet Account (immutable Public Key)</p>
+      <div class="example-account mb-4">
+        Σ.WVЦwIξб0лζФψδ£ëï6пжÛŚтÃVţåĈâ4ыĚÌŻştÍÒŀÛР⁶0Ц … YoэπÃЦЦψÔşôüźíZTZuψ4QExΧψΥì6чλйsёЪΛjĚtθΛŻZSyΞЦЩЩ
+      </div>
+
+      <p class="text-xs text-parchment/60 mb-1">Payment Key (rotated from default <code>k:</code> to autonomous <code>c:</code>)</p>
+      <div class="example-account mb-2" style="color: #d4a04a">
+        c:iQQFWj6gWtpGEzhM_O5ekW1QtnQQy55R8BRPGhj_0FU
+      </div>
+      <p class="text-xs text-parchment/70 mb-4">
+        Payment-Key Guard: <code>capability-guard</code> →
+        <code>ouronet-ns.DALOS.DALOS|NATIVE-AUTOMATIC</code>.
+        The Payment Key is itself a <code>c:</code> autonomous account whose gas
+        is authorized by a Pact capability, not by a private key.
+      </p>
+
+      <p class="text-xs text-parchment/60 mb-1">Guard (a <code>keys-any</code> keyset combining two backup keys)</p>
+      <div class="example-account mb-2" style="color: #d4a04a; font-size: 0.7rem">
+        keyset &middot; keys-any &middot; via ref <code>ouronet-ns.dh_sc_dalos-keyset</code><br/>
+        ├── 10e05871c5a2ef3f0f7dca9edd8e96e4ef0952175a4a2621895d2c4402a7b56a  &nbsp;(Ouronet Koala Seed #2)<br/>
+        └── 725d6ad18c7e4ef6e2773f6bb315bde13437872d0235f6404c0c99d9d900bbb4  &nbsp;(Ouronet Chainweaver Seed #2)
+      </div>
+      <p class="text-xs text-parchment/70 mb-4">
+        Either key alone can satisfy the Guard. The two keys come from independent
+        seeds, so losing one seed doesn't lock you out.
+      </p>
+
+      <p class="text-xs text-parchment/60 mb-1">Sovereign (a Standard <span class="ouronet">Ouronet</span> Account)</p>
+      <div class="example-account mb-2" style="color: #d4a04a">
+        Ѻ.éXødVţrřĄθ7ЛдUξjeßĉțιXTПЗÚĞqÝœÉэaLżØôĉмчPęăLĕ$éůäÒC … ÐOÉκнβдłлČлуáZĭDą8ĚHÃBÐЦmEBцÀÐвΘΪĭ5Ï7ξŔùrÑckeпёôšпχЪȚăì
+      </div>
+      <p class="text-xs text-parchment/70 mb-4">
+        Whoever can authorize as this Standard Account can also exercise
+        sovereignty over the Smart Account.
+      </p>
+
+      <p class="text-xs text-parchment/60 mb-1">Governor (user-guard composing multiple capability-guards)</p>
+      <div class="example-account mb-2" style="color: #d4a04a; font-size: 0.72rem">
+        user-guard &middot; <code>ouronet-ns.U|G.UEV_Any</code><br/>
+        accepts any of:<br/>
+        ├── <code>capability-guard ouronet-ns.TFT.P|DALOS|REMOTE-GOV</code><br/>
+        ├── <code>capability-guard ouronet-ns.OUROBOROS.P|DALOS|REMOTE-GOV</code><br/>
+        ├── <code>capability-guard ouronet-ns.SWPU.P|SWPU|REMOTE-GOV</code><br/>
+        ├── <code>capability-guard ouronet-ns.TS01-A.P|TRG</code><br/>
+        └── <code>capability-guard ouronet-ns.DSP.P|DRG</code>
+      </div>
+      <p class="text-xs text-parchment/70">
+        The Governor accepts authorization from any of five different Pact-module
+        capabilities. Each represents a distinct governance pathway — token-launchers,
+        oracles, swap-pair governance, time-locked release, distributor governance.
+        The account is effectively "governable from any of these modules" without
+        needing keys.
+      </p>
+    </div>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      Three slots out of three rotated to non-default forms — Payment Key to a
+      capability-guarded <code>c:</code> account, Guard to a 2-of-2 multi-source
+      keyset, Governor to a user-guard composing five module capabilities, plus a
+      Sovereign for the override path. The Public Key is the only thing that
+      stayed constant from creation.
+    </p>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Why this matters for Codex Consumers</h2>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      The slot model makes <span class="ouronet">Ouronet</span> Accounts much more
+      flexible than typical single-key blockchain accounts. A Codex Consumer
+      (OuronetUI, AncientHoldings, the upcoming Demiourgos Streaming Platform) can
+      build features like:
+    </p>
+
+    <ul class="text-parchment/80 space-y-2 ml-6 mb-6">
+      <li>• Time-locked sovereign override (Sovereign signs a delayed rotation)</li>
+      <li>• Capability-guarded autonomous payments (no key, just protocol logic)</li>
+      <li>• Multi-seed backup keys without rotating the public identity</li>
+      <li>• Module-driven governance of accounts (DAO-style)</li>
+      <li>• Account types specialised per purpose (treasury, payments, governance, sovereign control)</li>
+    </ul>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      None of these require changing the account's Public Key. Anyone resolving
+      <code>Σ.xxx</code> always finds the same identity — what's <em>behind</em> it
+      can change as the user's needs evolve.
+    </p>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Related</h2>
+
+    <div class="grid md:grid-cols-2 gap-4 mb-8">
+      <a href="/docs/dalos-curve.html" class="card p-4 rounded block">
+        <div class="text-bronze font-semibold">The Dalos Elliptic Curve →</div>
+        <div class="text-xs text-parchment/70 mt-1">The curve every Ouronet Account's Public Key lives on.</div>
+      </a>
+      <a href="/docs/stoictags.html" class="card p-4 rounded block">
+        <div class="text-bronze font-semibold">StoicTags →</div>
+        <div class="text-xs text-parchment/70 mt-1">Human-readable names for Ouronet Accounts — <code>§bytales</code> → <code>Ѻ.xxx</code>.</div>
+      </a>
+    </div>
+
+    <p class="text-parchment/60 text-sm">
+      Reference implementation:
+      <a href="https://github.com/StoaChain/DALOS_Crypto" class="text-bronze hover:text-gold">github.com/StoaChain/DALOS_Crypto</a>
+    </p>
+
+  </div>
+</section>
+
+<footer class="py-12 px-6 border-t border-bronze/20 bg-stoa-deep mt-16">
+  <div class="max-w-6xl mx-auto text-center">
+    <div class="glyph text-3xl mb-4">ΛΛ</div>
+    <p class="font-classical text-xl text-bronze mb-2"><span class="brand-lambda">ΛΛ</span>nemosyne</p>
+    <p class="text-sm text-parchment/60">
+      Part of the <span class="stoachain">StoaChain</span>/<span class="ouronet">Ouronet</span> ecosystem.
+      Built by <a href="https://ancientholdings.eu" class="text-bronze hover:text-gold transition">AncientHoldings GmbH</a>.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>

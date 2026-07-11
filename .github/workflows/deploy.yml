@@ -1,18 +1,19 @@
-name: Deploy to codex.ancientholdings.eu
+name: Deploy Mnemosyne (Next app) to codex.ancientholdings.eu
 
-# Mnemosyne v0.1 — static-site auto-deploy.
-# Triggers on every push to main (and manual workflow_dispatch). Rsyncs the
-# web/ folder to /var/www/codex.ancientholdings.eu/public/ on the Hetzner VPS
-# at 85.215.141.198. nginx already configured server-side; TLS via Let's Encrypt.
+# Mnemosyne v0.1+ — Next.js app auto-deploy (SUPERSEDES the old static web/ rsync).
 #
-# Required GitHub secrets (configured in repo Settings → Secrets and variables → Actions):
-#   - DEPLOY_SSH_KEY  — private half of the mnemosyne_deploy_ed25519 keypair
-#                       (the .pub half is already in /root/.ssh/authorized_keys on the VPS)
-#   - DEPLOY_HOST     — the VPS IP or hostname (e.g. "85.215.141.198")
+# Builds the SELF-CONTAINED Next `output: "standalone"` bundle (which bundles the
+# file:-linked @ancientpantheon/codex-* packages into the app chunks — no Codex
+# repo needed on the server), rsyncs it to the VPS, and reloads the pm2 process.
+# nginx reverse-proxies codex.ancientholdings.eu -> 127.0.0.1:3005 (one-time VPS
+# setup: see deploy/RUNBOOK.md). Runtime secrets (OIDC creds, SESSION_SECRET) live
+# in the SERVER's /var/www/codex.ancientholdings.eu/.env.local — NOT in CI.
 #
-# The deploy is non-atomic (direct rsync) because this is a static docs site
-# with no concurrent-session concerns. If we ever need atomic releases, switch
-# to the OuronetUI release-symlink pattern (releases/<ts>/ + current symlink).
+# Required GitHub secrets:
+#   DEPLOY_SSH_KEY    — private half of the mnemosyne_deploy_ed25519 keypair (VPS root)
+#   DEPLOY_HOST       — the VPS IP (85.215.141.198)
+#   CODEX_REPO_TOKEN  — a PAT with READ access to AncientPantheon/Codex (private),
+#                       so CI can check the codex packages out to build the bundle.
 
 on:
   push:
@@ -22,62 +23,98 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 20
 
     steps:
-      - name: Checkout
+      # Lay the two repos out at the SAME relative paths the file: links expect:
+      # Mnemosyne's package.json points at `../../AncientPantheon/Codex/packages/*`,
+      # so from _Claude/StoaOuronet/Mnemosyne that resolves to _Claude/AncientPantheon/Codex.
+      - name: Checkout Mnemosyne
         uses: actions/checkout@v4
+        with:
+          path: _Claude/StoaOuronet/Mnemosyne
 
-      - name: Prepare SSH key
-        # Write the deploy private key + scan host key. Pattern lifted from
-        # OuronetUI's deploy-dev.yml; same SSH pattern works for both sites.
+      - name: Checkout Codex packages (private)
+        uses: actions/checkout@v4
+        with:
+          repository: AncientPantheon/Codex
+          token: ${{ secrets.CODEX_REPO_TOKEN }}
+          path: _Claude/AncientPantheon/Codex
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build the Codex packages (produces dist the file: links resolve to)
+        working-directory: _Claude/AncientPantheon/Codex
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build Mnemosyne (standalone)
+        working-directory: _Claude/StoaOuronet/Mnemosyne
+        run: |
+          npm ci
+          npm run build   # next build --webpack, output: "standalone"
+
+      - name: Assemble the self-contained bundle
+        working-directory: _Claude/StoaOuronet/Mnemosyne
+        run: |
+          rm -rf deploy-bundle && mkdir -p deploy-bundle/.next
+          cp -a .next/standalone/. deploy-bundle/     # server.js + traced node_modules + .next build
+          cp -a .next/static deploy-bundle/.next/static
+          # NOTE: next standalone already traces public/index.html into
+          # .next/standalone/public (because route.ts reads it). So we must REPLACE
+          # that partial public/ with the FULL flat public/ — otherwise `cp -a public
+          # deploy-bundle/public` nests it under public/public and /assets + /docs 404.
+          rm -rf deploy-bundle/public
+          cp -a public deploy-bundle/public
+          # sanity: self-contained + public is flat (assets/docs at the top level)
+          test -f deploy-bundle/server.js || (echo "::error::standalone server.js missing" && exit 1)
+          test -d deploy-bundle/public/assets || (echo "::error::public/ not flat — assets missing" && exit 1)
+          test -f deploy-bundle/public/docs/index.html || (echo "::error::public/docs missing" && exit 1)
+
+      - name: Prepare deploy SSH key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
 
-      - name: SSH auth probe (fail fast if key is wrong)
+      - name: Rsync bundle to the VPS app dir
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        working-directory: _Claude/StoaOuronet/Mnemosyne
         run: |
-          ssh -i ~/.ssh/deploy_key -o BatchMode=yes root@${DEPLOY_HOST} \
-            'echo "SSH auth OK as $(whoami) on $(hostname)"'
-
-      - name: Rsync web/ to the VPS
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-        run: |
-          # --delete removes files on the server that no longer exist in web/;
-          # excludes prevent leaking dev artifacts (serve.json is just for local
-          # preview, .secrets/ is git-ignored but belt-and-suspenders, and we
-          # never want the .git directory pushed to a webroot).
+          # --delete keeps the app dir clean. .env.local + ecosystem.config.js live
+          # in the PARENT dir (stable, one-time), so --delete never touches secrets.
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=no" \
-            --exclude='serve.json' \
-            --exclude='.secrets' \
-            --exclude='.git' \
-            web/ root@${DEPLOY_HOST}:/var/www/codex.ancientholdings.eu/public/
+            deploy-bundle/ root@${DEPLOY_HOST}:/var/www/codex.ancientholdings.eu/app/
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes root@${DEPLOY_HOST} \
-            "chown -R www-data:www-data /var/www/codex.ancientholdings.eu/public/"
+            "chown -R www-data:www-data /var/www/codex.ancientholdings.eu/app/ || true"
 
-      - name: Smoke test the deploy
+      - name: Reload the pm2 service
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
         run: |
-          # Probe HTTPS direct (origin SSL is Let's Encrypt). Expect 200 on /
-          # and on /docs/index.html. Fail the job loudly if either is missing.
-          STATUS_ROOT=$(curl -sI https://codex.ancientholdings.eu/ | head -1 | awk '{print $2}')
-          STATUS_DOCS=$(curl -sI https://codex.ancientholdings.eu/docs/index.html | head -1 | awk '{print $2}')
-          echo "/ -> $STATUS_ROOT"
-          echo "/docs/index.html -> $STATUS_DOCS"
-          if [ "$STATUS_ROOT" != "200" ] || [ "$STATUS_DOCS" != "200" ]; then
-            echo "::error::Smoke test failed — landing or docs not serving 200"
-            exit 1
-          fi
-          # Sanity check: the served HTML should contain the brand wordmark.
+          # The pm2 app is registered once by the runbook (deploy/RUNBOOK.md).
+          # reload = zero-downtime restart picking up the new bundle.
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes root@${DEPLOY_HOST} \
+            "pm2 reload mnemosyne --update-env || pm2 start /var/www/codex.ancientholdings.eu/ecosystem.config.js"
+
+      - name: Smoke test the live app
+        run: |
+          sleep 3
+          ROOT=$(curl -sI https://codex.ancientholdings.eu/ | head -1 | awk '{print $2}')
+          ME=$(curl -s https://codex.ancientholdings.eu/api/me)
+          echo "/ -> $ROOT ; /api/me -> $ME"
+          [ "$ROOT" = "200" ] || (echo "::error::landing not 200" && exit 1)
           curl -s https://codex.ancientholdings.eu/ | grep -q "brand-lambda" \
-            || (echo "::error::Landing HTML missing brand-lambda — wrong file deployed?" && exit 1)
+            || (echo "::error::landing HTML missing brand-lambda" && exit 1)
+          echo "$ME" | grep -q "authenticated" \
+            || (echo "::error::/api/me not responding — Node app not proxied?" && exit 1)
           echo "Deploy smoke-tests passed ✓"
 
       - name: Cleanup ephemeral SSH key

@@ -5,6 +5,13 @@ node_modules/
 dist/
 build/
 .next/
+# Next.js generated ambient types (regenerated on every build)
+next-env.d.ts
+# Assembled standalone deploy bundle (build artifact — CI rebuilds it)
+deploy-bundle/
+
+# Server-side admin settings store (operator-set config; URLs only, gitignored)
+data/
 
 # Test output / caches
 coverage/

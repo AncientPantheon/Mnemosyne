@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Dalos Elliptic Curve — Mnemosyne Documentation</title>
+<meta name="description" content="A 1600-bit Twisted Edwards Curve used for every Ouronet account. The heaviest cryptographic curve in production use anywhere." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/assets/styles.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: {
+      fontFamily: { 'classical': ['Cinzel','serif'], 'sans': ['Inter','sans-serif'], 'mono': ['JetBrains Mono','monospace'] },
+      colors: { 'parchment':'#f5ecd9','bronze':'#b8860b','bronze-dim':'#8b6914','gold':'#d4a04a','stoa-stone':'#2a2520','stoa-deep':'#0d0a07' }
+    }}
+  }
+</script>
+</head>
+<body>
+
+<nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-stoa-deep/80 border-b border-bronze/20">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <a href="/index.html" class="font-classical text-xl text-bronze"><span class="brand-lambda">ΛΛ</span>nemosyne</a>
+    <div class="hidden md:flex gap-6 text-sm">
+      <a href="/index.html" class="text-parchment/70 transition">Landing</a>
+      <a href="/docs/index.html" class="text-bronze">Documentation</a>
+      <a href="https://github.com/OuroborosNetwork/Mnemosyne" class="text-parchment/70 transition">GitHub</a>
+    </div>
+    <span class="pill">v0.1 design</span>
+  </div>
+</nav>
+
+<section class="pt-32 pb-8 px-6">
+  <div class="max-w-4xl mx-auto">
+    <div class="doc-breadcrumb">
+      <a href="/index.html"><span class="brand-lambda">ΛΛ</span>nemosyne</a> &nbsp;/&nbsp;
+      <a href="/docs/index.html">Documentation</a> &nbsp;/&nbsp;
+      The Dalos Elliptic Curve
+    </div>
+    <div class="doc-header">
+      <h1 class="font-classical text-4xl md:text-5xl text-bronze mb-3">The Dalos Elliptic Curve</h1>
+      <p class="text-parchment/70 text-lg">
+        A 1600-bit Twisted Edwards Curve. Used for every
+        <span class="ouronet">Ouronet</span> account (Standard <code>Ѻ.</code> and
+        Smart <code>Σ.</code>). The flagship curve of the dalos-crypto family.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="pb-12 px-6">
+  <div class="max-w-4xl mx-auto">
+
+    <h2 class="font-classical text-2xl text-bronze mb-4">At a glance</h2>
+    <div class="card p-5 rounded mb-8">
+      <table class="param-table text-sm">
+        <tr><th>Curve family</th><td>Twisted Edwards Curve (TEC)</td></tr>
+        <tr><th>Formal name</th><td>TEC_S1600_Pr1605p2315_m26</td></tr>
+        <tr><th>Common name</th><td>Dalos</td></tr>
+        <tr><th>Used for</th><td><span class="ouronet">Ouronet</span> accounts (Standard + Smart)</td></tr>
+        <tr><th>Safe scalar size</th><td>1600 bits per account</td></tr>
+        <tr><th>Possible accounts per Codex</th><td>2<sup>1600</sup> ≈ 10<sup>481</sup></td></tr>
+        <tr><th>Address encoding</th><td>160 glyphs from the Dalos Character Set</td></tr>
+        <tr><th>Reference impl.</th><td><a href="https://github.com/StoaChain/DALOS_Crypto/blob/main/Elliptic/Parameters.go" class="text-bronze hover:text-gold">DALOS_Crypto/Elliptic/Parameters.go</a> (Go), <code>@stoachain/dalos-crypto</code> (TypeScript)</td></tr>
+      </table>
+    </div>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">The curve equation, at a glance</h2>
+    <div class="sidebar mb-6">
+      <div class="sidebar-title">Twisted Edwards form — instantiated for Dalos</div>
+      <p class="text-bronze font-mono text-xl text-center my-4">
+        x<sup>2</sup> + y<sup>2</sup> &nbsp;=&nbsp; 1 &nbsp;&minus;&nbsp; 26 &middot; x<sup>2</sup> &middot; y<sup>2</sup>
+      </p>
+      <p class="text-parchment/70 text-sm text-center">
+        General Twisted Edwards form: <code>a · x² + y² = 1 + d · x² · y²</code>.
+        Dalos plugs in <code>a = 1</code>, <code>d = −26</code>, and works over the
+        1606-bit prime field defined below.
+      </p>
+    </div>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Curve parameters</h2>
+    <div class="card p-5 rounded mb-8">
+      <table class="param-table text-sm">
+        <tr>
+          <th>Prime field <code>P</code></th>
+          <td>
+            2<sup>1605</sup> + 2315
+            <span class="text-xs text-parchment/60 block mt-1">(1606-bit prime defining the finite field the curve lives in)</span>
+          </td>
+        </tr>
+        <tr>
+          <th>Subgroup order <code>Q</code></th>
+          <td>
+            2<sup>1603</sup> + 1258387060301909514024042379046449850251725029634697115619073843890705481440046740552204199635883885272944914904655483501916023678206167596650367826811846862157534952990004386839463386963494516862067933899764941962204635259228497801901380413
+            <span class="text-xs text-parchment/60 block mt-1">(1604-bit prime — the order of the generator's subgroup; private-key scalars are reduced mod this)</span>
+          </td>
+        </tr>
+        <tr>
+          <th>Trace <code>T</code></th>
+          <td>
+            −5033548241207638056096169516185799401006900118538788462476295375562821925760186962208816798543535541091779659618621934007664094712824670386601471307247387448630139811960017547357853547853978067448271735599059767848818541036913991207605519336
+            <span class="text-xs text-parchment/60 block mt-1">(curve trace — relates to cofactor via R · Q = P + 1 − T)</span>
+          </td>
+        </tr>
+        <tr>
+          <th>Cofactor <code>R</code></th>
+          <td>
+            Computed via <code>R = (P + 1 − T) / Q</code>
+            <span class="text-xs text-parchment/60 block mt-1">(small cofactor required for safe Schnorr)</span>
+          </td>
+        </tr>
+        <tr>
+          <th><code>a</code> coefficient</th>
+          <td>1</td>
+        </tr>
+        <tr>
+          <th><code>d</code> coefficient</th>
+          <td>−26</td>
+        </tr>
+        <tr>
+          <th>Safe scalar <code>S</code></th>
+          <td>
+            1600 bits
+            <span class="text-xs text-parchment/60 block mt-1">(size of the private-key search space, after cofactor accounting)</span>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <p class="text-parchment/80 text-sm leading-relaxed mb-6">
+      Dalos's specific coefficients (<code>a = 1</code>, <code>d = −26</code>) over
+      a 1606-bit prime field give it the strongest security margin of any elliptic
+      curve currently in production use anywhere in cryptocurrency. The frozen
+      parameters above are the canonical reference — any implementation that
+      deviates produces incompatible keys.
+    </p>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Used for every Ouronet account</h2>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      Every <span class="ouronet">Ouronet</span> account in your Codex — Standard
+      (<code>Ѻ.xxx</code>) and Smart (<code>Σ.xxx</code>) — has a private key
+      that lives on the Dalos curve. The 160-glyph address you see is the
+      Dalos-Character-Set encoding of the account's public key.
+    </p>
+
+    <ul class="text-parchment/80 space-y-2 ml-6 mb-6">
+      <li>• <strong class="text-bronze">Standard Ouronet Accounts</strong> (<code>Ѻ.</code>) — single-key accounts. The Dalos private key signs operations directly.</li>
+      <li>• <strong class="text-bronze">Smart Ouronet Accounts</strong> (<code>Σ.</code>) — multi-branch authorization. The Dalos private key is one component; the account also has a sovereign guard and an optional governor branch for more sophisticated authorization patterns.</li>
+    </ul>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      Each Ouronet account is independent — its own Dalos private key, its own
+      Payment Key (the StoaChain k:account that backs gas costs), its own
+      address. A Codex can hold thousands of such accounts and the Dalos space
+      (2<sup>1600</sup> ≈ 10<sup>481</sup> possible keys) is wildly larger than
+      anything any user would ever need.
+    </p>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Entropy scale</h2>
+
+    <div class="sidebar mb-8">
+      <div class="sidebar-title">Why 1600 bits?</div>
+      <p class="text-parchment/80 text-sm mb-2">
+        Dalos was sized specifically to be the heaviest practical elliptic curve in production:
+      </p>
+      <ul class="text-sm text-parchment/80 space-y-1 mb-2 ml-4">
+        <li>• <strong>1600 bits</strong> = roughly 6× the safe-scalar size of Ed25519 (~252 bits)</li>
+        <li>• Practical brute-force attack effort: <code>2<sup>800</sup></code> operations (the birthday bound for elliptic-curve discrete-log via Pollard's rho)</li>
+        <li>• Total Ouronet account space: <code>2<sup>1600</sup> ≈ 10<sup>481</sup></code> — comfortably more than the cube of the atom count of the observable universe</li>
+      </ul>
+      <p class="text-parchment/80 text-sm">
+        The cost is signature size and verification time. Dalos signatures
+        are several hundred bytes; verification takes milliseconds rather than
+        microseconds. For an identity-and-account layer this is an acceptable
+        trade for a permanence ceiling that nothing else in cryptocurrency
+        approaches.
+      </p>
+    </div>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Dalos vs Apollo — when each is used</h2>
+
+    <div class="overflow-x-auto card p-2 rounded mb-8">
+      <table class="text-sm">
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th>Apollo</th>
+            <th>Dalos</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Safe scalar</td>
+            <td>1024 bits</td>
+            <td>1600 bits</td>
+          </tr>
+          <tr>
+            <td>Used for</td>
+            <td>Codex Identity (1 per Codex, 2 halves)</td>
+            <td>Ouronet accounts (many per Codex)</td>
+          </tr>
+          <tr>
+            <td>Prefix glyph</td>
+            <td><code>₱.</code> Standard, <code>Π.</code> Smart</td>
+            <td><code>Ѻ.</code> Standard, <code>Σ.</code> Smart</td>
+          </tr>
+          <tr>
+            <td>Total per Codex</td>
+            <td>2<sup>2048</sup> ≈ 10<sup>616</sup></td>
+            <td>2<sup>1600</sup> ≈ 10<sup>481</sup> (per account; unlimited count)</td>
+          </tr>
+          <tr>
+            <td>Signature verification</td>
+            <td>Off-chain only (Apollo not Pact-native)</td>
+            <td>Off-chain; on-chain via Pact native verifier for the chain-side ED25519 Payment Key</td>
+          </tr>
+          <tr>
+            <td>Design intent</td>
+            <td>Identity (permanent handle)</td>
+            <td>Operational accounts (frequent use)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="text-parchment/80 text-sm leading-relaxed mb-4">
+      Note that the Codex Identity space is larger than the per-account Dalos
+      space (10<sup>616</sup> vs 10<sup>481</sup>) — by design. The identity
+      layer needs more cryptographic margin than any individual account
+      because identity is meant to be permanent, while accounts can be
+      rotated. Apollo's 2×1024 architecture also gives the identity layer a
+      Guardian-style cosign model that single-key accounts don't have.
+    </p>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Schnorr signatures on Dalos</h2>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      Like Apollo, Dalos uses Schnorr signatures. Each signature is a pair
+      <code>(R, s)</code> with verification <code>s·G = R + e·P</code>. The
+      math is the same as Apollo; only the curve parameters differ.
+    </p>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      Dalos signatures are also off-chain-verified in user-facing contexts (the
+      Mnemosyne web app, OuronetUI, AncientHoldings, etc.). On
+      <span class="stoachain">StoaChain</span> itself, Dalos signatures don't
+      reach the Pact runtime — chain operations are authorized by the
+      Ouronet account's <strong>Payment Key</strong>, which is a Stoa-native
+      ED25519 keypair (<code>k:</code> account format). Dalos and the Payment
+      Key are linked at account-creation time and together form what we call
+      an "Ouronet account" in the user-facing sense.
+    </p>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Where Dalos seed words come from</h2>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      A Dalos account can be created from any of these inputs:
+    </p>
+
+    <ul class="text-parchment/80 space-y-2 ml-6 mb-6">
+      <li>• Random (system-generated; user never sees the seed)</li>
+      <li>• A bitstring (1600 bits raw binary)</li>
+      <li>• A base-10 scalar (a big number, up to ~482 digits)</li>
+      <li>• A base-49 scalar (the curve's natural base — most compact)</li>
+      <li>• Seed words from the <a href="/docs/dalos-character-set.html" class="text-bronze hover:text-gold">Dalos Character Set</a> (the human-friendly path)</li>
+      <li>• A 40×40 bitmap (1600 pixels = 1600 bits, paste or scan)</li>
+    </ul>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      All six are equivalent — they're different encodings of the same 1600
+      bits of entropy. The dalos-crypto package handles conversion between
+      them; you can supply any format the user provides.
+    </p>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Related</h2>
+
+    <div class="grid md:grid-cols-2 gap-4 mb-8">
+      <a href="/docs/dalos-character-set.html" class="card p-4 rounded block">
+        <div class="text-bronze font-semibold">The Dalos Character Set →</div>
+        <div class="text-xs text-parchment/70 mt-1">The 256-glyph alphabet, including how Dalos seed words are composed.</div>
+      </a>
+      <a href="/docs/apollo-curve.html" class="card p-4 rounded block">
+        <div class="text-bronze font-semibold">The Apollo Elliptic Curve →</div>
+        <div class="text-xs text-parchment/70 mt-1">The 1024-bit twin used for Codex Identity.</div>
+      </a>
+    </div>
+
+    <p class="text-parchment/60 text-sm">
+      Reference implementation:
+      <a href="https://github.com/StoaChain/DALOS_Crypto" class="text-bronze hover:text-gold">github.com/StoaChain/DALOS_Crypto</a>
+    </p>
+
+  </div>
+</section>
+
+<footer class="py-12 px-6 border-t border-bronze/20 bg-stoa-deep mt-16">
+  <div class="max-w-6xl mx-auto text-center">
+    <div class="glyph text-3xl mb-4">ΛΛ</div>
+    <p class="font-classical text-xl text-bronze mb-2"><span class="brand-lambda">ΛΛ</span>nemosyne</p>
+    <p class="text-sm text-parchment/60">
+      Part of the <span class="stoachain">StoaChain</span>/<span class="ouronet">Ouronet</span> ecosystem.
+      Built by <a href="https://ancientholdings.eu" class="text-bronze hover:text-gold transition">AncientHoldings GmbH</a>.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>

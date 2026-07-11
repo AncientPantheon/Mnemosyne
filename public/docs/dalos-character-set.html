@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Dalos Character Set — Mnemosyne Documentation</title>
+<meta name="description" content="A 256-glyph cryptographic alphabet that frees seed words from fixed dictionaries. Multi-language, composable, memorable." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/assets/styles.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: {
+      fontFamily: { 'classical': ['Cinzel','serif'], 'sans': ['Inter','sans-serif'], 'mono': ['JetBrains Mono','monospace'] },
+      colors: { 'parchment':'#f5ecd9','bronze':'#b8860b','bronze-dim':'#8b6914','gold':'#d4a04a','stoa-stone':'#2a2520','stoa-deep':'#0d0a07' }
+    }}
+  }
+</script>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-stoa-deep/80 border-b border-bronze/20">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <a href="/index.html" class="font-classical text-xl text-bronze"><span class="brand-lambda">ΛΛ</span>nemosyne</a>
+    <div class="hidden md:flex gap-6 text-sm">
+      <a href="/index.html" class="text-parchment/70 transition">Landing</a>
+      <a href="/docs/index.html" class="text-bronze">Documentation</a>
+      <a href="https://github.com/OuroborosNetwork/Mnemosyne" class="text-parchment/70 transition">GitHub</a>
+    </div>
+    <span class="pill">v0.1 design</span>
+  </div>
+</nav>
+
+<section class="pt-32 pb-8 px-6">
+  <div class="max-w-4xl mx-auto">
+    <div class="doc-breadcrumb">
+      <a href="/index.html"><span class="brand-lambda">ΛΛ</span>nemosyne</a> &nbsp;/&nbsp;
+      <a href="/docs/index.html">Documentation</a> &nbsp;/&nbsp;
+      The Dalos Character Set
+    </div>
+    <div class="doc-header">
+      <h1 class="font-classical text-4xl md:text-5xl text-bronze mb-3">The Dalos Character Set</h1>
+      <p class="text-parchment/70 text-lg">
+        A 256-glyph cryptographic alphabet — the foundation for free-form,
+        memorable, multi-language seed words.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="pb-12 px-6">
+  <div class="max-w-4xl mx-auto">
+
+    <h2 class="font-classical text-2xl text-bronze mb-4">The unprecedented part</h2>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      Every existing cryptocurrency seed-phrase system makes you pick from a
+      fixed list. Bitcoin's BIP-39 has 2048 English words. Monero has 1626.
+      Ethereum derivatives recycle BIP-39. Hardware wallets ship with the same
+      lists. You memorize a sequence pulled from a vocabulary somebody else chose.
+    </p>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      The Dalos Character Set inverts this. Instead of a fixed list of <em>words</em>,
+      it gives you a fixed alphabet of <strong>256 glyphs</strong> — and lets you
+      compose any words you want from that alphabet. You're not picking from a list;
+      you're <em>writing</em>. In your own language, your own dialect, your own
+      personal style.
+    </p>
+
+    <div class="sidebar mb-8">
+      <div class="sidebar-title">The numbers</div>
+      <ul class="text-sm text-parchment/80 space-y-1">
+        <li>• <strong>256 glyphs</strong> in the character set (arranged as a 16×16 matrix)</li>
+        <li>• <strong>Up to 512 seed words</strong> per Codex Identity</li>
+        <li>• <strong>Up to 256 glyphs</strong> per word</li>
+        <li>• Words separated by whitespace, no length constraints within the per-word maximum</li>
+        <li>• Total entropy ceiling: <code>2<sup>1048576</sup></code> distinct seed compositions
+          (512 × 256 × 8 bits = 1,048,576 bits — wildly more than any cryptographic curve can consume,
+          which is why we cap at sensible practical lengths)</li>
+      </ul>
+    </div>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      This is the first time in cryptocurrency history that you can construct
+      a seed phrase that doesn't have to live in any dictionary anywhere — including
+      Anglo-centric ones. The vault is yours. The mnemonic format is yours. The
+      vocabulary is yours.
+    </p>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Why this matters for security</h2>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      Fixed dictionaries leak structure. If an attacker knows you used BIP-39,
+      they know your seed is 12 or 24 words drawn from a public 2048-word list.
+      The search space for a 24-word BIP-39 seed is <code>2048<sup>24</sup></code>
+      ≈ <code>10<sup>79.2</sup></code> combinations. Big — but bounded by a known
+      dictionary.
+    </p>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      With the Dalos Character Set, an attacker doesn't even know what
+      vocabulary you used. They don't know which language, which glyphs you
+      favoured, how many words, or how long each word is. The combinatorial
+      space exceeds anything an attacker can reasonably enumerate — and crucially,
+      the only way to constrain it is to know <em>your</em> personal seed-building
+      habits, which is exactly the property a good mnemonic should have.
+    </p>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Multi-language support</h2>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      The 256-glyph set draws from multiple writing systems on purpose. You can
+      compose words in:
+    </p>
+
+    <ul class="text-parchment/80 space-y-2 ml-6 mb-6">
+      <li>• Latin scripts (English, Romanian, German, French, Italian, Polish, Scandinavian, …)</li>
+      <li>• Cyrillic scripts (Russian, Ukrainian, Bulgarian, Serbian, …)</li>
+      <li>• Greek</li>
+      <li>• Mathematical, currency, and special symbols (₿ ₱ Σ Δ ∇ ψ φ …)</li>
+      <li>• Diacritics and combining accents (ã ñ ç ø ž ł …)</li>
+    </ul>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      A user in Bucharest can write seed words like <code>bunătate</code> or
+      <code>mihai</code> in proper Romanian. A user in Moscow can write
+      <code>правда</code>. A user in Athens can write <code>αλήθεια</code>. A
+      user who wants a personal cipher can write <code>ψøŔлα</code>. All of these
+      are first-class Dalos seed words — no transliteration to Anglo
+      vocabulary needed.
+    </p>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">"Store your vault in your head, in your own language"</h2>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      This is the human-facing pitch. A 24-word BIP-39 seed is hard to memorize
+      because the words don't form a story — they're random nouns drawn from a
+      vocabulary you wouldn't naturally use. <em>"abandon ability about above
+      absent absorb…"</em> is impossible to mnemonicize because nobody talks like that.
+    </p>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      With the Dalos Character Set you can pick words that mean something to you.
+      The opening line of your favourite poem, a sentence from your grandmother,
+      a private joke between friends. The seed doesn't have to be random nouns
+      — it can be a story you can actually remember. That's the difference between
+      a vault you have to write down (and lose) and a vault that lives in your head.
+    </p>
+
+    <div class="sidebar mb-8">
+      <div class="sidebar-title">Example seed compositions</div>
+      <div class="space-y-3 text-sm">
+        <div>
+          <div class="text-bronze text-xs mb-1">Conventional English (looks like BIP-39 but isn't)</div>
+          <code class="text-xs">train ensure ankle fine magic hamster blade bag</code>
+        </div>
+        <div>
+          <div class="text-bronze text-xs mb-1">Romanian (with diacritics)</div>
+          <code class="text-xs">bunătate adevăr lumină ploaie cuvânt rădăcină</code>
+        </div>
+        <div>
+          <div class="text-bronze text-xs mb-1">Greek</div>
+          <code class="text-xs">αλήθεια λόγος φως μνήμη ψυχή σοφία</code>
+        </div>
+        <div>
+          <div class="text-bronze text-xs mb-1">Mixed personal-cipher style</div>
+          <code class="text-xs">mihai₿ ψøŔлα ŻЪłΘ̃ç1999 ëŻgöï marți14</code>
+        </div>
+        <div>
+          <div class="text-bronze text-xs mb-1">A line from a poem the user knows by heart</div>
+          <code class="text-xs">la fântâna lui Caragea curge apa în trei pârâie</code>
+        </div>
+        <div>
+          <div class="text-bronze text-xs mb-1">Ludicrous mode (random-glyph, ~256-char "words")</div>
+          <code class="text-xs">çØUŃøìȚulVí4I₳п€yìÞôů … <span class="text-parchment/40">(continues for 256 glyphs)</span></code>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">The canonical 16×16 character matrix</h2>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      The 256 glyphs are arranged as a 16×16 grid. Each byte value
+      <code>B</code> (0–255) indexes to the glyph at position
+      <code>(row B÷16, column B mod 16)</code>. This is how the dalos-crypto
+      package encodes binary data as readable glyph sequences — 160 bytes of
+      pubkey become 160 glyphs of address.
+    </p>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed text-sm">
+      <strong>Hover any glyph below</strong> to see its name and Unicode codepoint.
+      The matrix is rendered from the canonical data extracted directly from
+      <code>DALOS_Crypto/Elliptic/CharacterMatrix.go</code> — what you see is
+      byte-for-byte the matrix the curve actually uses to encode addresses.
+    </p>
+
+    <div id="dalos-matrix" class="dalos-matrix"></div>
+
+    <p class="text-xs text-parchment/40 text-center mb-8">
+      Canonical 256-glyph layout sourced from
+      <a href="https://github.com/StoaChain/DALOS_Crypto/blob/main/Elliptic/CharacterMatrix.go" class="text-bronze hover:text-gold">DALOS_Crypto/Elliptic/CharacterMatrix.go</a>.
+      Note that <code>space</code>, <code>-</code> (hyphen), and <code>.</code> (period)
+      are NOT in the set — space is reserved as the seed-word separator; punctuation is excluded.
+    </p>
+
+    <style>
+      .dalos-matrix {
+        display: grid;
+        grid-template-columns: repeat(16, 1fr);
+        gap: 2px;
+        background: rgba(184, 134, 11, 0.25);
+        padding: 2px;
+        border-radius: 0.25rem;
+        max-width: 40rem;
+        margin: 1rem auto 0.5rem;
+      }
+      .dalos-cell {
+        position: relative;
+        background: rgba(13, 10, 7, 0.85);
+        text-align: center;
+        padding: 0.45rem 0.1rem;
+        color: #d4a04a;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 1rem;
+        line-height: 1;
+        cursor: help;
+        transition: background 0.15s, transform 0.15s;
+        user-select: text;
+      }
+      .dalos-cell:hover {
+        background: rgba(184, 134, 11, 0.5);
+        color: #1a1612;
+        transform: scale(1.5);
+        z-index: 5;
+      }
+      .dalos-cell .dalos-tooltip {
+        display: none;
+        position: absolute;
+        bottom: calc(100% + 10px);
+        left: 50%;
+        transform: translateX(-50%) scale(0.6667);
+        transform-origin: bottom center;
+        background: #0d0a07;
+        border: 1px solid #b8860b;
+        border-radius: 0.4rem;
+        padding: 0.6rem 0.75rem;
+        min-width: 11rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.7);
+        z-index: 100;
+        pointer-events: none;
+      }
+      .dalos-cell:hover .dalos-tooltip {
+        display: block;
+      }
+      .dalos-tooltip-glyph {
+        font-family: 'Cinzel', serif;
+        font-size: 2.4rem;
+        color: #d4a04a;
+        line-height: 1;
+        text-align: center;
+        margin-bottom: 0.4rem;
+        text-shadow: 0 0 12px rgba(184, 134, 11, 0.6);
+      }
+      .dalos-tooltip-name {
+        color: #f5ecd9;
+        font-size: 0.78rem;
+        text-align: center;
+        font-family: 'Inter', sans-serif;
+        margin-bottom: 0.2rem;
+      }
+      .dalos-tooltip-unicode {
+        color: #b8860b;
+        font-size: 0.7rem;
+        text-align: center;
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .dalos-tooltip-index {
+        color: rgba(245, 236, 217, 0.4);
+        font-size: 0.65rem;
+        text-align: center;
+        font-family: 'JetBrains Mono', monospace;
+        margin-top: 0.15rem;
+      }
+    </style>
+
+    <script>
+      const dalosChars = [
+        // 0-9 — Digits
+        {g:"0",u:"U+0030",n:"Digit Zero"},{g:"1",u:"U+0031",n:"Digit One"},{g:"2",u:"U+0032",n:"Digit Two"},{g:"3",u:"U+0033",n:"Digit Three"},{g:"4",u:"U+0034",n:"Digit Four"},{g:"5",u:"U+0035",n:"Digit Five"},{g:"6",u:"U+0036",n:"Digit Six"},{g:"7",u:"U+0037",n:"Digit Seven"},{g:"8",u:"U+0038",n:"Digit Eight"},{g:"9",u:"U+0039",n:"Digit Nine"},
+        // 10-19 — Currencies and ecosystem symbols
+        {g:"Ѻ",u:"U+047A",n:"Cyrillic Round Omega (Ouroboros)"},{g:"₿",u:"U+20BF",n:"Bitcoin Sign"},{g:"$",u:"U+0024",n:"Dollar Sign"},{g:"¢",u:"U+00A2",n:"Cent Sign"},{g:"€",u:"U+20AC",n:"Euro Sign"},{g:"£",u:"U+00A3",n:"Pound Sign"},{g:"¥",u:"U+00A5",n:"Yen Sign"},{g:"₱",u:"U+20B1",n:"Peso Sign (Apollo Standard)"},{g:"₳",u:"U+20B3",n:"Austral (AURYN)"},{g:"∇",u:"U+2207",n:"Nabla (TALOS)"},
+        // 20-45 — Latin Capital Letters
+        {g:"A",u:"U+0041",n:"Latin Capital A"},{g:"B",u:"U+0042",n:"Latin Capital B"},{g:"C",u:"U+0043",n:"Latin Capital C"},{g:"D",u:"U+0044",n:"Latin Capital D"},{g:"E",u:"U+0045",n:"Latin Capital E"},{g:"F",u:"U+0046",n:"Latin Capital F"},{g:"G",u:"U+0047",n:"Latin Capital G"},{g:"H",u:"U+0048",n:"Latin Capital H"},{g:"I",u:"U+0049",n:"Latin Capital I"},{g:"J",u:"U+004A",n:"Latin Capital J"},{g:"K",u:"U+004B",n:"Latin Capital K"},{g:"L",u:"U+004C",n:"Latin Capital L"},{g:"M",u:"U+004D",n:"Latin Capital M"},{g:"N",u:"U+004E",n:"Latin Capital N"},{g:"O",u:"U+004F",n:"Latin Capital O"},{g:"P",u:"U+0050",n:"Latin Capital P"},{g:"Q",u:"U+0051",n:"Latin Capital Q"},{g:"R",u:"U+0052",n:"Latin Capital R"},{g:"S",u:"U+0053",n:"Latin Capital S"},{g:"T",u:"U+0054",n:"Latin Capital T"},{g:"U",u:"U+0055",n:"Latin Capital U"},{g:"V",u:"U+0056",n:"Latin Capital V"},{g:"W",u:"U+0057",n:"Latin Capital W"},{g:"X",u:"U+0058",n:"Latin Capital X"},{g:"Y",u:"U+0059",n:"Latin Capital Y"},{g:"Z",u:"U+005A",n:"Latin Capital Z"},
+        // 46-71 — Latin Small Letters
+        {g:"a",u:"U+0061",n:"Latin Small a"},{g:"b",u:"U+0062",n:"Latin Small b"},{g:"c",u:"U+0063",n:"Latin Small c"},{g:"d",u:"U+0064",n:"Latin Small d"},{g:"e",u:"U+0065",n:"Latin Small e"},{g:"f",u:"U+0066",n:"Latin Small f"},{g:"g",u:"U+0067",n:"Latin Small g"},{g:"h",u:"U+0068",n:"Latin Small h"},{g:"i",u:"U+0069",n:"Latin Small i"},{g:"j",u:"U+006A",n:"Latin Small j"},{g:"k",u:"U+006B",n:"Latin Small k"},{g:"l",u:"U+006C",n:"Latin Small l"},{g:"m",u:"U+006D",n:"Latin Small m"},{g:"n",u:"U+006E",n:"Latin Small n"},{g:"o",u:"U+006F",n:"Latin Small o"},{g:"p",u:"U+0070",n:"Latin Small p"},{g:"q",u:"U+0071",n:"Latin Small q"},{g:"r",u:"U+0072",n:"Latin Small r"},{g:"s",u:"U+0073",n:"Latin Small s"},{g:"t",u:"U+0074",n:"Latin Small t"},{g:"u",u:"U+0075",n:"Latin Small u"},{g:"v",u:"U+0076",n:"Latin Small v"},{g:"w",u:"U+0077",n:"Latin Small w"},{g:"x",u:"U+0078",n:"Latin Small x"},{g:"y",u:"U+0079",n:"Latin Small y"},{g:"z",u:"U+007A",n:"Latin Small z"},
+        // 72-124 — Latin Extended Capitals (53)
+        {g:"Æ",u:"U+00C6",n:"Latin Capital AE"},{g:"Œ",u:"U+0152",n:"Latin Capital OE"},{g:"Á",u:"U+00C1",n:"A with Acute"},{g:"Ă",u:"U+0102",n:"A with Breve"},{g:"Â",u:"U+00C2",n:"A with Circumflex"},{g:"Ä",u:"U+00C4",n:"A with Diaeresis"},{g:"À",u:"U+00C0",n:"A with Grave"},{g:"Ą",u:"U+0104",n:"A with Ogonek"},{g:"Å",u:"U+00C5",n:"A with Ring Above"},{g:"Ã",u:"U+00C3",n:"A with Tilde"},{g:"Ć",u:"U+0106",n:"C with Acute"},{g:"Č",u:"U+010C",n:"C with Caron"},{g:"Ç",u:"U+00C7",n:"C with Cedilla"},{g:"Ď",u:"U+010E",n:"D with Caron"},{g:"Đ",u:"U+0110",n:"D with Stroke"},{g:"É",u:"U+00C9",n:"E with Acute"},{g:"Ě",u:"U+011A",n:"E with Caron"},{g:"Ê",u:"U+00CA",n:"E with Circumflex"},{g:"Ë",u:"U+00CB",n:"E with Diaeresis"},{g:"È",u:"U+00C8",n:"E with Grave"},{g:"Ę",u:"U+0118",n:"E with Ogonek"},{g:"Ğ",u:"U+011E",n:"G with Breve"},{g:"Í",u:"U+00CD",n:"I with Acute"},{g:"Î",u:"U+00CE",n:"I with Circumflex"},{g:"Ï",u:"U+00CF",n:"I with Diaeresis"},{g:"Ì",u:"U+00CC",n:"I with Grave"},{g:"Ł",u:"U+0141",n:"L with Stroke"},{g:"Ń",u:"U+0143",n:"N with Acute"},{g:"Ñ",u:"U+00D1",n:"N with Tilde"},{g:"Ó",u:"U+00D3",n:"O with Acute"},{g:"Ô",u:"U+00D4",n:"O with Circumflex"},{g:"Ö",u:"U+00D6",n:"O with Diaeresis"},{g:"Ò",u:"U+00D2",n:"O with Grave"},{g:"Ø",u:"U+00D8",n:"O with Stroke"},{g:"Õ",u:"U+00D5",n:"O with Tilde"},{g:"Ř",u:"U+0158",n:"R with Caron"},{g:"Ś",u:"U+015A",n:"S with Acute"},{g:"Š",u:"U+0160",n:"S with Caron"},{g:"Ş",u:"U+015E",n:"S with Cedilla"},{g:"Ș",u:"U+0218",n:"S with Comma Below"},{g:"Þ",u:"U+00DE",n:"Thorn"},{g:"Ť",u:"U+0164",n:"T with Caron"},{g:"Ț",u:"U+021A",n:"T with Comma Below"},{g:"Ú",u:"U+00DA",n:"U with Acute"},{g:"Û",u:"U+00DB",n:"U with Circumflex"},{g:"Ü",u:"U+00DC",n:"U with Diaeresis"},{g:"Ù",u:"U+00D9",n:"U with Grave"},{g:"Ů",u:"U+016E",n:"U with Ring Above"},{g:"Ý",u:"U+00DD",n:"Y with Acute"},{g:"Ÿ",u:"U+0178",n:"Y with Diaeresis"},{g:"Ź",u:"U+0179",n:"Z with Acute"},{g:"Ž",u:"U+017D",n:"Z with Caron"},{g:"Ż",u:"U+017B",n:"Z with Dot Above"},
+        // 125-178 — Latin Extended Smalls (54)
+        {g:"æ",u:"U+00E6",n:"Latin Small ae"},{g:"œ",u:"U+0153",n:"Latin Small oe"},{g:"á",u:"U+00E1",n:"a with acute"},{g:"ă",u:"U+0103",n:"a with breve"},{g:"â",u:"U+00E2",n:"a with circumflex"},{g:"ä",u:"U+00E4",n:"a with diaeresis"},{g:"à",u:"U+00E0",n:"a with grave"},{g:"ą",u:"U+0105",n:"a with ogonek"},{g:"å",u:"U+00E5",n:"a with ring above"},{g:"ã",u:"U+00E3",n:"a with tilde"},{g:"ć",u:"U+0107",n:"c with acute"},{g:"č",u:"U+010D",n:"c with caron"},{g:"ç",u:"U+00E7",n:"c with cedilla"},{g:"ď",u:"U+010F",n:"d with caron"},{g:"đ",u:"U+0111",n:"d with stroke"},{g:"é",u:"U+00E9",n:"e with acute"},{g:"ě",u:"U+011B",n:"e with caron"},{g:"ê",u:"U+00EA",n:"e with circumflex"},{g:"ë",u:"U+00EB",n:"e with diaeresis"},{g:"è",u:"U+00E8",n:"e with grave"},{g:"ę",u:"U+0119",n:"e with ogonek"},{g:"ğ",u:"U+011F",n:"g with breve"},{g:"í",u:"U+00ED",n:"i with acute"},{g:"î",u:"U+00EE",n:"i with circumflex"},{g:"ï",u:"U+00EF",n:"i with diaeresis"},{g:"ì",u:"U+00EC",n:"i with grave"},{g:"ł",u:"U+0142",n:"l with stroke"},{g:"ń",u:"U+0144",n:"n with acute"},{g:"ñ",u:"U+00F1",n:"n with tilde"},{g:"ó",u:"U+00F3",n:"o with acute"},{g:"ô",u:"U+00F4",n:"o with circumflex"},{g:"ö",u:"U+00F6",n:"o with diaeresis"},{g:"ò",u:"U+00F2",n:"o with grave"},{g:"ø",u:"U+00F8",n:"o with stroke"},{g:"õ",u:"U+00F5",n:"o with tilde"},{g:"ř",u:"U+0159",n:"r with caron"},{g:"ś",u:"U+015B",n:"s with acute"},{g:"š",u:"U+0161",n:"s with caron"},{g:"ş",u:"U+015F",n:"s with cedilla"},{g:"ș",u:"U+0219",n:"s with comma below"},{g:"þ",u:"U+00FE",n:"thorn"},{g:"ť",u:"U+0165",n:"t with caron"},{g:"ț",u:"U+021B",n:"t with comma below"},{g:"ú",u:"U+00FA",n:"u with acute"},{g:"û",u:"U+00FB",n:"u with circumflex"},{g:"ü",u:"U+00FC",n:"u with diaeresis"},{g:"ù",u:"U+00F9",n:"u with grave"},{g:"ů",u:"U+016F",n:"u with ring above"},{g:"ý",u:"U+00FD",n:"y with acute"},{g:"ÿ",u:"U+00FF",n:"y with diaeresis"},{g:"ź",u:"U+017A",n:"z with acute"},{g:"ž",u:"U+017E",n:"z with caron"},{g:"ż",u:"U+017C",n:"z with dot above"},{g:"ß",u:"U+00DF",n:"sharp s (eszett)"},
+        // 179-188 — Greek Capitals
+        {g:"Γ",u:"U+0393",n:"Greek Capital Gamma"},{g:"Δ",u:"U+0394",n:"Greek Capital Delta"},{g:"Θ",u:"U+0398",n:"Greek Capital Theta"},{g:"Λ",u:"U+039B",n:"Greek Capital Lambda"},{g:"Ξ",u:"U+039E",n:"Greek Capital Xi"},{g:"Π",u:"U+03A0",n:"Greek Capital Pi (Apollo Smart)"},{g:"Σ",u:"U+03A3",n:"Greek Capital Sigma (Smart Ouronet)"},{g:"Φ",u:"U+03A6",n:"Greek Capital Phi"},{g:"Ψ",u:"U+03A8",n:"Greek Capital Psi"},{g:"Ω",u:"U+03A9",n:"Greek Capital Omega"},
+        // 189-211 — Greek Smalls
+        {g:"α",u:"U+03B1",n:"Greek Small Alpha"},{g:"β",u:"U+03B2",n:"Greek Small Beta"},{g:"γ",u:"U+03B3",n:"Greek Small Gamma"},{g:"δ",u:"U+03B4",n:"Greek Small Delta"},{g:"ε",u:"U+03B5",n:"Greek Small Epsilon"},{g:"ζ",u:"U+03B6",n:"Greek Small Zeta"},{g:"η",u:"U+03B7",n:"Greek Small Eta"},{g:"θ",u:"U+03B8",n:"Greek Small Theta"},{g:"ι",u:"U+03B9",n:"Greek Small Iota"},{g:"κ",u:"U+03BA",n:"Greek Small Kappa"},{g:"λ",u:"U+03BB",n:"Greek Small Lambda"},{g:"μ",u:"U+03BC",n:"Greek Small Mu"},{g:"ν",u:"U+03BD",n:"Greek Small Nu"},{g:"ξ",u:"U+03BE",n:"Greek Small Xi"},{g:"π",u:"U+03C0",n:"Greek Small Pi"},{g:"ρ",u:"U+03C1",n:"Greek Small Rho"},{g:"σ",u:"U+03C3",n:"Greek Small Sigma"},{g:"ς",u:"U+03C2",n:"Greek Small Final Sigma"},{g:"τ",u:"U+03C4",n:"Greek Small Tau"},{g:"φ",u:"U+03C6",n:"Greek Small Phi"},{g:"χ",u:"U+03C7",n:"Greek Small Chi"},{g:"ψ",u:"U+03C8",n:"Greek Small Psi"},{g:"ω",u:"U+03C9",n:"Greek Small Omega"},
+        // 212-230 — Cyrillic Capitals
+        {g:"Б",u:"U+0411",n:"Cyrillic Capital Be"},{g:"Д",u:"U+0414",n:"Cyrillic Capital De"},{g:"Ж",u:"U+0416",n:"Cyrillic Capital Zhe"},{g:"З",u:"U+0417",n:"Cyrillic Capital Ze"},{g:"И",u:"U+0418",n:"Cyrillic Capital I"},{g:"Й",u:"U+0419",n:"Cyrillic Capital Short I"},{g:"Л",u:"U+041B",n:"Cyrillic Capital El"},{g:"П",u:"U+041F",n:"Cyrillic Capital Pe"},{g:"У",u:"U+0423",n:"Cyrillic Capital U"},{g:"Ц",u:"U+0426",n:"Cyrillic Capital Tse"},{g:"Ч",u:"U+0427",n:"Cyrillic Capital Che"},{g:"Ш",u:"U+0428",n:"Cyrillic Capital Sha"},{g:"Щ",u:"U+0429",n:"Cyrillic Capital Shcha"},{g:"Ъ",u:"U+042A",n:"Cyrillic Capital Hard Sign"},{g:"Ы",u:"U+042B",n:"Cyrillic Capital Yeru"},{g:"Ь",u:"U+042C",n:"Cyrillic Capital Soft Sign"},{g:"Э",u:"U+042D",n:"Cyrillic Capital E"},{g:"Ю",u:"U+042E",n:"Cyrillic Capital Yu"},{g:"Я",u:"U+042F",n:"Cyrillic Capital Ya"},
+        // 231-255 — Cyrillic Smalls
+        {g:"б",u:"U+0431",n:"Cyrillic Small be"},{g:"в",u:"U+0432",n:"Cyrillic Small ve"},{g:"д",u:"U+0434",n:"Cyrillic Small de"},{g:"ж",u:"U+0436",n:"Cyrillic Small zhe"},{g:"з",u:"U+0437",n:"Cyrillic Small ze"},{g:"и",u:"U+0438",n:"Cyrillic Small i"},{g:"й",u:"U+0439",n:"Cyrillic Small short i"},{g:"к",u:"U+043A",n:"Cyrillic Small ka"},{g:"л",u:"U+043B",n:"Cyrillic Small el"},{g:"м",u:"U+043C",n:"Cyrillic Small em"},{g:"н",u:"U+043D",n:"Cyrillic Small en"},{g:"п",u:"U+043F",n:"Cyrillic Small pe"},{g:"т",u:"U+0442",n:"Cyrillic Small te"},{g:"у",u:"U+0443",n:"Cyrillic Small u"},{g:"ф",u:"U+0444",n:"Cyrillic Small ef"},{g:"ц",u:"U+0446",n:"Cyrillic Small tse"},{g:"ч",u:"U+0447",n:"Cyrillic Small che"},{g:"ш",u:"U+0448",n:"Cyrillic Small sha"},{g:"щ",u:"U+0449",n:"Cyrillic Small shcha"},{g:"ъ",u:"U+044A",n:"Cyrillic Small hard sign"},{g:"ы",u:"U+044B",n:"Cyrillic Small yeru"},{g:"ь",u:"U+044C",n:"Cyrillic Small soft sign"},{g:"э",u:"U+044D",n:"Cyrillic Small e"},{g:"ю",u:"U+044E",n:"Cyrillic Small yu"},{g:"я",u:"U+044F",n:"Cyrillic Small ya"}
+      ];
+
+      (function renderDalosMatrix(){
+        const container = document.getElementById("dalos-matrix");
+        if (!container) return;
+        const frag = document.createDocumentFragment();
+        dalosChars.forEach((c, i) => {
+          const cell = document.createElement("div");
+          cell.className = "dalos-cell";
+          cell.textContent = c.g;
+          const tip = document.createElement("div");
+          tip.className = "dalos-tooltip";
+          tip.innerHTML =
+            '<div class="dalos-tooltip-glyph">' + c.g + '</div>' +
+            '<div class="dalos-tooltip-name">' + c.n + '</div>' +
+            '<div class="dalos-tooltip-unicode">' + c.u + '</div>' +
+            '<div class="dalos-tooltip-index">index ' + i + ' &middot; row ' + Math.floor(i/16) + ' col ' + (i%16) + '</div>';
+          cell.appendChild(tip);
+          frag.appendChild(cell);
+        });
+        container.appendChild(frag);
+        console.assert(dalosChars.length === 256, "Dalos Character Set must contain exactly 256 glyphs, got " + dalosChars.length);
+      })();
+    </script>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">From seed words to a private key</h2>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      The transformation from "human-typed seed words" to "elliptic-curve private
+      key" is deterministic:
+    </p>
+
+    <ol class="text-parchment/80 space-y-2 ml-6 mb-6 list-decimal">
+      <li>Concatenate all your seed words with single spaces</li>
+      <li>UTF-8 encode the resulting string</li>
+      <li>Apply seven-fold Blake3 (Blake3 chained seven times) with a 200-byte (1600-bit) output</li>
+      <li>The 1600-bit output becomes the bitstring input to the elliptic curve key generator</li>
+      <li>Reduce mod <code>Q</code> (the curve's subgroup order) to get the private key scalar</li>
+    </ol>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      The seven-fold Blake3 is deliberate: it makes derivation slow enough to
+      resist brute force on weak seeds while staying fast enough for legitimate
+      sign-in. Any two inputs producing the same 1600-bit Blake3 output collide;
+      the Blake3 collision-resistance bound (~2<sup>256</sup>) places this far
+      beyond reach.
+    </p>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">This applies to every key in your Codex, not just CodexID</h2>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      The Dalos Character Set isn't just for your Codex Identity seed. Every
+      <span class="ouronet">Ouronet</span> account in your Codex is also derived
+      from a seed (or a directly-supplied raw key), and any seed can use the
+      Dalos Character Set the same way.
+    </p>
+
+    <p class="text-parchment/80 mb-4 leading-relaxed">
+      In practice, this rarely matters — you remember <em>one</em> Codex Identity
+      seed (the master one), and inside the Codex itself you'll have hundreds
+      of accounts using whatever derivation made sense at creation. The
+      property that matters is: <strong>if you can remember the Codex Identity
+      seed, you can recover the entire Codex</strong>, and from there every
+      Ouronet account, every saved key, every stored secret.
+    </p>
+
+    <h2 class="font-classical text-2xl text-bronze mb-4 mt-12">Related</h2>
+
+    <div class="grid md:grid-cols-2 gap-4 mb-8">
+      <a href="/docs/apollo-curve.html" class="card p-4 rounded block">
+        <div class="text-bronze font-semibold">The Apollo Elliptic Curve →</div>
+        <div class="text-xs text-parchment/70 mt-1">Where Dalos-Character-Set seed words become Codex Identity keys.</div>
+      </a>
+      <a href="/docs/dalos-curve.html" class="card p-4 rounded block">
+        <div class="text-bronze font-semibold">The Dalos Elliptic Curve →</div>
+        <div class="text-xs text-parchment/70 mt-1">Where Dalos-Character-Set seed words become Ouronet account keys.</div>
+      </a>
+    </div>
+
+    <p class="text-parchment/60 text-sm">
+      Reference implementation:
+      <a href="https://github.com/StoaChain/DALOS_Crypto" class="text-bronze hover:text-gold">github.com/StoaChain/DALOS_Crypto</a>
+    </p>
+
+  </div>
+</section>
+
+<footer class="py-12 px-6 border-t border-bronze/20 bg-stoa-deep mt-16">
+  <div class="max-w-6xl mx-auto text-center">
+    <div class="glyph text-3xl mb-4">ΛΛ</div>
+    <p class="font-classical text-xl text-bronze mb-2"><span class="brand-lambda">ΛΛ</span>nemosyne</p>
+    <p class="text-sm text-parchment/60">
+      Part of the <span class="stoachain">StoaChain</span>/<span class="ouronet">Ouronet</span> ecosystem.
+      Built by <a href="https://ancientholdings.eu" class="text-bronze hover:text-gold transition">AncientHoldings GmbH</a>.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>

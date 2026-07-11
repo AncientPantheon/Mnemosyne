@@ -1,0 +1,206 @@
+/* Mnemosyne admin panel — the stoa-deep / bronze / parchment palette, matching the
+   codex bar and the landing wordmark. Scoped under .mnemo-admin so it never bleeds
+   into the marketing pages or the codex-ui-scoped styles. */
+.mnemo-admin {
+  --admin-bg: #0d0a07; /* stoa-deep */
+  --admin-surface: #1a1612; /* ink */
+  --admin-surface-2: #2a2520; /* stoa-stone */
+  --admin-border: #3d3530; /* stoa-stone-light */
+  --admin-text: #f5ecd9; /* parchment */
+  --admin-text-dim: #c9bfa8; /* dim parchment */
+  --admin-accent: #b8860b; /* bronze */
+  --admin-gold: #d4a04a; /* gold */
+  --admin-danger: #ff6b7d;
+
+  min-height: 100vh;
+  margin: 0 auto;
+  max-width: 860px;
+  padding: 2.5rem 1.5rem 4rem;
+  background: var(--admin-bg);
+  color: var(--admin-text);
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+.mnemo-admin-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid #b8860b33;
+}
+
+.mnemo-admin-headleft {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.mnemo-admin-title {
+  margin: 0;
+  font-family: "Cinzel", serif;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--admin-gold);
+}
+
+.mnemo-admin-btn--ghost {
+  background: transparent;
+  border: 1px solid #b8860b66;
+  color: var(--admin-gold, #d4a04a);
+}
+.mnemo-admin-btn--ghost:hover {
+  border-color: #b8860b;
+  background: #b8860b1a;
+}
+
+.mnemo-admin-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 1.75rem;
+}
+
+.mnemo-admin-card {
+  padding: 1.25rem 1.4rem;
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: 12px;
+}
+
+.mnemo-admin-gate {
+  margin-top: 2.5rem;
+  text-align: center;
+}
+
+.mnemo-admin-h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  color: var(--admin-gold);
+}
+
+.mnemo-admin-muted {
+  margin: 0.35rem 0;
+  color: var(--admin-text-dim);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.mnemo-admin-notice {
+  color: var(--admin-danger);
+  font-size: 0.95rem;
+}
+
+.mnemo-admin-status {
+  margin: 0.6rem 0 0;
+  color: var(--admin-gold);
+  font-size: 0.88rem;
+}
+
+.mnemo-admin-row {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.mnemo-admin-input {
+  flex: 1 1 260px;
+  padding: 0.55rem 0.7rem;
+  background: var(--admin-surface-2);
+  border: 1px solid #b8860b66;
+  border-radius: 8px;
+  color: var(--admin-text);
+  font-size: 0.9rem;
+}
+
+.mnemo-admin-input:focus {
+  outline: none;
+  border-color: var(--admin-accent);
+}
+
+.mnemo-admin-btn {
+  display: inline-block;
+  padding: 0.55rem 1rem;
+  background: transparent;
+  border: 1px solid #b8860b66;
+  border-radius: 8px;
+  color: var(--admin-text);
+  font-size: 0.88rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.mnemo-admin-btn:hover:not(:disabled) {
+  border-color: var(--admin-accent);
+  background: #b8860b1a;
+}
+
+.mnemo-admin-btn--primary {
+  background: var(--admin-accent);
+  border-color: var(--admin-accent);
+  color: #0d0a07;
+  font-weight: 600;
+}
+
+.mnemo-admin-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.mnemo-admin-result {
+  margin-top: 0.9rem;
+}
+
+.mnemo-admin-log {
+  max-height: 220px;
+  overflow: auto;
+  padding: 0.7rem;
+  background: #0d0a07;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  color: var(--admin-text-dim);
+  font-size: 0.78rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.mnemo-admin-chainlist {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mnemo-admin-chainlist li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background: var(--admin-surface-2);
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+}
+
+.mnemo-admin-chain {
+  font-weight: 600;
+}
+
+.mnemo-admin-badge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: #3d353066;
+  color: var(--admin-text-dim);
+  border: 1px solid var(--admin-border);
+}
+
+.mnemo-admin-badge--live {
+  background: #b8860b22;
+  color: var(--admin-gold);
+  border-color: #b8860b66;
+}

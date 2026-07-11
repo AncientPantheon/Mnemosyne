@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Documentation — Mnemosyne</title>
+<meta name="description" content="Technical documentation for the StoaChain™/Ouronet™ Codex management ecosystem." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/assets/styles.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: {
+      fontFamily: { 'classical': ['Cinzel','serif'], 'sans': ['Inter','sans-serif'], 'mono': ['JetBrains Mono','monospace'] },
+      colors: { 'parchment':'#f5ecd9','bronze':'#b8860b','bronze-dim':'#8b6914','gold':'#d4a04a','stoa-stone':'#2a2520','stoa-deep':'#0d0a07' }
+    }}
+  }
+</script>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-stoa-deep/80 border-b border-bronze/20">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <a href="/index.html" class="font-classical text-xl text-bronze"><span class="brand-lambda">ΛΛ</span>nemosyne</a>
+    <div class="hidden md:flex gap-6 text-sm">
+      <a href="/index.html" class="text-parchment/70 transition">Landing</a>
+      <a href="/docs/index.html" class="text-bronze">Documentation</a>
+      <a href="https://github.com/OuroborosNetwork/Mnemosyne" class="text-parchment/70 transition">GitHub</a>
+    </div>
+    <span class="pill">v0.1 design</span>
+  </div>
+</nav>
+
+<section class="pt-32 pb-12 px-6">
+  <div class="max-w-5xl mx-auto">
+    <div class="doc-breadcrumb"><a href="/index.html"><span class="brand-lambda">ΛΛ</span>nemosyne</a> &nbsp;/&nbsp; Documentation</div>
+    <h1 class="font-classical text-4xl md:text-5xl text-bronze mb-4">Documentation</h1>
+    <p class="text-parchment/70 max-w-3xl">
+      Technical reference for the <span class="stoachain">StoaChain</span>/<span class="ouronet">Ouronet</span>
+      cryptographic stack underneath Mnemosyne. Each page is self-contained and deep-linkable.
+      Start from the landing page if you want the narrative overview;
+      come here when you want the specifics.
+    </p>
+  </div>
+</section>
+
+<div class="greek-divider max-w-3xl mx-auto"></div>
+
+<section class="py-12 px-6">
+  <div class="max-w-5xl mx-auto">
+
+    <h2 class="font-classical text-2xl text-bronze mb-6">The Codex</h2>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-12">
+
+      <a href="/docs/codex-entities.html" class="card p-6 rounded-lg block">
+        <div class="glyph text-3xl mb-3">▤</div>
+        <h3 class="font-classical text-xl text-bronze mb-2">Codex Entities</h3>
+        <p class="text-sm text-parchment/80 mb-3">
+          Everything the Codex stores — <span class="ouronet">Ouronet</span> Accounts,
+          Seed Words (Koala / Chainweaver / Eckowallet), Pure Key Pairs,
+          <span class="stoachain">StoaChain</span> accounts (k/c/u/w/r/named),
+          Address Book, and Codex Consumer settings.
+        </p>
+        <span class="text-bronze text-xs">Read more →</span>
+      </a>
+
+      <div class="card p-6 rounded-lg opacity-60">
+        <div class="glyph text-3xl mb-3">…</div>
+        <h3 class="font-classical text-xl text-bronze mb-2">More Codex internals</h3>
+        <p class="text-sm text-parchment/80 mb-3">
+          Codex storage format, encryption envelope, recovery mechanics, and the
+          wire-level <code>v1.2</code> format spec will land here as v0.1 ships.
+        </p>
+        <span class="text-parchment/40 text-xs">Coming later</span>
+      </div>
+
+    </div>
+
+    <h2 class="font-classical text-2xl text-bronze mb-6 mt-8">Cryptographic primitives</h2>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-12">
+
+      <a href="/docs/dalos-character-set.html" class="card p-6 rounded-lg block">
+        <div class="glyph text-3xl mb-3">м</div>
+        <h3 class="font-classical text-xl text-bronze mb-2">The Dalos Character Set</h3>
+        <p class="text-sm text-parchment/80 mb-3">
+          A 256-glyph cryptographic alphabet that lets you compose seed words from
+          any writing system. Up to 512 words, each up to 256 glyphs. The first
+          system in crypto that frees users from fixed dictionary lists.
+        </p>
+        <span class="text-bronze text-xs">Read more →</span>
+      </a>
+
+      <a href="/docs/apollo-curve.html" class="card p-6 rounded-lg block">
+        <div class="glyph text-3xl mb-3">₱</div>
+        <h3 class="font-classical text-xl text-bronze mb-2">The Apollo Elliptic Curve</h3>
+        <p class="text-sm text-parchment/80 mb-3">
+          A 1024-bit Twisted Edwards Curve from the dalos-crypto family. Used for
+          Codex Identity (Standard + Smart halves, 2×1024 = 2048 bits combined).
+          Formal name: TEC_S1024_Pr1029p639_m729.
+        </p>
+        <span class="text-bronze text-xs">Read more →</span>
+      </a>
+
+      <a href="/docs/dalos-curve.html" class="card p-6 rounded-lg block">
+        <div class="glyph text-3xl mb-3">Ѻ</div>
+        <h3 class="font-classical text-xl text-bronze mb-2">The Dalos Elliptic Curve</h3>
+        <p class="text-sm text-parchment/80 mb-3">
+          A 1600-bit Twisted Edwards Curve from the dalos-crypto family. Used for
+          every <span class="ouronet">Ouronet</span> account (Standard <code>Ѻ.</code>
+          and Smart <code>Σ.</code>). Formal name: TEC_S1600_Pr1605p2315_m26.
+        </p>
+        <span class="text-bronze text-xs">Read more →</span>
+      </a>
+
+      <div class="card p-6 rounded-lg opacity-60">
+        <div class="glyph text-3xl mb-3">…</div>
+        <h3 class="font-classical text-xl text-bronze mb-2">More curves &amp; primitives</h3>
+        <p class="text-sm text-parchment/80 mb-3">
+          The dalos-crypto family also includes Leto, Artemis, and historical
+          curves. Documentation for these will land here as we surface them
+          in user-facing flows.
+        </p>
+        <span class="text-parchment/40 text-xs">Coming later</span>
+      </div>
+
+    </div>
+
+    <h2 class="font-classical text-2xl text-bronze mb-6 mt-8">On-chain primitives</h2>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-12">
+
+      <a href="/docs/ouronet-accounts.html" class="card p-6 rounded-lg block">
+        <div class="glyph text-3xl mb-3">Ѻ</div>
+        <h3 class="font-classical text-xl text-bronze mb-2">Ouronet Accounts</h3>
+        <p class="text-sm text-parchment/80 mb-3">
+          Anatomy of <code>Ѻ.</code> Standard and <code>Σ.</code> Smart accounts —
+          Public Key, Payment Key, Guard, plus the Smart-only Governor and
+          Sovereign slots. With a worked example showing the full flexibility of
+          the slot model.
+        </p>
+        <span class="text-bronze text-xs">Read more →</span>
+      </a>
+
+      <a href="/docs/stoictags.html" class="card p-6 rounded-lg block">
+        <div class="glyph text-3xl mb-3">§</div>
+        <h3 class="font-classical text-xl text-bronze mb-2">StoicTags</h3>
+        <p class="text-sm text-parchment/80 mb-3">
+          On-chain human-readable name registry for
+          <span class="ouronet">Ouronet</span> Accounts. Cost-gated, codex-agnostic,
+          anyone-can-register. <code>§bytales</code> resolves to a specific
+          <span class="ouronet">Ouronet</span> Account on the
+          <span class="stoachain">StoaChain</span>.
+        </p>
+        <span class="text-bronze text-xs">Read more →</span>
+      </a>
+
+    </div>
+
+    <div class="greek-divider mb-12"></div>
+
+    <h2 class="font-classical text-2xl text-bronze mb-6">External references</h2>
+    <div class="space-y-3 text-sm">
+      <div class="card p-4 rounded-lg">
+        <a href="https://github.com/StoaChain/DALOS_Crypto" class="text-bronze hover:text-gold transition">
+          github.com/StoaChain/DALOS_Crypto →
+        </a>
+        <p class="text-parchment/70 mt-1">
+          The Go reference implementation of all dalos-crypto primitives — every
+          curve, the character matrix, the Blake3 hashing pipeline, Schnorr
+          signatures. Source of truth.
+        </p>
+      </div>
+      <div class="card p-4 rounded-lg">
+        <a href="https://demiourgos-holdings-tm.gitbook.io/kadena/ouronet-cryptography/dalos-character-set" class="text-bronze hover:text-gold transition">
+          The Dalos Character Set on GitBook →
+        </a>
+        <p class="text-parchment/70 mt-1">
+          The original Dalos character set documentation. Includes the full 256-glyph
+          matrix and historical context.
+        </p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<footer class="py-12 px-6 border-t border-bronze/20 bg-stoa-deep mt-16">
+  <div class="max-w-6xl mx-auto text-center">
+    <div class="glyph text-3xl mb-4">ΛΛ</div>
+    <p class="font-classical text-xl text-bronze mb-2"><span class="brand-lambda">ΛΛ</span>nemosyne</p>
+    <p class="text-sm text-parchment/60 mb-6">
+      Part of the <span class="stoachain">StoaChain</span>/<span class="ouronet">Ouronet</span> ecosystem.
+      Built by <a href="https://ancientholdings.eu" class="text-bronze hover:text-gold transition">AncientHoldings GmbH</a>.
+    </p>
+    <p class="text-xs text-parchment/40">
+      v0.1 design preview &middot; codex.ancientholdings.eu
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
