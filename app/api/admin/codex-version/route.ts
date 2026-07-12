@@ -33,8 +33,13 @@ export async function GET(request: NextRequest) {
       ? isNewerVersion(available, installed)
       : false;
 
+  // "bundle" = the built standalone (prod) — codex is compiled in, so an in-app
+  // npm pull can't change the running app; the update path is a redeploy. "dev" =
+  // localhost, where the pull re-installs node_modules and a reload picks it up.
+  const deployMode = process.env.NODE_ENV === "production" ? "bundle" : "dev";
+
   return Response.json(
-    { installed, available, updateAvailable },
+    { installed, available, updateAvailable, deployMode },
     { headers: NO_STORE },
   );
 }

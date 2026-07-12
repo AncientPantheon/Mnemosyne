@@ -228,6 +228,8 @@ interface CodexVersionInfo {
   installed: string;
   available: string | null;
   updateAvailable: boolean;
+  /** "bundle" = live standalone (update via redeploy); "dev" = localhost (pull works). */
+  deployMode?: "bundle" | "dev";
 }
 
 /**
@@ -274,6 +276,10 @@ function UpdateCodexSection({ codexVersion }: { codexVersion: string }): ReactEl
   const installed = info?.installed ?? codexVersion;
   const available = info?.available ?? null;
   const updateAvailable = info?.updateAvailable ?? false;
+  // On the live standalone bundle, codex is compiled in — an in-app pull can't
+  // change the running app, so the update path is a redeploy. Only offer the real
+  // pull on localhost (dev).
+  const isBundle = info?.deployMode === "bundle";
 
   return (
     <section className="mnemo-admin-card">
@@ -297,24 +303,33 @@ function UpdateCodexSection({ codexVersion }: { codexVersion: string }): ReactEl
       <p className="mnemo-admin-muted">
         {available === null
           ? info
-            ? "Couldn't reach npm to check for updates — you can still pull the latest."
+            ? "Couldn't reach npm to check for updates."
             : "Checking npm for the latest version…"
           : updateAvailable
             ? `Update available — v${installed} → v${available}.`
             : `Up to date — running the latest published codex (v${installed}).`}
       </p>
-      <button
-        type="button"
-        className="mnemo-admin-btn mnemo-admin-btn--primary"
-        disabled={busy}
-        onClick={() => void run()}
-      >
-        {busy
-          ? "Pulling latest codex…"
-          : updateAvailable
-            ? `Update to v${available}`
-            : "Re-pull latest"}
-      </button>
+      {isBundle ? (
+        <p className="mnemo-admin-muted">
+          This is the live build — codex is compiled into the deployed bundle, so it
+          updates on <strong>redeploy</strong> (push to <code>main</code>; CI rebuilds
+          against the latest npm version), not from a button here. The versions above
+          tell you when a redeploy is worth it.
+        </p>
+      ) : (
+        <button
+          type="button"
+          className="mnemo-admin-btn mnemo-admin-btn--primary"
+          disabled={busy}
+          onClick={() => void run()}
+        >
+          {busy
+            ? "Pulling latest codex…"
+            : updateAvailable
+              ? `Update to v${available}`
+              : "Re-pull latest"}
+        </button>
+      )}
       {error ? (
         <p className="mnemo-admin-status" role="alert">
           {error}

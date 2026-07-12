@@ -44,6 +44,16 @@ const turboWeb = toAbs("@ardrive", "turbo-sdk", "lib", "esm", "web", "index.js")
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // The codex aggregate's CODE is bundled into the app chunks, so Next does not
+  // otherwise trace its package.json into the standalone output — which made the
+  // "installed codex version" reader (readCodexUiVersion) return "unknown" on the
+  // live bundle. Force-include the manifest for every route that reads the version.
+  outputFileTracingIncludes: {
+    "/codex": ["./node_modules/@ancientpantheon/codex/package.json"],
+    "/admin": ["./node_modules/@ancientpantheon/codex/package.json"],
+    "/api/admin/codex-version": ["./node_modules/@ancientpantheon/codex/package.json"],
+    "/api/admin/update-codex": ["./node_modules/@ancientpantheon/codex/package.json"],
+  },
   // Out-of-root sources that must be transpiled: the single bundled
   // `@ancientpantheon/codex` aggregate (npm) + its external `arweave-core`, plus
   // the aggregate's peer chain primitives — the four `@stoachain/*` + `@noble/curves`
