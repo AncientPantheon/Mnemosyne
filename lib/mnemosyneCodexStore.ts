@@ -126,6 +126,17 @@ export function clearCodex(baseDir: string = defaultCodexDir()): void {
   rmSync(metaPath(baseDir), { force: true });
 }
 
+/**
+ * Every master-key-sealed file in the store — the "vault rows" a master-key
+ * rotation must re-seal (currently `password.sealed` + `backup.sealed`). Returned
+ * generically (all `*.sealed` that exist) so a sealed artifact added later is
+ * covered by the rotation re-seal automatically, per the automaton handoff.
+ * `meta.json` is NOT included — it holds only secret-free timestamps.
+ */
+export function sealedFilePaths(baseDir: string = defaultCodexDir()): string[] {
+  return [passwordPath(baseDir), backupPath(baseDir)].filter((p) => existsSync(p));
+}
+
 /** Secret-free summary for surfacing in audit / debug details. */
 export function codexMeta(baseDir: string = defaultCodexDir()): {
   provisioned: boolean;
