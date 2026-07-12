@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { loadOidcConfig, resolveRedirect } from "@/lib/auth/oidcConfig";
+import { loadOidcConfig, resolveRedirect, siteUrl } from "@/lib/auth/oidcConfig";
 import { getDiscovery } from "@/lib/auth/discovery";
 import { createLoginChallenge } from "@/lib/auth/pkce";
 import {
@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const cfg = loadOidcConfig();
   if (!cfg) {
-    return NextResponse.redirect(new URL("/?auth_error=unconfigured", request.url), 302);
+    return NextResponse.redirect(siteUrl(request, "/?auth_error=unconfigured"), 302);
   }
 
   // Derive the redirect URI (+ secure flag) from the request host, so the hub

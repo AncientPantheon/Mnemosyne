@@ -9,6 +9,17 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.2.1] — 2026-07-12
+
+### Fixes
+- **Login/logout no longer bounce to `localhost:3005` on the live site.** The OIDC
+  `redirect_uri` was already host-derived, but the same-site "return home" redirects
+  (callback success, auth-error bounces, logout) still used `request.url`, which
+  behind nginx reflects the app's internal `127.0.0.1:3005` bind host. New
+  `resolveOrigin()` / `siteUrl()` derive every same-site redirect from the request's
+  public host (`X-Forwarded-Host`/`-Proto`), so login and logout land on
+  `codex.ancientholdings.eu`, not localhost.
+
 ## [0.2.0] — 2026-07-12
 
 ### Codex packaging

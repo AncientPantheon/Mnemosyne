@@ -108,19 +108,40 @@ export function resolveRedirect(
   request: Request,
   cfg: OidcConfig,
 ): { redirectUri: string; secureCookies: boolean } {
+  const origin = resolveOrigin(request);
+  if (!origin) {
+    return { redirectUri: cfg.redirectUri, secureCookies: cfg.secureCookies };
+  }
+  return {
+    redirectUri: `${origin}/admin/callback`,
+    secureCookies: origin.startsWith("https:"),
+  };
+}
+
+/**
+ * The PUBLIC origin (`scheme://host`) the request actually arrived on, derived
+ * from the reverse proxy's `X-Forwarded-Host`/`X-Forwarded-Proto` (falling back to
+ * the `Host` header). Returns `null` only when there is no host header at all.
+ *
+ * Load-bearing behind nginx: the app binds `127.0.0.1:3005`, so `request.url`
+ * reflects that INTERNAL host — using it to build a "return home" redirect sends
+ * the operator to `localhost:3005`. Every same-site redirect (login/logout/callback
+ * → `/`) must go through {@link siteUrl} so it lands on the public origin.
+ */
+export function resolveOrigin(request: Request): string | null {
   const headers = request.headers;
   const host =
     headers.get("x-forwarded-host")?.split(",")[0]?.trim() ||
     headers.get("host")?.trim();
-  if (!host) {
-    return { redirectUri: cfg.redirectUri, secureCookies: cfg.secureCookies };
-  }
+  if (!host) return null;
   const isLocal = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host);
   const proto =
     headers.get("x-forwarded-proto")?.split(",")[0]?.trim() ||
     (isLocal ? "http" : "https");
-  return {
-    redirectUri: `${proto}://${host}/admin/callback`,
-    secureCookies: proto === "https",
-  };
+  return `${proto}://${host}`;
+}
+
+/** Build a same-origin URL from the request's public host (falls back to request.url). */
+export function siteUrl(request: Request, pathAndQuery: string): URL {
+  return new URL(pathAndQuery, resolveOrigin(request) ?? request.url);
 }

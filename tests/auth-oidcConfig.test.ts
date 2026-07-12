@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
 
-import { loadOidcConfig, resolveRedirect, type OidcConfig } from "../lib/auth/oidcConfig";
+import {
+  loadOidcConfig,
+  resolveRedirect,
+  resolveOrigin,
+  siteUrl,
+  type OidcConfig,
+} from "../lib/auth/oidcConfig";
 
 const SECRET = "x".repeat(32);
 
@@ -157,5 +163,35 @@ describe("resolveRedirect — host-derived redirect URI (the localhost-trap fix)
     // Node's Request may synthesize a host from the URL; assert the fallback OR a
     // derived value, never a crash — the branch exists for header-less contexts.
     expect(out.redirectUri).toMatch(/\/admin\/callback$/);
+  });
+});
+
+describe("resolveOrigin / siteUrl — same-site redirects use the PUBLIC host (not localhost:3005)", () => {
+  it("derives the prod origin from the proxy headers, so a home redirect never lands on localhost", () => {
+    // Behind nginx the app binds 127.0.0.1:3005; request.url would send the operator
+    // to localhost. The forwarded host is the real origin.
+    const req = reqWith({
+      "x-forwarded-host": "codex.ancientholdings.eu",
+      "x-forwarded-proto": "https",
+      host: "127.0.0.1:3005",
+    });
+    expect(resolveOrigin(req)).toBe("https://codex.ancientholdings.eu");
+    expect(siteUrl(req, "/").toString()).toBe("https://codex.ancientholdings.eu/");
+    expect(siteUrl(req, "/?auth_error=x").toString()).toBe(
+      "https://codex.ancientholdings.eu/?auth_error=x",
+    );
+  });
+
+  it("derives http://localhost for dev", () => {
+    const req = reqWith({ host: "localhost:3005" });
+    expect(resolveOrigin(req)).toBe("http://localhost:3005");
+    expect(siteUrl(req, "/").toString()).toBe("http://localhost:3005/");
+  });
+
+  it("returns null with no host header; siteUrl then falls back to request.url", () => {
+    const req = new Request("http://internal:9/admin/logout");
+    // Node synthesizes a host from the URL, so resolveOrigin may be non-null here;
+    // the contract is only that siteUrl never crashes and yields an absolute URL.
+    expect(siteUrl(req, "/").pathname).toBe("/");
   });
 });

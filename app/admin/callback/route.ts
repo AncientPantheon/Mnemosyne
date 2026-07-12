@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { loadOidcConfig, resolveRedirect } from "@/lib/auth/oidcConfig";
+import { loadOidcConfig, resolveRedirect, siteUrl } from "@/lib/auth/oidcConfig";
 import { getDiscovery } from "@/lib/auth/discovery";
 import { verifyIdToken } from "@/lib/auth/idToken";
 import { postForm } from "@/lib/auth/postForm";
@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 /** Bounce home with a failure flag; the login-state cookie is always cleared. */
 function fail(request: NextRequest, reason: string, secure: boolean): NextResponse {
   const res = NextResponse.redirect(
-    new URL(`/?auth_error=${encodeURIComponent(reason)}`, request.url),
+    siteUrl(request, `/?auth_error=${encodeURIComponent(reason)}`),
     302,
   );
   res.cookies.set(LOGIN_COOKIE, "", { ...loginCookieOptions(secure), maxAge: 0 });
@@ -34,7 +34,7 @@ function fail(request: NextRequest, reason: string, secure: boolean): NextRespon
 export async function GET(request: NextRequest) {
   const cfg = loadOidcConfig();
   if (!cfg) {
-    return NextResponse.redirect(new URL("/?auth_error=unconfigured", request.url), 302);
+    return NextResponse.redirect(siteUrl(request, "/?auth_error=unconfigured"), 302);
   }
   // Same host-derived redirect the login route used — the token exchange's
   // redirect_uri MUST byte-match the authorize request's (OAuth requirement).
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
 
   // Return to the MAIN page after login — the header then shows the operator
   // identity + the (ancient-gated) Admin Dashboard button. Not the bare panel.
-  const res = NextResponse.redirect(new URL("/", request.url), 302);
+  const res = NextResponse.redirect(siteUrl(request, "/"), 302);
   res.cookies.set(
     SESSION_COOKIE,
     await signSession(
