@@ -223,15 +223,38 @@ function PythiaConnectorSection(): ReactElement {
   );
 }
 
+/** `/api/admin/codex-version` payload. */
+interface CodexVersionInfo {
+  installed: string;
+  available: string | null;
+  updateAvailable: boolean;
+}
+
 /**
- * Update Codex: shows the currently-linked codex-ui version and triggers the local
- * `file:`-link rebuild (Phase 3). It never restarts the server — see the note the
- * server action returns.
+ * Update Codex: shows the INSTALLED `@ancientpantheon/codex` version alongside the
+ * latest AVAILABLE version on npm, and pulls `@latest` on demand. The version pair
+ * is fetched live from `/api/admin/codex-version` (and re-fetched after a pull) so
+ * the operator can see whether an update exists before clicking. Never restarts the
+ * server — see the note the server action returns.
  */
 function UpdateCodexSection({ codexVersion }: { codexVersion: string }): ReactElement {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<RebuildResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<CodexVersionInfo | null>(null);
+
+  const loadVersions = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/codex-version", { cache: "no-store" });
+      if (res.ok) setInfo((await res.json()) as CodexVersionInfo);
+    } catch {
+      /* leave info null → fall back to the installed prop only */
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadVersions();
+  }, [loadVersions]);
 
   const run = useCallback(async () => {
     setBusy(true);
@@ -240,19 +263,45 @@ function UpdateCodexSection({ codexVersion }: { codexVersion: string }): ReactEl
     try {
       const res = await fetch("/api/admin/update-codex", { method: "POST" });
       setResult((await res.json()) as RebuildResult);
+      void loadVersions(); // refresh installed/available after the pull
     } catch {
-      setError("Rebuild request failed — network error.");
+      setError("Update request failed — network error.");
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [loadVersions]);
+
+  const installed = info?.installed ?? codexVersion;
+  const available = info?.available ?? null;
+  const updateAvailable = info?.updateAvailable ?? false;
 
   return (
     <section className="mnemo-admin-card">
       <h2 className="mnemo-admin-h2">Update Codex</h2>
+      <ul className="mnemo-admin-chainlist">
+        <li>
+          <span className="mnemo-admin-chain">
+            Installed · <code>@ancientpantheon/codex</code>
+          </span>
+          <span className="mnemo-admin-badge mnemo-admin-badge--live">v{installed}</span>
+        </li>
+        <li>
+          <span className="mnemo-admin-chain">Latest on npm</span>
+          <span
+            className={`mnemo-admin-badge${updateAvailable ? "" : " mnemo-admin-badge--live"}`}
+          >
+            {available ? `v${available}` : info ? "unreachable" : "checking…"}
+          </span>
+        </li>
+      </ul>
       <p className="mnemo-admin-muted">
-        Installed <code>@ancientpantheon/codex</code> version:{" "}
-        <strong>{codexVersion}</strong>
+        {available === null
+          ? info
+            ? "Couldn't reach npm to check for updates — you can still pull the latest."
+            : "Checking npm for the latest version…"
+          : updateAvailable
+            ? `Update available — v${installed} → v${available}.`
+            : `Up to date — running the latest published codex (v${installed}).`}
       </p>
       <button
         type="button"
@@ -260,7 +309,11 @@ function UpdateCodexSection({ codexVersion }: { codexVersion: string }): ReactEl
         disabled={busy}
         onClick={() => void run()}
       >
-        {busy ? "Pulling latest codex…" : "Update Codex"}
+        {busy
+          ? "Pulling latest codex…"
+          : updateAvailable
+            ? `Update to v${available}`
+            : "Re-pull latest"}
       </button>
       {error ? (
         <p className="mnemo-admin-status" role="alert">
