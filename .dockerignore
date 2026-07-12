@@ -1,0 +1,23 @@
+# Keep the build context tiny + never copy host state/secrets into the image.
+node_modules
+.next
+deploy-bundle
+data
+.env
+.env.local
+.env.*.local
+.git
+.github
+.bee
+.wasp
+.claude
+coverage
+.vitest-cache
+*.tsbuildinfo
+npm-debug.log*
+Dockerfile
+.dockerignore
+docker-compose*.yml
+# docs + tests aren't needed in the image (they don't affect the runtime bundle).
+docs
+tests

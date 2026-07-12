@@ -1,0 +1,39 @@
+# Mnemosyne container runtime on the VPS. The image is either built on the box (the
+# tokenless Deploy button: `docker compose build`) OR pulled from ghcr.io (CI release).
+# Operator state (sealed codex + master key + secrets + Pythia config) lives in HOST
+# paths mounted in — never in the image — so a rebuild/swap never loses it.
+#
+# Blue-green (zero-downtime) is driven by the deploy script, which runs a second
+# instance on an alternate port, health-checks it, flips nginx, then stops the old.
+# This base file is the single-instance definition it builds from.
+
+services:
+  mnemosyne:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/ancientpantheon/mnemosyne:local
+    container_name: mnemosyne
+    restart: unless-stopped
+    # nginx (host) reverse-proxies to this; bind loopback only.
+    ports:
+      - "127.0.0.1:3005:3005"
+    # Secrets are read at start (env_file) AND the file is mounted rw so master-key
+    # rotation can rewrite it in place (MNEMOSYNE_ENV_FILE points at the mounted path).
+    env_file:
+      - /var/www/codex.ancientholdings.eu/.env.local
+    environment:
+      # Override the host-path values from .env.local with the in-CONTAINER paths.
+      MNEMOSYNE_ENV_FILE: /app/.env.local
+      MNEMOSYNE_CODEX_DIR: /app/data/mnemosyne-codex
+    volumes:
+      # rw: master-key rotation rewrites this atomically; the host file is the source.
+      - /var/www/codex.ancientholdings.eu/.env.local:/app/.env.local
+      # The sealed codex — survives every container rebuild/swap.
+      - /var/www/codex.ancientholdings.eu/data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3005/api/me"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
