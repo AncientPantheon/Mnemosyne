@@ -272,10 +272,12 @@ function UpdateCodexSection({ codexVersion }: { codexVersion: string }): ReactEl
           <p className="mnemo-admin-status">
             {result.ok
               ? result.changed
-                ? `Pulled codex ${result.versionBefore} → ${result.versionAfter}`
-                : `Already on the latest codex (${result.versionAfter})`
-              : "Codex pull failed"}{" "}
-            (exit {result.exitCode}) · <code>{result.command}</code>
+                ? `✓ Pull complete — codex updated ${result.versionBefore} → ${result.versionAfter}`
+                : `✓ Pull complete — already on the latest codex (${result.versionAfter}); nothing to update`
+              : `✗ Pull failed (exit ${result.exitCode})`}
+          </p>
+          <p className="mnemo-admin-muted">
+            <code>{result.command}</code>
           </p>
           {result.ok && result.changed ? (
             <p className="mnemo-admin-muted">

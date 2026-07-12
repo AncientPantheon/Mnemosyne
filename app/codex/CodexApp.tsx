@@ -318,7 +318,7 @@ function EncryptedSession({
   return <Dashboard onReset={onReset} />;
 }
 
-export function CodexApp(): ReactElement {
+export function CodexApp({ codexVersion = "unknown" }: { codexVersion?: string } = {}): ReactElement {
   const [loaded, setLoaded] = useState<LoadedState>({ kind: "idle" });
   const [loadError, setLoadError] = useState<string | null>(null);
   // Whether the "Back to Mnemosyne" overlay is showing. While true the codex tree
@@ -390,7 +390,13 @@ export function CodexApp(): ReactElement {
       </StatusScreen>
     );
   } else if (loaded.kind === "idle") {
-    content = <LoadCodexScreen onUploadBackup={loadEncrypted} onBack={goHome} />;
+    content = (
+      <LoadCodexScreen
+        onUploadBackup={loadEncrypted}
+        onBack={goHome}
+        codexVersion={codexVersion}
+      />
+    );
   } else {
     // Mount empty -> restore -> unlock -> dashboard, under the Mnemosyne host bar.
     content = (
@@ -491,9 +497,11 @@ function StatusScreen({ children }: { children: ReactNode }): ReactElement {
 function LoadCodexScreen({
   onUploadBackup,
   onBack,
+  codexVersion,
 }: {
   onUploadBackup: (event: ChangeEvent<HTMLInputElement>) => void;
   onBack: () => void;
+  codexVersion: string;
 }): ReactElement {
   return (
     <div className="cxpg-app cxpg-landing">
@@ -532,6 +540,10 @@ function LoadCodexScreen({
         </label>
 
         <p className="cxpg-note">Nothing leaves this device — no account, no cloud.</p>
+        <p className="cxpg-note cxpg-engine-badge">
+          Codex engine <strong>v{codexVersion}</strong>
+          <span className="cxpg-engine-pkg"> · @ancientpantheon/codex</span>
+        </p>
       </div>
     </div>
   );

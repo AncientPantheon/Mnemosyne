@@ -643,3 +643,14 @@ body {
 .cxpg-eye:active {
   color: var(--cxpg-accent);
 }
+
+/* Codex engine version badge on the load screen — a monospace, muted line so the
+   operator can confirm at a glance which @ancientpantheon/codex build is running. */
+.cxpg-engine-badge {
+  margin-top: 0.5rem;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.78rem;
+  opacity: 0.85;
+}
+.cxpg-engine-badge strong { color: #d4a04a; }
+.cxpg-engine-pkg { opacity: 0.55; }

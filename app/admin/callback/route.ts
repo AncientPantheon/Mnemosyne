@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { loadOidcConfig } from "@/lib/auth/oidcConfig";
+import { loadOidcConfig, resolveRedirect } from "@/lib/auth/oidcConfig";
 import { getDiscovery } from "@/lib/auth/discovery";
 import { verifyIdToken } from "@/lib/auth/idToken";
 import { postForm } from "@/lib/auth/postForm";
@@ -36,7 +36,9 @@ export async function GET(request: NextRequest) {
   if (!cfg) {
     return NextResponse.redirect(new URL("/?auth_error=unconfigured", request.url), 302);
   }
-  const secure = cfg.secureCookies;
+  // Same host-derived redirect the login route used — the token exchange's
+  // redirect_uri MUST byte-match the authorize request's (OAuth requirement).
+  const { redirectUri, secureCookies: secure } = resolveRedirect(request, cfg);
 
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
@@ -64,7 +66,7 @@ export async function GET(request: NextRequest) {
     new URLSearchParams({
       grant_type: "authorization_code",
       code,
-      redirect_uri: cfg.redirectUri,
+      redirect_uri: redirectUri,
       code_verifier: login.codeVerifier,
     }).toString(),
   );

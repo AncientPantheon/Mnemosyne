@@ -21,6 +21,6 @@ const CodexApp = dynamic(() => import("./CodexApp"), {
   ),
 });
 
-export function CodexMount(): ReactElement {
-  return <CodexApp />;
+export function CodexMount({ codexVersion }: { codexVersion: string }): ReactElement {
+  return <CodexApp codexVersion={codexVersion} />;
 }

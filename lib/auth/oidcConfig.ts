@@ -83,3 +83,44 @@ export function loadOidcConfig(
       redirectUri.startsWith("https:") || env.NODE_ENV === "production",
   };
 }
+
+/**
+ * Resolve the OIDC redirect URI + cookie-secure flag FROM THE REQUEST HOST.
+ *
+ * This is the durable fix for the "live login redirects to localhost" trap: the
+ * redirect URI the hub returns to is now derived from the origin the operator is
+ * actually on — `http://localhost:3005/admin/callback` in dev,
+ * `https://codex.ancientholdings.eu/admin/callback` in prod — so it is IMPOSSIBLE
+ * for it to point at the wrong environment, with ZERO per-deploy config to keep in
+ * sync. The login route (authorize) and the callback route (token exchange) both
+ * call this, so the two redirect URIs match byte-for-byte as OAuth requires.
+ *
+ * Honors the reverse proxy's `X-Forwarded-Host` / `X-Forwarded-Proto` (nginx sets
+ * them). Falls back to the configured `cfg.redirectUri` only when there is no host
+ * header at all (never true for a real browser request).
+ *
+ * NOTE: the hub must have the resulting redirect URI registered for `cfg.clientId`.
+ * Each environment's client (or one client with BOTH URIs registered) must list its
+ * own `…/admin/callback`. Deriving the URI removes the app-side mismatch; the hub
+ * registration is the other half.
+ */
+export function resolveRedirect(
+  request: Request,
+  cfg: OidcConfig,
+): { redirectUri: string; secureCookies: boolean } {
+  const headers = request.headers;
+  const host =
+    headers.get("x-forwarded-host")?.split(",")[0]?.trim() ||
+    headers.get("host")?.trim();
+  if (!host) {
+    return { redirectUri: cfg.redirectUri, secureCookies: cfg.secureCookies };
+  }
+  const isLocal = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host);
+  const proto =
+    headers.get("x-forwarded-proto")?.split(",")[0]?.trim() ||
+    (isLocal ? "http" : "https");
+  return {
+    redirectUri: `${proto}://${host}/admin/callback`,
+    secureCookies: proto === "https",
+  };
+}

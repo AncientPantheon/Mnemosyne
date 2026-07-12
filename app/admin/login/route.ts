@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { loadOidcConfig } from "@/lib/auth/oidcConfig";
+import { loadOidcConfig, resolveRedirect } from "@/lib/auth/oidcConfig";
 import { getDiscovery } from "@/lib/auth/discovery";
 import { createLoginChallenge } from "@/lib/auth/pkce";
 import {
@@ -24,12 +24,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/?auth_error=unconfigured", request.url), 302);
   }
 
+  // Derive the redirect URI (+ secure flag) from the request host, so the hub
+  // returns to whatever origin this login began on — never a hard-coded localhost.
+  const { redirectUri, secureCookies } = resolveRedirect(request, cfg);
+
   const { discovery } = await getDiscovery(cfg.issuer);
   const challenge = createLoginChallenge();
 
   const params = new URLSearchParams({
     client_id: cfg.clientId,
-    redirect_uri: cfg.redirectUri,
+    redirect_uri: redirectUri,
     response_type: "code",
     // `roles` is required — omitting it locks admin out (no role claim to gate on).
     scope: "openid profile email roles",
@@ -53,7 +57,7 @@ export async function GET(request: NextRequest) {
       },
       cfg.sessionSecret,
     ),
-    loginCookieOptions(cfg.secureCookies),
+    loginCookieOptions(secureCookies),
   );
   return res;
 }
