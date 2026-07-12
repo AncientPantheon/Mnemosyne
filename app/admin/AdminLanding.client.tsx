@@ -21,11 +21,18 @@ const ENTRIES: AdminEntry[] = [
       "Mnemosyne's own sealed operator codex — populate seeds & accounts; auto-unlocked.",
   },
   {
-    href: "/admin/update-codex",
+    href: "/admin/update-constructors",
     icon: "⬇️",
-    title: "Update Codex",
+    title: "Update Constructors",
     description:
-      "Installed vs latest @ancientpantheon/codex; pull the latest (dev) / redeploy (live).",
+      "Pull the latest @ancientpantheon/codex and (soon) khronoton engines.",
+  },
+  {
+    href: "/admin/khronoton",
+    icon: "🕰️",
+    title: "Mnemosyne Khronoton",
+    description:
+      "Schedule codex-signed autonomous transactions (coming soon).",
   },
   {
     href: "/admin/pythia",

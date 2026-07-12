@@ -36,34 +36,15 @@ import {
   type ReactNode,
 } from "react";
 
-import { CodexProvider, useCodexStore } from "@ancientpantheon/codex/provider";
-import {
-  CodexUiRoot,
-  CodexTabs,
-  CodexSettingsSection,
-  CodexDebouncerPanel,
-} from "@ancientpantheon/codex/ui";
-import type { NetworkSettingsModel } from "@ancientpantheon/codex";
-
-import {
-  loadNetworkSettings,
-  saveNetworkSettings,
-  resolveNetworkModel,
-  fetchOperatorPythiaUrl,
-  STOACHAIN_CHAIN_ID,
-  ARWEAVE_CHAIN_ID,
-  type NetworkSettings,
-} from "./networkSettings";
-import {
-  ObservationalCodexIdDisplay,
-  CodexPasswordPrompt,
-} from "@ancientpantheon/codex/ui";
+import { CodexProvider } from "@ancientpantheon/codex/provider";
 import {
   useCodex,
   useCodexAuth,
   useCodexBackup,
 } from "@ancientpantheon/codex/hooks";
 import { MemoryCodexAdapter } from "@ancientpantheon/codex/ouronet";
+
+import { CodexShell } from "./CodexShell";
 
 import { UnlockScreen } from "./UnlockScreen";
 import "./app.css";
@@ -79,179 +60,37 @@ type LoadedState =
  * (useCodexBackup) see the mounted store.
  */
 export function Dashboard({ onReset }: { onReset?: () => void } = {}): ReactElement {
+  // The consumer surface: the shared CodexShell + the upload-flow top-bar actions
+  // (export the loaded codex / load a different one). Layout lives in CodexShell so
+  // this stays identical to the server /admin/codex surface.
   const { downloadAsJson } = useCodexBackup();
-  const { isReady } = useCodex();
-  const store = useCodexStore();
-
-  // The Codex UI / Codex UI Settings view toggle (consumer-composed — CodexUiRoot
-  // is only a token-scope boundary; the split is the app's to build).
-  const [activeView, setActiveView] = useState<"ui" | "settings">("ui");
-
-  // ── Network settings (the "Network" tab in Codex UI Settings) ──────────────
-  // Surfaced, editable, per-user endpoints (StoaChain node + Arweave gateway) plus
-  // the Pythia connector URL, persisted to localStorage. Without this `network`
-  // prop the settings section renders with no Network tab — which is why it was
-  // missing in the first Phase-1 mount.
-  const [network, setNetwork] = useState<NetworkSettings>(() =>
-    loadNetworkSettings(),
-  );
-  const [networkModel, setNetworkModel] = useState<NetworkSettingsModel | null>(
-    null,
-  );
-  // The operator-injected Pythia gateway (set by an ancient in /admin, served from
-  // /api/config). It is the GLOBAL connection for ALL Mnemosyne users and takes
-  // precedence over the empty per-user field — fetched once at mount.
-  const [operatorPythiaUrl, setOperatorPythiaUrl] = useState("");
-
-  useEffect(() => {
-    let live = true;
-    void fetchOperatorPythiaUrl().then((url) => {
-      if (live) setOperatorPythiaUrl(url);
-    });
-    return () => {
-      live = false;
-    };
-  }, []);
-
-  // Persist edits so they survive a reload.
-  useEffect(() => {
-    saveNetworkSettings(network);
-  }, [network]);
-
-  // Push the StoaChain node into uiSettings (selectedNode:"custom"/customNodeUrl)
-  // — the seam the dashboard's reads/signing follow. Gated on isReady: the
-  // adapter is wired only after the provider's init effect runs.
-  useEffect(() => {
-    if (!isReady) return;
-    void store.getState().actions.updateUiSettings({
-      selectedNode: "custom",
-      customNodeUrl: network.stoaChainNodeUrl,
-    });
-  }, [isReady, network.stoaChainNodeUrl, store]);
-
-  // Build the per-chain NetworkSettingsModel off the surfaced state + the operator
-  // global (async resolve). The operator Pythia URL wins over the per-user field.
-  useEffect(() => {
-    let live = true;
-    void resolveNetworkModel(network, operatorPythiaUrl).then((model) => {
-      if (live) setNetworkModel(model);
-    });
-    return () => {
-      live = false;
-    };
-  }, [network, operatorPythiaUrl]);
-
-  const setChainUrl = useCallback((chainId: string, url: string) => {
-    setNetwork((prev) => {
-      if (chainId === STOACHAIN_CHAIN_ID) return { ...prev, stoaChainNodeUrl: url };
-      if (chainId === ARWEAVE_CHAIN_ID) return { ...prev, arweaveGatewayUrl: url };
-      return prev;
-    });
-  }, []);
-
-  const setPythiaUrl = useCallback(
-    (url: string) => setNetwork((prev) => ({ ...prev, pythiaUrl: url })),
-    [],
-  );
-
   return (
-    <div className="cxpg-container">
-      {/* Global codex password prompt — the modal the CodexID lock control opens.
-          Kept OUT of the header flow (mirrors OuronetUI's codex-ui route). */}
-      <CodexUiRoot>
-        <CodexPasswordPrompt />
-      </CodexUiRoot>
-
-      <div className="cxpg-topbar">
-        <div className="cxpg-topbar-left">
-          <div className="cxpg-titlerow">
-            <h1 className="cxpg-brand">
-              <span className="cxpg-brand-mark" aria-hidden="true">
-                ◈
-              </span>
-              Codex
-            </h1>
-            <span className="cxpg-badge">standalone</span>
-            <p className="cxpg-tagline">
-              The standalone Codex — your multi-chain key vault, local &amp; offline.
-            </p>
-          </div>
-          <div className="cxpg-viewtabs" role="tablist" aria-label="Codex view">
+    <CodexShell
+      brand="Codex"
+      badge="standalone"
+      tagline="Your multi-chain key vault — local & offline."
+      consumerName="Mnemosyne"
+      topbarActions={
+        <>
+          <button
+            type="button"
+            className="cxpg-btn cxpg-btn--primary cxpg-btn--sm"
+            onClick={() => void downloadAsJson()}
+          >
+            Export codex to JSON
+          </button>
+          {onReset ? (
             <button
               type="button"
-              role="tab"
-              aria-selected={activeView === "ui"}
-              className={`cxpg-viewtab${activeView === "ui" ? " cxpg-viewtab--active" : ""}`}
-              onClick={() => setActiveView("ui")}
+              className="cxpg-btn cxpg-btn--ghost cxpg-btn--sm"
+              onClick={onReset}
             >
-              Codex UI
+              Load a different codex
             </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeView === "settings"}
-              className={`cxpg-viewtab${activeView === "settings" ? " cxpg-viewtab--active" : ""}`}
-              onClick={() => setActiveView("settings")}
-            >
-              Codex UI Settings
-            </button>
-          </div>
-        </div>
-        <div className="cxpg-topbar-right">
-          <div className="cxpg-codexbar-actions">
-            <button
-              type="button"
-              className="cxpg-btn cxpg-btn--primary cxpg-btn--sm"
-              onClick={() => void downloadAsJson()}
-            >
-              Export codex to JSON
-            </button>
-            {onReset ? (
-              <button
-                type="button"
-                className="cxpg-btn cxpg-btn--ghost cxpg-btn--sm"
-                onClick={onReset}
-              >
-                Load a different codex
-              </button>
-            ) : null}
-          </div>
-          <CodexUiRoot>
-            <CodexDebouncerPanel />
-          </CodexUiRoot>
-        </div>
-      </div>
-
-      <div className="cxpg-bodycard">
-        <CodexUiRoot>
-          <ObservationalCodexIdDisplay />
-        </CodexUiRoot>
-        <div className="cxpg-separator" aria-hidden="true" />
-        <CodexUiRoot>
-          {activeView === "ui" ? (
-            <CodexTabs />
-          ) : (
-            <CodexSettingsSection
-              consumerName="Mnemosyne"
-              network={
-                networkModel
-                  ? {
-                      model: networkModel,
-                      urls: {
-                        [STOACHAIN_CHAIN_ID]: network.stoaChainNodeUrl,
-                        [ARWEAVE_CHAIN_ID]: network.arweaveGatewayUrl,
-                      },
-                      onSetChainUrl: setChainUrl,
-                      pythiaUrl: network.pythiaUrl,
-                      onSetPythiaUrl: setPythiaUrl,
-                    }
-                  : undefined
-              }
-            />
-          )}
-        </CodexUiRoot>
-      </div>
-    </div>
+          ) : null}
+        </>
+      }
+    />
   );
 }
 

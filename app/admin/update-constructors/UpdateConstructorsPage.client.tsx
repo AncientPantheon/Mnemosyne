@@ -25,6 +25,15 @@ interface CodexVersionInfo {
   deployMode?: "bundle" | "dev";
 }
 
+/** `/api/admin/khronoton-version` payload. */
+interface KhronotonVersionInfo {
+  installed: string;
+  available: string | null;
+  updateAvailable: boolean;
+  /** false until the Khronoton package is wired into Mnemosyne. */
+  wired: boolean;
+}
+
 /**
  * Update Codex: shows the INSTALLED `@ancientpantheon/codex` version alongside the
  * latest AVAILABLE version on npm, and pulls `@latest` on demand. The version pair
@@ -159,12 +168,80 @@ function UpdateCodexSection({ codexVersion }: { codexVersion: string }): ReactEl
   );
 }
 
-export function UpdateCodexPage({ codexVersion }: { codexVersion: string }): ReactElement {
+/**
+ * Update Khronoton (SCAFFOLD): the same installed-vs-available shape as
+ * {@link UpdateCodexSection}, but for the future `@ancientpantheon/khronoton-core`
+ * automaton engine. Khronoton is NOT wired into Mnemosyne yet, so `/api/admin/
+ * khronoton-version` reports `installed: "not wired"` and `wired: false`; we still
+ * show the latest-on-npm version as a preview so the operator can see the package
+ * is taking shape. The Update button stays disabled until the package is wired in.
+ */
+function UpdateKhronotonSection(): ReactElement {
+  const [info, setInfo] = useState<KhronotonVersionInfo | null>(null);
+
+  const loadVersions = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/khronoton-version", { cache: "no-store" });
+      if (res.ok) setInfo((await res.json()) as KhronotonVersionInfo);
+    } catch {
+      /* leave info null → the "checking…" placeholder stays */
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadVersions();
+  }, [loadVersions]);
+
+  const installed = info?.installed ?? "not wired";
+  const available = info?.available ?? null;
+
   return (
-    <AdminGate title="Update Codex">
+    <section className="mnemo-admin-card">
+      <h2 className="mnemo-admin-h2">Update Khronoton</h2>
+      <ul className="mnemo-admin-chainlist">
+        <li>
+          <span className="mnemo-admin-chain">
+            Installed · <code>@ancientpantheon/khronoton-core</code>
+          </span>
+          <span className="mnemo-admin-badge">{installed}</span>
+        </li>
+        <li>
+          <span className="mnemo-admin-chain">Latest on npm</span>
+          <span className="mnemo-admin-badge mnemo-admin-badge--live">
+            {available ? `v${available}` : info ? "unreachable" : "checking…"}
+          </span>
+        </li>
+      </ul>
+      <p className="mnemo-admin-muted">
+        The Khronoton engine isn&apos;t wired into Mnemosyne yet — the{" "}
+        <code>@ancientpantheon/khronoton-core</code> package is being built into a
+        plug-and-play automaton engine (see{" "}
+        <code>docs/handoffs/03-khronoton-automaton-package.md</code>). This panel will
+        pull + wire it once the package is ready.
+      </p>
+      <button
+        type="button"
+        className="mnemo-admin-btn mnemo-admin-btn--primary"
+        disabled
+        title="Khronoton not yet wired"
+      >
+        Update Khronoton
+      </button>
+    </section>
+  );
+}
+
+export function UpdateConstructorsPage({
+  codexVersion,
+}: {
+  codexVersion: string;
+}): ReactElement {
+  return (
+    <AdminGate title="Update Constructors">
       <UpdateCodexSection codexVersion={codexVersion} />
+      <UpdateKhronotonSection />
     </AdminGate>
   );
 }
 
-export default UpdateCodexPage;
+export default UpdateConstructorsPage;

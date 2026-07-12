@@ -9,6 +9,24 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.2.2] — 2026-07-12
+
+### Codex
+- **Both codex surfaces now render through one shared `CodexShell`.** The Mnemosyne
+  server codex (`/admin/codex`) had drifted from the consumer `/codex` (a long
+  tagline wrapped its top-bar over the body); extracting the consumer's proven
+  layout into a shared shell makes the two identical (only the top-bar action
+  differs — Export/Load vs Lock).
+
+### Admin
+- **"Update Constructors"** page — merges Update Codex with a scaffold **Update
+  Khronoton** (previews the `@ancientpantheon/khronoton-core` npm version; disabled
+  until the package is wired). Replaces the standalone Update Codex tile.
+- **"Mnemosyne Khronoton"** page — a scaffold for scheduling codex-signed autonomous
+  transactions (coming soon; references the Khronoton package handoff). New landing
+  tile.
+- `GET /api/admin/khronoton-version` (ancient-gated) — the Khronoton version preview.
+
 ## [0.2.1] — 2026-07-12
 
 ### Fixes

@@ -29,22 +29,39 @@ describe("/admin route files", () => {
   });
 
   it("gives each function its own dedicated sub-page (Hub-style)", () => {
-    for (const dir of ["pythia", "update-codex", "security", "network"]) {
+    for (const dir of [
+      "pythia",
+      "update-constructors",
+      "khronoton",
+      "security",
+      "network",
+    ]) {
       expect(existsSync(join(root, "app", "admin", dir, "page.tsx"))).toBe(true);
     }
+  });
+
+  it("has retired the standalone update-codex page (merged into update-constructors)", () => {
+    expect(existsSync(join(root, "app", "admin", "update-codex"))).toBe(false);
   });
 
   it("lists every sub-page as an entry tile on the landing", () => {
     const landing = read("app", "admin", "AdminLanding.client.tsx");
     for (const href of [
       "/admin/codex",
-      "/admin/update-codex",
+      "/admin/update-constructors",
+      "/admin/khronoton",
       "/admin/pythia",
       "/admin/security",
       "/admin/network",
     ]) {
       expect(landing).toMatch(new RegExp(href.replace(/\//g, "\\/")));
     }
+  });
+
+  it("surfaces the two new automaton-constructor tiles on the landing", () => {
+    const landing = read("app", "admin", "AdminLanding.client.tsx");
+    expect(landing).toMatch(/Update Constructors/);
+    expect(landing).toMatch(/Mnemosyne Khronoton/);
   });
 });
 
@@ -86,21 +103,70 @@ describe("admin — Pythia connector control (REQ-10)", () => {
   });
 });
 
-describe("admin — Update Codex control (REQ-09, REVIEW M5/M6)", () => {
-  const panel = () => read("app", "admin", "update-codex", "UpdateCodexPage.client.tsx");
+describe("admin — Update Constructors control (REQ-09, REVIEW M5/M6)", () => {
+  const panel = () =>
+    read("app", "admin", "update-constructors", "UpdateConstructorsPage.client.tsx");
 
   it("is a client component behind the shared gate", () => {
     expect(panel()).toMatch(/^["']use client["'];?/m);
     expect(panel()).toMatch(/AdminGate/);
   });
 
-  it("POSTs to the ancient-gated update-codex route", () => {
+  it("bundles both the codex and khronoton updater sections", () => {
+    expect(panel()).toMatch(/UpdateCodexSection/);
+    expect(panel()).toMatch(/UpdateKhronotonSection/);
+  });
+
+  it("POSTs to the ancient-gated update-codex route (moved verbatim)", () => {
     expect(panel()).toMatch(/\/api\/admin\/update-codex/);
   });
 
   it("surfaces the current codex-ui version passed from the server page", () => {
-    expect(read("app", "admin", "update-codex", "page.tsx")).toMatch(/readCodexUiVersion/);
+    expect(read("app", "admin", "update-constructors", "page.tsx")).toMatch(
+      /readCodexUiVersion/,
+    );
     expect(panel()).toMatch(/codexVersion/);
+  });
+
+  it("scaffolds the Khronoton updater against the new version endpoint, disabled until wired", () => {
+    expect(panel()).toMatch(/\/api\/admin\/khronoton-version/);
+    expect(panel()).toMatch(/@ancientpantheon\/khronoton-core/);
+    expect(panel()).toMatch(/Khronoton not yet wired/);
+    expect(panel()).toMatch(/03-khronoton-automaton-package\.md/);
+  });
+});
+
+describe("admin — Mnemosyne Khronoton scaffold (autonomous transactions)", () => {
+  const panel = () => read("app", "admin", "khronoton", "KhronotonPage.client.tsx");
+
+  it("is a client component behind the shared gate", () => {
+    expect(panel()).toMatch(/^["']use client["'];?/m);
+    expect(panel()).toMatch(/AdminGate/);
+  });
+
+  it("presents an on-brand coming-soon placeholder that references the handoff", () => {
+    expect(panel()).toMatch(/Autonomous transactions/);
+    expect(panel()).toMatch(/Coming soon/);
+    expect(panel()).toMatch(/Pantheonic Automaton/);
+    expect(panel()).toMatch(/03-khronoton-automaton-package\.md/);
+  });
+
+  it("disables the new-scheduled-transaction action until the package is wired", () => {
+    expect(panel()).toMatch(/New scheduled transaction/);
+    expect(panel()).toMatch(/Available once the Khronoton package is wired/);
+  });
+});
+
+describe("/api/admin/khronoton-version — ancient-gated scaffold (source contract)", () => {
+  const route = () => read("app", "api", "admin", "khronoton-version", "route.ts");
+
+  it("is ancient-gated like the codex-version route", () => {
+    expect(route()).toMatch(/requireAncient/);
+  });
+
+  it("reports wired:false (Khronoton is not yet a dependency)", () => {
+    expect(route()).toMatch(/wired:\s*false/);
+    expect(route()).toMatch(/not wired/);
   });
 });
 
@@ -141,10 +207,11 @@ describe("operator Pythia injection into the codex mount (REQ-10 wiring)", () =>
     expect(ns).toMatch(/operatorPythiaUrl/);
   });
 
-  it("the codex Dashboard fetches the operator /api/config value at mount and feeds it to the model", () => {
-    const app = read("app", "codex", "CodexApp.tsx");
-    expect(app).toMatch(/fetchOperatorPythiaUrl/);
-    expect(app).toMatch(/operatorPythiaUrl/);
+  it("the codex shell fetches the operator /api/config value at mount and feeds it to the model", () => {
+    // The network wiring lives in the shared CodexShell (both /codex + /admin/codex).
+    const shell = read("app", "codex", "CodexShell.tsx");
+    expect(shell).toMatch(/fetchOperatorPythiaUrl/);
+    expect(shell).toMatch(/operatorPythiaUrl/);
   });
 
   it("fetchOperatorPythiaUrl reads the public /api/config endpoint", () => {

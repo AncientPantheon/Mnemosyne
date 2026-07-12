@@ -46,25 +46,8 @@ import {
   useCodex,
   useCodexAuth,
 } from "@ancientpantheon/codex/hooks";
-import {
-  CodexUiRoot,
-  CodexTabs,
-  CodexSettingsSection,
-  CodexDebouncerPanel,
-} from "@ancientpantheon/codex/ui";
-import { ObservationalCodexIdDisplay } from "@ancientpantheon/codex/ui";
-import type { NetworkSettingsModel } from "@ancientpantheon/codex";
-
 import { MnemosyneServerCodexAdapter } from "@/lib/codex-dropin/MnemosyneServerCodexAdapter";
-import {
-  loadNetworkSettings,
-  saveNetworkSettings,
-  resolveNetworkModel,
-  fetchOperatorPythiaUrl,
-  STOACHAIN_CHAIN_ID,
-  ARWEAVE_CHAIN_ID,
-  type NetworkSettings,
-} from "../../codex/networkSettings";
+import { CodexShell } from "../../codex/CodexShell";
 import "../../codex/app.css";
 
 // Cache the master-key unlock for a normal admin session. Modest on purpose —
@@ -184,74 +167,12 @@ function MnemosyneLockControl(): ReactElement {
 }
 
 /**
- * The body — the real codex-ui shell, with the network wiring reused from the
- * consumer /codex Dashboard. Rendered inside <CodexProvider> so its hooks see
- * the mounted store.
+ * The body — the SAME shared CodexShell as the consumer /codex surface, so the two
+ * render identically. Only the top-bar action differs (Lock instead of
+ * Export/Load). Gates on the codex init state first (server-adapter load).
  */
 function CodexBody(): ReactElement {
   const { isReady, initError } = useCodex();
-  const store = useCodexStore();
-
-  const [activeView, setActiveView] = useState<"ui" | "settings">("ui");
-
-  // ── Network settings (same as the consumer /codex surface) ────────────────
-  const [network, setNetwork] = useState<NetworkSettings>(() =>
-    loadNetworkSettings(),
-  );
-  const [networkModel, setNetworkModel] = useState<NetworkSettingsModel | null>(
-    null,
-  );
-  // The operator-injected GLOBAL Pythia (set by an ancient in /admin, served from
-  // /api/config) — the same global connection the consumer surface reads.
-  const [operatorPythiaUrl, setOperatorPythiaUrl] = useState("");
-
-  useEffect(() => {
-    let live = true;
-    void fetchOperatorPythiaUrl().then((url) => {
-      if (live) setOperatorPythiaUrl(url);
-    });
-    return () => {
-      live = false;
-    };
-  }, []);
-
-  // Persist per-browser edits so they survive a reload (local, this operator only).
-  useEffect(() => {
-    saveNetworkSettings(network);
-  }, [network]);
-
-  // Push the StoaChain node into uiSettings (the seam reads/signing follow).
-  useEffect(() => {
-    if (!isReady) return;
-    void store.getState().actions.updateUiSettings({
-      selectedNode: "custom",
-      customNodeUrl: network.stoaChainNodeUrl,
-    });
-  }, [isReady, network.stoaChainNodeUrl, store]);
-
-  // Build the per-chain model — the operator GLOBAL Pythia wins over the local field.
-  useEffect(() => {
-    let live = true;
-    void resolveNetworkModel(network, operatorPythiaUrl).then((model) => {
-      if (live) setNetworkModel(model);
-    });
-    return () => {
-      live = false;
-    };
-  }, [network, operatorPythiaUrl]);
-
-  const setChainUrl = useCallback((chainId: string, url: string) => {
-    setNetwork((prev) => {
-      if (chainId === STOACHAIN_CHAIN_ID) return { ...prev, stoaChainNodeUrl: url };
-      if (chainId === ARWEAVE_CHAIN_ID) return { ...prev, arweaveGatewayUrl: url };
-      return prev;
-    });
-  }, []);
-
-  const setPythiaUrl = useCallback(
-    (url: string) => setNetwork((prev) => ({ ...prev, pythiaUrl: url })),
-    [],
-  );
 
   if (initError) {
     return (
@@ -276,83 +197,13 @@ function CodexBody(): ReactElement {
   }
 
   return (
-    <div className="cxpg-container">
-      <div className="cxpg-topbar">
-        <div className="cxpg-topbar-left">
-          <div className="cxpg-titlerow">
-            <h1 className="cxpg-brand">
-              <span className="cxpg-brand-mark" aria-hidden="true">
-                ◈
-              </span>
-              Mnemosyne Codex
-            </h1>
-            <span className="cxpg-badge">server-sealed</span>
-            <p className="cxpg-tagline">
-              Mnemosyne&apos;s own operator codex — sealed on the server, auto-unlocked
-              for you. Populate it on the spot; every change saves in real time.
-            </p>
-          </div>
-          <div className="cxpg-viewtabs" role="tablist" aria-label="Codex view">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeView === "ui"}
-              className={`cxpg-viewtab${activeView === "ui" ? " cxpg-viewtab--active" : ""}`}
-              onClick={() => setActiveView("ui")}
-            >
-              Codex UI
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeView === "settings"}
-              className={`cxpg-viewtab${activeView === "settings" ? " cxpg-viewtab--active" : ""}`}
-              onClick={() => setActiveView("settings")}
-            >
-              Codex UI Settings
-            </button>
-          </div>
-        </div>
-        <div className="cxpg-topbar-right">
-          <div className="cxpg-codexbar-actions">
-            <MnemosyneLockControl />
-          </div>
-          <CodexUiRoot>
-            <CodexDebouncerPanel />
-          </CodexUiRoot>
-        </div>
-      </div>
-
-      <div className="cxpg-bodycard">
-        <CodexUiRoot>
-          <ObservationalCodexIdDisplay />
-        </CodexUiRoot>
-        <div className="cxpg-separator" aria-hidden="true" />
-        <CodexUiRoot>
-          {activeView === "ui" ? (
-            <CodexTabs />
-          ) : (
-            <CodexSettingsSection
-              consumerName="Mnemosyne"
-              network={
-                networkModel
-                  ? {
-                      model: networkModel,
-                      urls: {
-                        [STOACHAIN_CHAIN_ID]: network.stoaChainNodeUrl,
-                        [ARWEAVE_CHAIN_ID]: network.arweaveGatewayUrl,
-                      },
-                      onSetChainUrl: setChainUrl,
-                      pythiaUrl: network.pythiaUrl,
-                      onSetPythiaUrl: setPythiaUrl,
-                    }
-                  : undefined
-              }
-            />
-          )}
-        </CodexUiRoot>
-      </div>
-    </div>
+    <CodexShell
+      brand="Mnemosyne Codex"
+      badge="server-sealed"
+      tagline="Sealed on the server · auto-unlocked · saves live."
+      consumerName="Mnemosyne"
+      topbarActions={<MnemosyneLockControl />}
+    />
   );
 }
 

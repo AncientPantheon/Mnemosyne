@@ -67,11 +67,15 @@ describe("product flow port (REQ-04: upload -> unlock -> dashboard)", () => {
     expect(app).toMatch(/<UnlockScreen\b/);
   });
 
-  it("renders the real dashboard slots (CodexUiRoot + tabs + settings) once unlocked", () => {
-    const app = read("CodexApp.tsx");
+  it("renders the real dashboard slots (CodexUiRoot + tabs + settings) — now in the shared CodexShell", () => {
+    // The dashboard layout was extracted to CodexShell.tsx, rendered by BOTH the
+    // consumer /codex Dashboard and the server /admin/codex surface.
+    const shell = read("CodexShell.tsx");
     for (const slot of ["CodexUiRoot", "CodexTabs", "CodexSettingsSection"]) {
-      expect(app, `dashboard must render ${slot}`).toMatch(new RegExp(slot));
+      expect(shell, `the shared shell must render ${slot}`).toMatch(new RegExp(slot));
     }
+    // The consumer Dashboard delegates to the shell.
+    expect(read("CodexApp.tsx")).toMatch(/CodexShell/);
   });
 
   it("drives the unlock through the real useCodexAuth().authenticate path with an empty-password guard", () => {

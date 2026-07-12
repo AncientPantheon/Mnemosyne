@@ -50,6 +50,31 @@ export async function fetchLatestCodexVersion(): Promise<string | null> {
   }
 }
 
+/** The npm package the (future) Khronoton automaton engine ships as. */
+const KHRONOTON_PACKAGE = "@ancientpantheon/khronoton-core";
+
+/**
+ * The latest `@ancientpantheon/khronoton-core` version PUBLISHED on the npm registry,
+ * read from the package's `dist-tags.latest`. Mirrors {@link fetchLatestCodexVersion}
+ * but for the Khronoton engine package, which is NOT yet a Mnemosyne dependency — so
+ * there is no installed version to read, only this "does the package exist yet?" npm
+ * preview. Returns `null` on any failure (offline, registry down, package missing).
+ */
+export async function fetchLatestKhronotonVersion(): Promise<string | null> {
+  try {
+    const res = await fetch(`https://registry.npmjs.org/${KHRONOTON_PACKAGE}`, {
+      headers: { accept: "application/vnd.npm.install-v1+json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { "dist-tags"?: { latest?: string } };
+    const latest = body["dist-tags"]?.latest;
+    return typeof latest === "string" && latest.length > 0 ? latest : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * True when `available` is a strictly newer semver than `installed` (numeric
  * per-segment compare: 0.10.0 > 0.9.0). Non-numeric/pre-release segments coerce to
