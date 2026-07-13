@@ -95,6 +95,14 @@ app+website+API in one). Two complementary, **credential-free** paths:
 2. **Add-on — CI → ghcr.io on release.** On a git tag/push, GitHub Actions builds + pushes
    a **versioned** image (automatic `GITHUB_TOKEN`) → gives rollback + the Packages
    presence. The dashboard deploy does not depend on it.
+   - **Two setup gotchas (both bit Mnemosyne's first release):** (a) the **org** must allow
+     Actions write permissions — AncientPantheon's org Actions setting (Settings → Actions →
+     General → Workflow permissions) caps every repo, so "Read and write" must be enabled
+     there or the push is denied even with `permissions: packages: write` in the workflow;
+     (b) the image job MUST run **`docker/setup-buildx-action`** before `build-push-action`
+     if it uses `cache-from/to: type=gha` — without Buildx the step fails in ~1s. Actions-
+     published packages default to **private** (make public in the package settings if you
+     want anonymous pulls; not needed if the box builds its own image).
 
 **No user-managed token anywhere.** Dashboard deploy = local + public; registry publish =
 CI's built-in token.
