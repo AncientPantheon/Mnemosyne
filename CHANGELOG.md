@@ -9,6 +9,34 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.4.0] — 2026-07-13
+
+### Added
+- **Download + Load for the Mnemosyne own-codex** (server-custody portability).
+  - **Download** (`POST /api/admin/codex/export`): prompt a new password (twice) → the
+    server re-keys the codex *machine-password → your new password* and returns a
+    portable backup you download. The live codex is untouched; the file is protected by
+    the password you chose (not the machine password you never see).
+  - **Load** (`POST /api/admin/codex/import`): pick a Mnemosyne codex backup + enter its
+    password → the server re-keys it *file-password → machine-password* and seals it under
+    the master key, **adopting** it (auto-unlocks as usual). This replaces the current
+    codex, so it's gated behind an explicit confirm + a "download a backup first" nudge.
+  - Both re-keys run **server-side in Node** (master key + machine password never leave
+    the box) using the codex package's new `rekeyCodex` primitive (codex 0.6.0, handoff
+    07) — which owns the drift-proof secret-field walk. Mnemosyne only ferries the opaque
+    blob (`lib/mnemosyneCodexRekey.ts`) and never touches plaintext key material.
+
+### Changed
+- **Codex constructor → 0.6.0** (brings `rekeyCodex` + `changeCodexPassword`).
+
+### Notes
+- Download/Load use Mnemosyne's raw-snapshot backup format (backup ↔ restore, and moving
+  a codex between automatons). Loading a **wallet-export (envelope) codex** is rejected
+  with a clear message — it needs one more small codex export (a pure `snapshotFromExport`);
+  flagged as a handoff-07 follow-up.
+- Minor packaging note for the codex agent: `rekeyCodex` runtime-exports from `/ouronet`
+  only, though the root `.d.ts` re-exports it — worth aligning the root JS entry.
+
 ## [0.3.5] — 2026-07-13
 
 ### Added

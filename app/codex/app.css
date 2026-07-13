@@ -654,3 +654,51 @@ body {
 }
 .cxpg-engine-badge strong { color: #d4a04a; }
 .cxpg-engine-pkg { opacity: 0.55; }
+
+/* ── Codex portability modal (Download / Load) ─────────────────────────────── */
+.mnemo-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+}
+.mnemo-modal {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  text-align: left;
+}
+.mnemo-modal-input {
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--codex-border, #2a241c);
+  background: var(--codex-surface-2, #14110c);
+  color: var(--codex-text, #e8e0d0);
+  font-size: 0.9rem;
+}
+.mnemo-modal-input:focus {
+  outline: none;
+  border-color: var(--codex-accent, #ceac5f);
+}
+.mnemo-modal-ack {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--codex-text-dim, #b8ad97);
+  cursor: pointer;
+}
+.mnemo-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 0.3rem;
+}

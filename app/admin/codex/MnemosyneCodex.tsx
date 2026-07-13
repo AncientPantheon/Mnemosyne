@@ -48,6 +48,7 @@ import {
 } from "@ancientpantheon/codex/hooks";
 import { MnemosyneServerCodexAdapter } from "@/lib/codex-dropin/MnemosyneServerCodexAdapter";
 import { CodexShell } from "../../codex/CodexShell";
+import { CodexPortabilityControls } from "./CodexPortabilityControls";
 import "../../codex/app.css";
 
 // Cache the master-key unlock for a normal admin session. Modest on purpose —
@@ -202,7 +203,12 @@ function CodexBody(): ReactElement {
       badge="server-sealed"
       tagline="Sealed on the server · auto-unlocked · saves live."
       consumerName="Mnemosyne"
-      topbarActions={<MnemosyneLockControl />}
+      topbarActions={
+        <>
+          <CodexPortabilityControls />
+          <MnemosyneLockControl />
+        </>
+      }
     />
   );
 }

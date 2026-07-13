@@ -204,6 +204,32 @@ Mnemosyne `lib/codex-dropin/MnemosyneServerCodexAdapter.ts` + `app/admin/codex/M
 (the hub's `CodexDropIn` pattern). Empty on first open → the ancient populates it on the spot
 → real-time sealed save. No upload.
 
+### 7a. Portability: download + load-and-adopt (server-custody re-key) — SHIPPED
+
+A server-custody codex is sealed under the master key and encrypted at the inner layer under a
+**machine-generated password the operator never sees**, so the plain codex Export/Load (which
+preserve the current password) aren't usable — both directions need a **re-key**. Mnemosyne
+v0.4.0 ships two ancient-gated flows (`app/api/admin/codex/{export,import}` + `app/admin/codex/
+CodexPortabilityControls.tsx`):
+- **Download** — prompt a new password (twice) → re-key *machine-pw → the new password* →
+  the operator downloads a portable codex encrypted under a password THEY chose. Live codex
+  untouched.
+- **Load-and-adopt** — pick a codex + its password → re-key *file-pw → machine-pw* → seal under
+  the master key (`saveBackup`) → auto-unlocks as usual. It **replaces** the current codex →
+  gate behind a confirm + "download a backup first".
+- Do the re-key **server-side** (Node): the master key + machine password never leave the box;
+  only the passwords the operator types travel (over TLS).
+
+**The re-key primitive is the codex package's, NOT the automaton's.** Consume
+`rekeyCodex(snapshot, oldPw, newPw)` (codex 0.6.0, from `@ancientpantheon/codex/ouronet`) — it
+owns the drift-proof secret-field walk (its `CODEX_IDENTITY_SECRET_FIELDS` + a `rekey-inventory`
+guard test keep it in lockstep with the snapshot shape, so a future secret field can't be
+silently left under the old password). Mnemosyne only ferries the opaque `backup.sealed` blob
+(`JSON.stringify(snapshot)`) through `lib/mnemosyneCodexRekey.ts` and never touches plaintext.
+Reject wallet-**envelope** uploads (`kadenaWallets`/`ouronetWallets`) up front — Load takes the
+raw-snapshot format; envelope import awaits a codex `snapshotFromExport` (handoff 07 follow-up).
+The story of why this belongs in the package: `07-codex-rekey-primitive.md`.
+
 ---
 
 ## 8. Pythia credentials (wired into the codex; persistent; embeddable)
