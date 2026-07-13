@@ -9,6 +9,26 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.3.0] — 2026-07-13
+
+### Infrastructure
+- **Mnemosyne now runs as a Docker container** (the automaton-container model —
+  `docs/handoffs/04-automaton-blueprint.md`). One Next-standalone image = the whole
+  app+website+API; operator state (sealed codex, master key, secrets, Pythia config)
+  lives in host paths mounted in, so a rebuild/redeploy never loses it. `Dockerfile`,
+  `docker-compose.yml` (persistence volume + rw `.env.local` mount for rotation),
+  `.dockerignore`, and `deploy/DOCKER.md`.
+- **Release images on ghcr.io** — `.github/workflows/image.yml` builds + pushes
+  `ghcr.io/ancientpantheon/mnemosyne:<version>` on a `v*` tag via the automatic
+  `GITHUB_TOKEN` (no PAT), for reproducible releases + rollback.
+- **Retired the pm2 rsync deploy workflow** — superseded by the container + (next) the
+  on-box Deploy button. Pushing to `main` no longer auto-deploys; updates go through
+  the Deploy button (blue-green) or a tagged ghcr.io image.
+
+### Repo
+- Moved to `github.com/AncientPantheon/Mnemosyne` (public) and the local tree to the
+  AncientPantheon workspace.
+
 ## [0.2.2] — 2026-07-12
 
 ### Codex
