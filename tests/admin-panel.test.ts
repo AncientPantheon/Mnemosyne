@@ -169,7 +169,7 @@ describe("deploy pipeline — spool + status routes (source contract)", () => {
   });
 });
 
-describe("admin — Mnemosyne Khronoton scaffold (autonomous transactions)", () => {
+describe("admin — Mnemosyne Khronoton (mockup embed, handoff 04)", () => {
   const panel = () => read("app", "admin", "khronoton", "KhronotonPage.client.tsx");
 
   it("is a client component behind the shared gate", () => {
@@ -177,16 +177,19 @@ describe("admin — Mnemosyne Khronoton scaffold (autonomous transactions)", () 
     expect(panel()).toMatch(/AdminGate/);
   });
 
-  it("presents an on-brand coming-soon placeholder that references the handoff", () => {
+  it("frames the static UI mockup inline via iframe (visual review, not live wiring)", () => {
     expect(panel()).toMatch(/Autonomous transactions/);
-    expect(panel()).toMatch(/Coming soon/);
-    expect(panel()).toMatch(/Pantheonic Automaton/);
-    expect(panel()).toMatch(/03-khronoton-automaton-package\.md/);
+    expect(panel()).toMatch(/<iframe/);
+    expect(panel()).toMatch(/\/khronoton-mockup\.html/);
   });
 
-  it("disables the new-scheduled-transaction action until the package is wired", () => {
-    expect(panel()).toMatch(/New scheduled transaction/);
-    expect(panel()).toMatch(/Available once the Khronoton package is wired/);
+  it("is explicit that it is NOT wired to the live engine (gated on handoff 05)", () => {
+    expect(panel()).toMatch(/[Nn]ot yet wired|not wired/);
+    expect(panel()).toMatch(/05-khronoton-engine-wire-in\.md/);
+  });
+
+  it("ships the self-contained mockup as a public asset", () => {
+    expect(existsSync(join(root, "public", "khronoton-mockup.html"))).toBe(true);
   });
 });
 

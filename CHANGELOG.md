@@ -9,6 +9,23 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.3.3] — 2026-07-13
+
+### Added
+- **Khronoton UI mockup embedded at `/admin/khronoton`** (handoff 04). The placeholder
+  is replaced by the package's self-contained static mockup (`public/khronoton-mockup.html`,
+  iframed in the ancient-gated page): the four views — Cronotons list, two-pane Pact
+  builder (Config/Payload/Gas Payer/Signatures/Execute + 7 schedule modes), Observe
+  fire-history (LIVE/TEST, paginated 50/page), Public read-only — plus the consumer-theme
+  recolor switcher. Visual review only.
+
+### Notes
+- **Still NOT wired to the live engine.** `@ancientpantheon/khronoton-core@0.2.0` ships a
+  real headless `/server` engine (store + atomic claim-before-fire + executor + tick), but
+  wiring it live means Mnemosyne autonomously codex-signs on-chain transactions — gated
+  behind the standing "finalize all three Constructors first" decision (handoff 05 §4).
+  The mockup stands in until that gate opens and the 0.3.0 `/ui` package ships.
+
 ## [0.3.2] — 2026-07-13
 
 ### Added
