@@ -1,9 +1,22 @@
+import { fetchLatestMnemosyneVersion, readMnemosyneVersion } from "../appVersion";
 import {
   fetchLatestCodexVersion,
   fetchLatestKhronotonVersion,
   isNewerVersion,
   readCodexUiVersion,
 } from "../codexVersion";
+
+/**
+ * The automaton itself (Mnemosyne, the Next.js app) — distinct from its constructors.
+ * `installed` is the running build's version; `available` is the version on the deploy
+ * branch (what a Deploy would `git pull` + rebuild). A Deploy rebuilds the app from
+ * source, so an app update is a first-class reason to deploy — not just a constructor.
+ */
+export interface AppStatus {
+  installed: string;
+  available: string | null;
+  updateAvailable: boolean;
+}
 
 /**
  * The status of one constructor (Codex, Khronoton, …) for the unified Deploy panel.
@@ -22,10 +35,12 @@ export interface ConstructorStatus {
   updateAvailable: boolean;
 }
 
-/** Aggregate status across all constructors — the single source for the button state. */
+/** Aggregate deploy status — the single source for the Deploy button state. */
 export interface ConstructorsStatus {
+  /** The automaton app itself (installed build vs the version on the deploy branch). */
+  mnemosyne: AppStatus;
   constructors: ConstructorStatus[];
-  /** True when at least one WIRED constructor has a strictly-newer npm version. */
+  /** True when the app OR any wired constructor has a strictly-newer version. */
   anyUpdateAvailable: boolean;
   /** "bundle" = live standalone (deploy = on-box rebuild); "dev" = localhost pull. */
   deployMode: "bundle" | "dev";
@@ -38,11 +53,24 @@ export interface ConstructorsStatus {
  * a deploy, so `updateAvailable` stays false regardless.
  */
 export async function readConstructorsStatus(): Promise<ConstructorsStatus> {
-  const [codexInstalled, codexLatest, khronotonLatest] = await Promise.all([
-    Promise.resolve(readCodexUiVersion()),
-    fetchLatestCodexVersion(),
-    fetchLatestKhronotonVersion(),
-  ]);
+  const [appInstalled, appLatest, codexInstalled, codexLatest, khronotonLatest] =
+    await Promise.all([
+      Promise.resolve(readMnemosyneVersion()),
+      fetchLatestMnemosyneVersion(),
+      Promise.resolve(readCodexUiVersion()),
+      fetchLatestCodexVersion(),
+      fetchLatestKhronotonVersion(),
+    ]);
+
+  const appUpdate =
+    appLatest !== null && appInstalled !== "0.0.0"
+      ? isNewerVersion(appLatest, appInstalled)
+      : false;
+  const mnemosyne: AppStatus = {
+    installed: appInstalled,
+    available: appLatest,
+    updateAvailable: appUpdate,
+  };
 
   const codexUpdate =
     codexLatest !== null && codexInstalled !== "unknown"
@@ -71,8 +99,11 @@ export async function readConstructorsStatus(): Promise<ConstructorsStatus> {
   ];
 
   return {
+    mnemosyne,
     constructors,
-    anyUpdateAvailable: constructors.some((c) => c.wired && c.updateAvailable),
+    anyUpdateAvailable:
+      mnemosyne.updateAvailable ||
+      constructors.some((c) => c.wired && c.updateAvailable),
     deployMode: process.env.NODE_ENV === "production" ? "bundle" : "dev",
   };
 }

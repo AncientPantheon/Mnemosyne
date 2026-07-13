@@ -139,6 +139,29 @@ describe("admin — Update Constructors: single Deploy button (REQ-09, REVIEW M5
     expect(panel()).not.toMatch(/coming soon/i);
     expect(panel()).not.toMatch(/KhronotonPreview/);
   });
+
+  it("shows Mnemosyne itself as its own version row (app build vs deploy branch)", () => {
+    expect(panel()).toMatch(/Mnemosyne/);
+    expect(panel()).toMatch(/the automaton/);
+    expect(panel()).toMatch(/VersionRow/);
+    expect(panel()).toMatch(/status\.mnemosyne/);
+  });
+});
+
+describe("deploy status — the app is a first-class deploy target (source contract)", () => {
+  it("reads the running app version + the version on the deploy branch (GitHub raw)", () => {
+    const av = read("lib", "appVersion.ts");
+    expect(av).toMatch(/readMnemosyneVersion/);
+    expect(av).toMatch(/fetchLatestMnemosyneVersion/);
+    expect(av).toMatch(/raw\.githubusercontent\.com/);
+  });
+
+  it("folds an app update into anyUpdateAvailable so a code-only change lights the button", () => {
+    const lib = read("lib", "deploy", "constructors.ts");
+    expect(lib).toMatch(/mnemosyne/);
+    expect(lib).toMatch(/fetchLatestMnemosyneVersion/);
+    expect(lib).toMatch(/mnemosyne\.updateAvailable\s*\|\|/);
+  });
 });
 
 describe("deploy pipeline — spool + status routes (source contract)", () => {

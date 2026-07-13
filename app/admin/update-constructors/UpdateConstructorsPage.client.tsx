@@ -15,7 +15,15 @@ interface ConstructorStatus {
   updateAvailable: boolean;
 }
 
+/** The automaton app itself (running build vs the version on the deploy branch). */
+interface AppStatus {
+  installed: string;
+  available: string | null;
+  updateAvailable: boolean;
+}
+
 interface ConstructorsStatus {
+  mnemosyne: AppStatus;
   constructors: ConstructorStatus[];
   anyUpdateAvailable: boolean;
   deployMode: "bundle" | "dev";
@@ -23,25 +31,47 @@ interface ConstructorsStatus {
 
 type Phase = "idle" | "arming" | "running" | "success" | "failed";
 
-/** Status badge for one constructor (installed + npm-latest, wired-aware). */
-function ConstructorRow({ c }: { c: ConstructorStatus }): ReactElement {
-  const availLabel = c.available ? `v${c.available}` : "unreachable";
+/**
+ * One installed→available version row (used for both the Mnemosyne app and each
+ * constructor). `wired: false` shows "not wired" instead of an installed version;
+ * `installedTitle`/`availableTitle` tune the hover text per source (build vs npm/repo).
+ */
+function VersionRow({
+  label,
+  subtitle,
+  installed,
+  available,
+  wired,
+  updateAvailable,
+  installedTitle,
+  availableTitle,
+}: {
+  label: string;
+  subtitle: ReactElement | string;
+  installed: string;
+  available: string | null;
+  wired: boolean;
+  updateAvailable: boolean;
+  installedTitle: string;
+  availableTitle: string;
+}): ReactElement {
+  const availLabel = available ? `v${available}` : "unreachable";
   return (
     <li>
       <span className="mnemo-admin-chain">
-        {c.label} · <code>{c.npmPackage}</code>
+        {label} · {typeof subtitle === "string" ? <code>{subtitle}</code> : subtitle}
       </span>
       <span className="mnemo-admin-badges">
         <span
-          className={`mnemo-admin-badge${c.wired ? " mnemo-admin-badge--live" : ""}`}
-          title="Installed in this build"
+          className={`mnemo-admin-badge${wired ? " mnemo-admin-badge--live" : ""}`}
+          title={installedTitle}
         >
-          {c.wired ? `v${c.installed}` : "not wired"}
+          {wired ? `v${installed}` : "not wired"}
         </span>
         <span className="mnemo-admin-arrow">→</span>
         <span
-          className={`mnemo-admin-badge${c.updateAvailable ? "" : " mnemo-admin-badge--live"}`}
-          title="Latest on npm"
+          className={`mnemo-admin-badge${updateAvailable ? "" : " mnemo-admin-badge--live"}`}
+          title={availableTitle}
         >
           {availLabel}
         </span>
@@ -147,10 +177,42 @@ function DeployPanel(): ReactElement {
 
   return (
     <section className="mnemo-admin-card">
+      <h2 className="mnemo-admin-h2">Mnemosyne</h2>
+      <ul className="mnemo-admin-chainlist">
+        {status ? (
+          <VersionRow
+            label="Mnemosyne"
+            subtitle={<em>the automaton</em>}
+            installed={status.mnemosyne.installed}
+            available={status.mnemosyne.available}
+            wired
+            updateAvailable={status.mnemosyne.updateAvailable}
+            installedTitle="Running build (this container)"
+            availableTitle="Latest on the deploy branch (main)"
+          />
+        ) : (
+          <li>
+            <span className="mnemo-admin-chain">Checking version…</span>
+          </li>
+        )}
+      </ul>
+
       <h2 className="mnemo-admin-h2">Constructors</h2>
       <ul className="mnemo-admin-chainlist">
         {status ? (
-          status.constructors.map((c) => <ConstructorRow key={c.key} c={c} />)
+          status.constructors.map((c) => (
+            <VersionRow
+              key={c.key}
+              label={c.label}
+              subtitle={c.npmPackage}
+              installed={c.installed}
+              available={c.available}
+              wired={c.wired}
+              updateAvailable={c.updateAvailable}
+              installedTitle="Installed in this build"
+              availableTitle="Latest on npm"
+            />
+          ))
         ) : (
           <li>
             <span className="mnemo-admin-chain">Checking constructors…</span>
@@ -160,10 +222,10 @@ function DeployPanel(): ReactElement {
 
       <p className="mnemo-admin-muted">
         {status == null
-          ? "Reading installed versions and checking npm…"
+          ? "Reading installed versions and checking for updates…"
           : anyUpdate
-            ? "An update is available. Deploy rebuilds the automaton with the latest constructors."
-            : "All wired constructors are up to date. You can still re-deploy to pick up code changes."}
+            ? "An update is available. Deploy rebuilds the automaton from the latest code + constructors."
+            : "Mnemosyne and its wired constructors are up to date. You can still re-deploy to pick up code changes."}
       </p>
       <p className="mnemo-admin-muted">
         {isBundle

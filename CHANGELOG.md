@@ -11,6 +11,15 @@ from `package.json`.
 
 ## [0.3.4] — 2026-07-13
 
+### Added
+- **Mnemosyne itself now has its own version row** on Update Constructors, above the
+  Constructors table: running build (`installed`) vs the version on the deploy branch
+  (`available`, read from `main`'s `package.json` on the public GitHub repo — the same
+  code a Deploy `git pull`s + rebuilds). A Deploy updates the app *and* the constructors,
+  so an app-source update is now a first-class deploy reason: the **Deploy button lights
+  up** when Mnemosyne OR any wired constructor is behind — a code-only change no longer
+  hides behind "Re-deploy."
+
 ### Changed
 - **Removed the redundant "Khronoton (coming soon)" card** from Update Constructors.
   Both constructors already appear in the Constructors status table (Khronoton shows
