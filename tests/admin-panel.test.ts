@@ -134,10 +134,10 @@ describe("admin — Update Constructors: single Deploy button (REQ-09, REVIEW M5
     expect(panel()).toMatch(/anyUpdateAvailable/);
   });
 
-  it("still surfaces Khronoton as an unwired preview that references the handoff", () => {
-    expect(panel()).toMatch(/@ancientpantheon\/khronoton-core/);
-    expect(panel()).toMatch(/03-khronoton-automaton-package\.md/);
+  it("surfaces Khronoton as an unwired constructor inline (no redundant coming-soon card)", () => {
     expect(panel()).toMatch(/not wired/i);
+    expect(panel()).not.toMatch(/coming soon/i);
+    expect(panel()).not.toMatch(/KhronotonPreview/);
   });
 });
 

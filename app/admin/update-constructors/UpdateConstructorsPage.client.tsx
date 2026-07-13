@@ -170,6 +170,13 @@ function DeployPanel(): ReactElement {
           ? "Live build — Deploy runs an on-box, zero-downtime rebuild (blue-green swap). Progress streams below; the site stays up throughout."
           : "Localhost — Deploy pulls the constructors at @latest; reload the page afterwards to pick them up."}
       </p>
+      {status?.constructors.some((c) => !c.wired) ? (
+        <p className="mnemo-admin-muted">
+          Khronoton&apos;s engine is published but <strong>not wired</strong> yet —
+          turning it on (autonomous codex-signing) is gated until all three Constructors
+          are finalized. Preview its UI under <code>Mnemosyne Khronoton</code>.
+        </p>
+      ) : null}
 
       {phase === "arming" ? (
         <div className="mnemo-admin-confirm">
@@ -231,34 +238,10 @@ function DeployPanel(): ReactElement {
   );
 }
 
-/**
- * Khronoton preview (SCAFFOLD): Khronoton is NOT wired into Mnemosyne yet — only the
- * logic-only `@ancientpantheon/khronoton-core` is published; the plug-and-play
- * `khronoton-server`/`khronoton-ui` packages (docs/handoffs/03) don't exist yet. Once
- * they ship and Mnemosyne takes the dependency, Khronoton joins the Deploy panel above
- * as a wired constructor and this note goes away.
- */
-function KhronotonPreview(): ReactElement {
-  return (
-    <section className="mnemo-admin-card">
-      <h2 className="mnemo-admin-h2">Khronoton (coming soon)</h2>
-      <p className="mnemo-admin-muted">
-        The Khronoton engine isn&apos;t wired into Mnemosyne yet. Only the logic-only{" "}
-        <code>@ancientpantheon/khronoton-core</code> is on npm; the plug-and-play
-        automaton package (see{" "}
-        <code>docs/handoffs/03-khronoton-automaton-package.md</code>) is still being
-        built. Once it ships, Khronoton appears as a wired constructor above and the
-        single Deploy button rebuilds it alongside Codex — no separate button.
-      </p>
-    </section>
-  );
-}
-
 export function UpdateConstructorsPage(): ReactElement {
   return (
     <AdminGate title="Update Constructors">
       <DeployPanel />
-      <KhronotonPreview />
     </AdminGate>
   );
 }

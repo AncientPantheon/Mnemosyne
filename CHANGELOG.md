@@ -9,6 +9,16 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.3.4] — 2026-07-13
+
+### Changed
+- **Removed the redundant "Khronoton (coming soon)" card** from Update Constructors.
+  Both constructors already appear in the Constructors status table (Khronoton shows
+  `not wired → v0.2.0`), so the card was pure duplication and its text was stale (it
+  claimed the engine was "still being built" — the `/server` engine has shipped). The
+  one useful bit — why Khronoton is unwired + where to preview its UI — is now a single
+  inline line under the table, shown only while an unwired constructor exists.
+
 ## [0.3.3] — 2026-07-13
 
 ### Added
