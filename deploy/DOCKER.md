@@ -16,6 +16,14 @@ host: /var/www/codex.ancientholdings.eu/
 Both already exist on the box (set up for the pm2 run) — the container reuses them, so
 the codex you already sealed and the Pythia config keep working across the migration.
 
+**Ownership (do not skip):** the image runs as the non-root user `nextjs` (uid **1001**).
+The mounted host state must be owned by 1001 or the container can't read/write it (the
+sealed-codex dir is `drwx------`, so a wrong owner = "codex load failed" even though the
+site is up). Chown the host state to the runtime uid:
+```bash
+chown -R 1001:1001 /var/www/codex.ancientholdings.eu/data /var/www/codex.ancientholdings.eu/.env.local
+```
+
 ## One-time VPS migration (pm2 standalone → container)
 
 1. **Install Docker** on the VPS (root): `curl -fsSL https://get.docker.com | sh` +

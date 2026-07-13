@@ -108,6 +108,11 @@ host:/srv/<automaton>/.env.local → master key + session/OIDC secrets + Pythia 
 Never bake secrets into the image. The volume makes "wire Pythia once → it persists
 across all deploys" true by construction.
 
+**Runtime-user ownership (learned on Mnemosyne):** the image runs as a NON-ROOT user
+(uid 1001). The mounted host state (`.env.local` + `data/`) MUST be owned by that uid or
+the container can't read the `drwx------` sealed-codex dir — the site is up but the codex
+"fails to load". `chown -R 1001:1001 <host-state>` on first setup.
+
 ---
 
 ## 4. Localhost vs live — clean segregation (do not mix)
