@@ -42,19 +42,39 @@ Because the container and pm2 both bind `127.0.0.1:3005`, do step 4 (stop pm2) r
 before/after `up -d` — a brief blip on the FIRST cutover only. Subsequent updates use
 blue-green (below) with zero downtime.
 
-## Updates — blue-green, zero-downtime (the Deploy button)
+## Updates — blue-green, zero-downtime (the Deploy button) — BUILT
 
-The ancient-gated Deploy endpoint (TBD: `POST /api/admin/deploy`) runs on the box and:
-1. `git pull` (public repo, no cred) + bump constructors to `@latest`.
-2. `docker compose build` a new image.
-3. Start a SECOND container on an alternate port (e.g. 3006), health-check `/api/me`.
-4. Flip nginx's upstream 3005→3006 (`nginx -s reload`), then stop + remove the old.
-5. Stream every step's logs to the admin page over SSE (a live terminal).
+The ancient-gated single **Deploy** button (Admin → Update Constructors) drives a
+zero-downtime rebuild. The container itself holds NO Docker/nginx power (least
+privilege) — instead of a mounted docker socket, it *signals* a privileged host
+deployer through the shared volume:
 
-For the app (in a container) to drive host Docker, mount the docker socket read-only
-into the container (`/var/run/docker.sock`) OR run the deploy script via a tiny host
-helper. Socket-mount is simplest; treat it as a privileged capability (ancient-gated +
-fresh-confirm).
+1. `POST /api/admin/deploy` writes a `<id>.request.json` into the deploy spool
+   (`<data>/deploy/`, on the host volume) and seeds `<id>.log` + `<id>.status`.
+2. A systemd **path unit** (`mnemosyne-deploy.path`) watches the spool and runs
+   `mnemosyne-deploy.sh` (as root, on the host) for each request:
+   - `git checkout -- package.json package-lock.json && git pull --ff-only`
+   - `npm install @ancientpantheon/codex@latest` (bump the pins)
+   - `docker build` the new image
+   - start the OTHER color (`mnemosyne-blue`↔`mnemosyne-green`, ports 3005↔3006),
+     health-check `/api/me`
+   - rewrite `/etc/nginx/snippets/mnemosyne-upstream.conf` to the new port +
+     `nginx -s reload` (the atomic cut-over), then remove the old color
+3. The browser tails `<id>.log`/`<id>.status` via SSE
+   (`/api/admin/deploy/stream/<id>`). When the swap drops the container serving the
+   stream, EventSource auto-reconnects to the new container and resumes the tail off
+   the same host-volume log — so the terminal stays consistent across the swap.
+
+Install once on the box: `deploy/host/install-host-deployer.sh` (systemd units +
+nginx upstream include + spool chown to uid 1001), plus a one-time vhost wiring
+(`include` the upstream + `proxy_pass http://mnemosyne_app;` + an SSE-friendly
+`location /api/admin/deploy/stream/` with `proxy_buffering off; proxy_read_timeout
+1800s;`). See `deploy/host/mnemosyne-upstream.conf` for the exact lines. The first
+deploy migrates the single `mnemosyne` container to `mnemosyne-blue` (a one-time
+few-second blip; every deploy after is zero-downtime).
+
+On **dev** (`NODE_ENV !== production`) the same button instead pulls the constructors
+`@latest` in-process and streams npm's output to the terminal; reload picks it up.
 
 ## Releases → ghcr.io
 

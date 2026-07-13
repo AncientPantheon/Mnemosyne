@@ -87,11 +87,21 @@ app+website+API in one). Two complementary, **credential-free** paths:
    the box runs: `git pull` (public repo, no cred) → `npm install @ancientpantheon/*@latest`
    (public npm) → `docker build` (local) → **blue-green swap**. 100% tokenless. A single
    button, **lit whenever any constructor (or the app source) has a newer version**.
+   BUILT + PROVEN live in Mnemosyne v0.3.2 (see `deploy/host/` + `deploy/DOCKER.md`).
+   - **Least privilege (do NOT mount the docker socket).** The container holds no
+     Docker/nginx power. `POST /api/admin/deploy` only drops a request file in a spool on
+     the shared host volume; a **systemd path unit** on the host runs the privileged
+     deployer (`mnemosyne-deploy.sh`, as root) — build, container swap, nginx reload. A
+     socket-mount would hand container-escape-equivalent power to the web app; the
+     host-signal keeps the blast radius on the host side.
    - **Zero-downtime (blue-green):** build the new image → start the new container on a
-     second port → health-check → flip nginx's upstream → stop the old. The site never
-     drops a request.
-   - **Streamed progress:** stream the `git pull`/`npm`/`docker build` logs to the admin
-     page over SSE — a live terminal, exactly like the hub's website-update button.
+     second port (blue 3005 ↔ green 3006) → health-check → rewrite an nginx `upstream`
+     include + `nginx -s reload` → stop the old. The site never drops a request.
+   - **Streamed progress:** the deployer writes its log to the spool; the browser tails it
+     over SSE (`/api/admin/deploy/stream/<id>`), reconnecting across the swap (the log
+     lives on the host volume, so the new container resumes the tail). The nginx `location`
+     for the stream needs `proxy_buffering off; proxy_read_timeout 1800s;`. A live
+     terminal, exactly like the hub's website-update button.
 2. **Add-on — CI → ghcr.io on release.** On a git tag/push, GitHub Actions builds + pushes
    a **versioned** image (automatic `GITHUB_TOKEN`) → gives rollback + the Packages
    presence. The dashboard deploy does not depend on it.
