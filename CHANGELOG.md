@@ -9,6 +9,14 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.3.1] — 2026-07-13
+
+### Fixes
+- **Favicon on the landing page.** The landing is served as raw HTML (`app/route.ts`),
+  so Next's `app/icon.svg` convention didn't inject a favicon there the way it does for
+  the App Router pages — the tab showed no icon. Added an explicit
+  `<link rel="icon" href="/icon.svg">` to `public/index.html`.
+
 ## [0.3.0] — 2026-07-13
 
 ### Infrastructure
