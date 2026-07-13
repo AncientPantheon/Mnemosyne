@@ -28,6 +28,18 @@ The three organs are **"constructors"** — reusable npm packages the automaton 
 The automaton itself is an **app**, not a library: its artifact is a **container image**,
 never an npm package.
 
+**Three shapes use this blueprint — know which you are before reading on:**
+- **Pure constructor** — an npm package only, no deployed surface (e.g. `khronoton-core`).
+  This doc barely applies: publish + version it, done.
+- **Automaton** — a deployed container that consumes constructors (e.g. Mnemosyne). The
+  whole doc applies.
+- **Constructor-service** — a constructor that is ALSO a deployed app with its own webpage +
+  admin (e.g. **Pythia**: automatons *import* it AND humans *operate* it live). It takes the
+  **infrastructure core** — §3 container + tokenless Deploy, §5 AncientHub login, §6 sealed
+  operator secrets, §9 Hub-style admin, §10 versioning — but ships **two** artifacts (an npm
+  package AND a container) and SKIPS the organs it doesn't have (no operator Codex UI, no
+  Khronoton). **If you're Pythia, read §13 first, then the infra sections it points to.**
+
 ```
         ┌───────────────────────── the Automaton (a Docker container) ─────────────────────────┐
         │  AncientHub OIDC login (ancient gate)                                                 │
@@ -50,8 +62,9 @@ never an npm package.
   (GitHub Container Registry — shows under the repo's *Packages* tab). Built + pushed
   by CI on release using the workflow's **automatic `GITHUB_TOKEN`** (no user PAT, never
   expires).
-- **NOT an npm package.** An automaton is deployed, not imported. Only *constructors*
-  (codex, khronoton) are npm packages.
+- **An automaton is NOT an npm package** — deployed, not imported; only *constructors* are
+  npm packages. **Exception — a constructor-service (Pythia) is BOTH:** it publishes an npm
+  package for consumers AND ships a container for its own live surface (§13).
 - The repo is **public**, so the box pulls source + npm packages with **zero credentials**.
 
 ---
@@ -180,10 +193,16 @@ The automaton delegates human login to the **AncientHub OIDC IdP** and gates adm
 
 ---
 
-## 6. Master-key sealed Codex (follow handoff 02)
+## 6. Master-key sealed operator secrets (follow handoff 02)
 
-The automaton holds its OWN operator codex, **sealed under a server master key** and
-**auto-unlocked** for the ancient admin (no password) and for self-execution.
+The service holds its OWN operator secrets, **sealed under a server master key** and
+**auto-unlocked** for the ancient admin (no password) and for self-execution. **What the
+sealed payload IS depends on the service:** Mnemosyne seals an **operator codex** (keys +
+signing, §7); a constructor-service like **Pythia** seals **its own credentials** (upstream
+node connections, API keys, the dual-key halves) — *same vault, different contents*. The
+master-key vault + rotation mechanics below are generic; "codex" is just Mnemosyne's payload,
+and §7 (the codex-ui server-custody adapter) is Mnemosyne-specific — a service with no codex
+seals a plain JSON secrets blob instead, reusing the same Vault/rotation code.
 
 - Master key `<AUTOMATON>_MASTER_KEY` (base64 of 32 random bytes) in the volume `.env.local`.
 - Sealing = libsodium `crypto_secretbox`; the codex is stored as sealed files in the volume
@@ -273,19 +292,25 @@ the safety net for the deploy button.
 
 ## 11. New-automaton checklist
 
-- [ ] Repo under `AncientPantheon` (public); image → `ghcr.io/ancientpantheon/<name>`; NOT npm.
+> **Constructor-service (Pythia)?** Do the infra items but skip the ones marked *(automaton
+> only)*, seal your own creds instead of a codex, and ADD "publish the npm package on release"
+> (§13).
+
+- [ ] Repo under `AncientPantheon` (public); image → `ghcr.io/ancientpantheon/<name>`.
+      *(constructor-service: ALSO publish an npm package — §13.)*
 - [ ] Next.js `output: "standalone"`; Dockerfile (multi-stage) + compose with a **host volume**
       for `.env.local` + `data/`.
 - [ ] AncientHub OIDC login + `ancient` gate — **host-derived `redirect_uri` AND all same-site
       redirects** (`resolveOrigin`/`siteUrl`); Lax/Secure-per-scheme cookies. Register the
       client + its callback with the hub.
-- [ ] Own sealed Codex (master key in the volume) + rotation per handoff 02 + a survives-rotation
-      test.
-- [ ] Server-custody codex adapter + the shared CodexShell (one layout, all surfaces).
-- [ ] Pythia connector (global + per-user), persisted in the volume.
-- [ ] Constructors consumed as npm (`@ancientpantheon/*`, core/server/ui), baked into the image.
-- [ ] Khronoton wired once its package ships (handoff 03): inject a KeyResolver over the sealed
-      codex + a ChainRuntime + storage + audit; run the tick.
+- [ ] Master-key sealed operator secrets in the volume + rotation per handoff 02 + a
+      survives-rotation test (Mnemosyne: a codex; constructor-service: its own creds — §6).
+- [ ] Server-custody codex adapter + the shared CodexShell *(automaton only — needs a codex)*.
+- [ ] Pythia connector (global + per-user), persisted in the volume *(automaton consumers only;
+      Pythia itself IS the service)*.
+- [ ] Constructors consumed as npm (`@ancientpantheon/*`, core/server/ui), baked into the image
+      *(if it consumes any)*.
+- [ ] Khronoton wired once its package ships (handoff 03) *(automaton only)*.
 - [ ] Hub-style admin (landing + per-function pages + `AdminGate`).
 - [ ] Deploy: on-box tokenless button (git pull + npm latest + docker build + blue-green +
       streamed logs), deploy-mode-aware (dev = npm + restart); CI → ghcr.io on release.
@@ -303,4 +328,54 @@ the safety net for the deploy button.
 | Hub-style admin | `app/admin/AdminGate.client.tsx`, `app/admin/AdminLanding.client.tsx`, `app/admin/*/` |
 | Constructor version/update surface | `lib/codexVersion.ts`, `app/api/admin/{codex,khronoton}-version`, `app/admin/update-constructors/*` |
 | Versioning gate | `tests/changelog-version.test.ts`, `docs/RELEASING.md`, `CHANGELOG.md` |
-| Deploy (target — TBD as of this writing) | Dockerfile + compose + `POST /api/admin/deploy` (blue-green, SSE) |
+| Deploy (BUILT) | `Dockerfile`, `docker-compose.yml`, `deploy/host/*` (systemd blue-green deployer + install script), `app/api/admin/deploy/*` (trigger + SSE stream), `app/admin/update-constructors/*` |
+| Sealed-config portability (download/load) | `lib/mnemosyneCodexRekey.ts`, `app/api/admin/codex/{export,import}`, `app/admin/codex/CodexPortabilityControls.tsx` (§7a) |
+
+---
+
+## 13. Constructor-services — a constructor that is ALSO a deployed app (Pythia)
+
+**Pythia** is the reference constructor-service: automatons **import** it as a chain-reads
+constructor (an npm package baked into their image at build time), AND it runs as a **live
+deployed service** with its own webpage + ancient admin (the backend the connector URL points
+at). So there are effectively two faces of Pythia — the **npm client** consumers bake in, and
+the **deployed service** humans operate — and this section is about making the *deployed
+service* an admin-driven container exactly like Mnemosyne.
+
+**Reuse verbatim (the infra core):**
+- **§3 container + tokenless on-box Deploy** (blue-green, SSE, least-privilege host-signal
+  deployer, host-volume persistence, uid-1001 ownership). Identical.
+- **§5 AncientHub OIDC login + `ancient` gate** — both redirect traps, Lax/Secure cookies,
+  `requireAncient`. Identical. Register Pythia's own confidential client + callback with the hub.
+- **§6 master-key sealed operator secrets** — Pythia seals **its own** credentials (upstream
+  node connections, API keys, the dual-key halves), NOT a codex. Same Vault + generic rotation;
+  the sealed payload is a plain JSON secrets blob. (§7's codex-ui adapter does NOT apply.)
+- **§9 Hub-style admin** (landing + tile per function + shared `AdminGate`) and **§10 versioning
+  gate**. Identical.
+
+**Skip:** §7 the codex-ui server-custody adapter, §7a codex portability (unless Pythia wants an
+analogous "download/load my sealed config" — trivially the same server-side re-seal pattern),
+Khronoton (handoff 03), and the "consumes other organs" framing (Pythia may consume none).
+
+**The one genuinely new thing — TWO artifacts, ONE version, TWO release lanes:**
+Unlike an automaton (one artifact: a container), a constructor-service ships **both**:
+1. the **npm package** `@ancientpantheon/pythia*` (what automatons import), and
+2. the **container image** `ghcr.io/ancientpantheon/pythia` (the live service).
+
+Keep them in lockstep with the **single `package.json` version** (the §10 gate). A release is:
+- **npm publish on tag** (CI, like the constructor triplet) — so downstream automatons (Mnemosyne
+  et al.) see a new *constructor* version on THEIR Deploy panels and rebuild. This is the
+  existing cross-constructor flow — nothing new downstream.
+- **the container** — Pythia's OWN on-box Deploy button rebuilds its live service from source
+  (git pull + `npm install @latest` for any constructors it consumes + docker build + blue-green),
+  AND CI → ghcr.io on release for a rollback image. Same §3 mechanic.
+
+So Pythia's admin has the **same "Update Constructors + Deploy" surface** as Mnemosyne (rebuilds
+its container, and shows Pythia's *own* version as the automaton row — see §7-style app-version
+tracking via a GitHub-raw `package.json` read). The extra discipline vs an automaton: **a Pythia
+release must publish the npm package too**, not just redeploy the container — otherwise consumers
+never get the new client. Wire the npm publish into the release CI so the two lanes can't drift.
+
+**Net for the Pythia agent:** build the deployed service as a Mnemosyne-shaped container (§§1,3,5,
+6,9,10,11), seal Pythia's own creds instead of a codex, skip Codex-UI/Khronoton, and add the npm
+publish lane so every version ships both artifacts. Everything else is copy-the-Mnemosyne-pattern.
