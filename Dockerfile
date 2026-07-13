@@ -5,7 +5,7 @@
 # touches operator state. Reference: docs/handoffs/04-automaton-blueprint.md.
 
 # ---- deps: resolve node_modules from the lockfile (cached layer) --------------------
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 WORKDIR /app
 # libc compat for native modules (libsodium-wrappers, future better-sqlite3).
 RUN apk add --no-cache libc6-compat
@@ -13,7 +13,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
 # ---- build: compile the Next standalone output -------------------------------------
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
 COPY --from=deps /app/node_modules ./node_modules
@@ -24,7 +24,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 # ---- runtime: just the standalone server + static + public -------------------------
-FROM node:20-alpine AS runtime
+FROM node:22-alpine AS runtime
 WORKDIR /app
 RUN apk add --no-cache libc6-compat \
   && addgroup -g 1001 -S nodejs \

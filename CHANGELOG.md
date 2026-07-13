@@ -9,6 +9,27 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.3.5] — 2026-07-13
+
+### Added
+- **Auto-reload after a live deploy** — no more manual refresh. When a bundle deploy
+  finishes, the panel reloads to the freshly-swapped build automatically (dev still
+  shows the "reload to run the new build" note, since dev needs a server restart).
+- **Granular deploy progress.** The on-box deployer now emits numbered phase banners
+  with elapsed time (`═══ [1m20s] 2/5 · Build image (BuildKit) ═══`) and builds with
+  BuildKit `--progress=plain`, so the admin terminal streams every step live instead
+  of the terse legacy-builder output.
+
+### Changed
+- **Container base image → Node 22** (`node:22-alpine`), silencing the `EBADENGINE`
+  warnings from deps that require Node ≥22 (`@stoachain/kadena-stoic-legacy`, the
+  Solana/wallet-standard transitives).
+
+### Fixed
+- **Deployer can't corrupt itself mid-run.** A deploy `git pull`s the very scripts it's
+  executing; the scan step now snapshots the deployer to an immutable temp dir and
+  re-execs from there, so pulling new script versions can't corrupt the running deploy.
+
 ## [0.3.4] — 2026-07-13
 
 ### Added

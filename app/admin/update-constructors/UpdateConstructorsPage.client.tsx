@@ -96,13 +96,20 @@ function DeployPanel(): ReactElement {
   const [phase, setPhase] = useState<Phase>("idle");
   const [log, setLog] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+  const [reloading, setReloading] = useState(false);
   const esRef = useRef<EventSource | null>(null);
   const termRef = useRef<HTMLPreElement | null>(null);
+  // deployMode inside the SSE callback (closes over stale state otherwise).
+  const modeRef = useRef<"bundle" | "dev" | null>(null);
 
   const loadStatus = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/deploy", { cache: "no-store" });
-      if (res.ok) setStatus((await res.json()) as ConstructorsStatus);
+      if (res.ok) {
+        const data = (await res.json()) as ConstructorsStatus;
+        setStatus(data);
+        modeRef.current = data.deployMode;
+      }
     } catch {
       /* leave null → "checking…" */
     }
@@ -134,8 +141,20 @@ function DeployPanel(): ReactElement {
       es.addEventListener("done", (ev) => {
         const s = (ev as MessageEvent).data as string;
         es.close();
-        setPhase(s === "success" ? "success" : "failed");
-        void loadStatus();
+        if (s === "success") {
+          setPhase("success");
+          void loadStatus();
+          // Live build: the new container already serves — reload to pick up the new
+          // assets so the operator never has to hit refresh. (Dev needs a dev-server
+          // restart, not a reload, so we only auto-reload the bundle.)
+          if (modeRef.current === "bundle") {
+            setReloading(true);
+            window.setTimeout(() => window.location.reload(), 2500);
+          }
+        } else {
+          setPhase("failed");
+          void loadStatus();
+        }
       });
       es.onerror = () => {
         // Not terminal → the browser will auto-reconnect (e.g. mid-swap). If it's
@@ -285,7 +304,9 @@ function DeployPanel(): ReactElement {
             {phase === "running"
               ? "▶ Deploy in progress…"
               : phase === "success"
-                ? "✓ Deploy complete."
+                ? reloading
+                  ? "✓ Deploy complete — reloading to the new build…"
+                  : "✓ Deploy complete."
                 : "✗ Deploy failed — see the log."}
           </p>
           <pre className="mnemo-admin-log mnemo-admin-term" ref={termRef}>
