@@ -41,8 +41,8 @@ describe("/api/admin/khronoton-version — ancient-gated scaffold", () => {
     expect((await GET(req(await modernCookie()))).status).toBe(403);
   });
 
-  it("200s for an ancient with { installed:'not wired', wired:false, available } + no-store", async () => {
-    // Stub the npm registry so the route can preview the published Khronoton version.
+  it("200s for an ancient with { installed:<semver>, wired:true, available } + no-store", async () => {
+    // npm reports an OLDER version than what's installed → no update available.
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
@@ -53,17 +53,34 @@ describe("/api/admin/khronoton-version — ancient-gated scaffold", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toBe("no-store");
     const body = await res.json();
-    expect(body.installed).toBe("not wired");
-    expect(body.wired).toBe(false);
-    expect(body.updateAvailable).toBe(false);
+    // Khronoton is now a real dependency: installed is read from node_modules, wired:true.
+    expect(body.wired).toBe(true);
+    expect(body.installed).toMatch(/^\d+\.\d+\.\d+/);
+    expect(body.installed).not.toBe("not wired");
     expect(body.available).toBe("0.1.1");
+    expect(body.updateAvailable).toBe(false);
   });
 
-  it("still reports wired:false with available:null when npm is unreachable", async () => {
+  it("flags updateAvailable when npm publishes a newer Khronoton", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(JSON.stringify({ "dist-tags": { latest: "99.0.0" } }), { status: 200 }),
+      ),
+    );
+    const res = await GET(req(await ancientCookie()));
+    const body = await res.json();
+    expect(body.wired).toBe(true);
+    expect(body.available).toBe("99.0.0");
+    expect(body.updateAvailable).toBe(true);
+  });
+
+  it("still reports wired:true with available:null + no update when npm is unreachable", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("down", { status: 503 })));
     const res = await GET(req(await ancientCookie()));
     const body = await res.json();
-    expect(body.wired).toBe(false);
+    expect(body.wired).toBe(true);
     expect(body.available).toBeNull();
+    expect(body.updateAvailable).toBe(false);
   });
 });

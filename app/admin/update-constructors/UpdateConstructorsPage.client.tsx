@@ -251,11 +251,12 @@ function DeployPanel(): ReactElement {
           ? "Live build — Deploy runs an on-box, zero-downtime rebuild (blue-green swap). Progress streams below; the site stays up throughout."
           : "Localhost — Deploy pulls the constructors at @latest; reload the page afterwards to pick them up."}
       </p>
-      {status?.constructors.some((c) => !c.wired) ? (
+      {status?.constructors.some((c) => c.key === "khronoton" && c.wired) ? (
         <p className="mnemo-admin-muted">
-          Khronoton&apos;s engine is published but <strong>not wired</strong> yet —
-          turning it on (autonomous codex-signing) is gated until all three Constructors
-          are finalized. Preview its UI under <code>Mnemosyne Khronoton</code>.
+          Khronoton is <strong>installed</strong> and deploys with Mnemosyne, but its
+          autonomous engine (codex-signing, no human in the loop) is <strong>not
+          switched on</strong> yet — that wire-in is gated on the Pythia network runtime.
+          Preview its UI under <code>Mnemosyne Khronoton</code>.
         </p>
       ) : null}
 

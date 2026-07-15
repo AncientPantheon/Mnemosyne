@@ -4,6 +4,7 @@ import {
   fetchLatestKhronotonVersion,
   isNewerVersion,
   readCodexUiVersion,
+  readKhronotonUiVersion,
 } from "../codexVersion";
 
 /**
@@ -22,8 +23,11 @@ export interface AppStatus {
  * The status of one constructor (Codex, Khronoton, …) for the unified Deploy panel.
  * `installed` is what's compiled into / installed in the running build; `available`
  * is npm's latest (null if unreachable). `wired` is false for a constructor that
- * exists on npm but isn't a Mnemosyne dependency yet (Khronoton, today) — it can
- * never be "update available" because there's nothing installed to update.
+ * exists on npm but isn't a Mnemosyne dependency yet — it can never be "update
+ * available" because there's nothing installed to update. Both Codex and Khronoton are
+ * wired now; `wired` here is strictly "is a Mnemosyne dependency", distinct from
+ * whether a constructor's runtime engine is switched on (Khronoton's autonomous
+ * signing is a separate, Pythia-gated follow-up — the package ships regardless).
  */
 export interface ConstructorStatus {
   key: "codex" | "khronoton";
@@ -47,20 +51,27 @@ export interface ConstructorsStatus {
 }
 
 /**
- * Read every constructor's installed-vs-available pair. Codex is wired (installed
- * version read from node_modules; update flagged when npm is newer). Khronoton is
- * NOT wired yet — we still surface its npm version as a preview, but it can't drive
- * a deploy, so `updateAvailable` stays false regardless.
+ * Read every constructor's installed-vs-available pair. Codex and Khronoton are both
+ * wired (installed version read from node_modules; update flagged when npm is newer),
+ * so either can drive a deploy. `wired` reflects dependency presence — Khronoton's
+ * autonomous engine being switched on is a separate, Pythia-gated concern.
  */
 export async function readConstructorsStatus(): Promise<ConstructorsStatus> {
-  const [appInstalled, appLatest, codexInstalled, codexLatest, khronotonLatest] =
-    await Promise.all([
-      Promise.resolve(readMnemosyneVersion()),
-      fetchLatestMnemosyneVersion(),
-      Promise.resolve(readCodexUiVersion()),
-      fetchLatestCodexVersion(),
-      fetchLatestKhronotonVersion(),
-    ]);
+  const [
+    appInstalled,
+    appLatest,
+    codexInstalled,
+    codexLatest,
+    khronotonInstalled,
+    khronotonLatest,
+  ] = await Promise.all([
+    Promise.resolve(readMnemosyneVersion()),
+    fetchLatestMnemosyneVersion(),
+    Promise.resolve(readCodexUiVersion()),
+    fetchLatestCodexVersion(),
+    Promise.resolve(readKhronotonUiVersion()),
+    fetchLatestKhronotonVersion(),
+  ]);
 
   const appUpdate =
     appLatest !== null && appInstalled !== "0.0.0"
@@ -77,6 +88,11 @@ export async function readConstructorsStatus(): Promise<ConstructorsStatus> {
       ? isNewerVersion(codexLatest, codexInstalled)
       : false;
 
+  const khronotonUpdate =
+    khronotonLatest !== null && khronotonInstalled !== "unknown"
+      ? isNewerVersion(khronotonLatest, khronotonInstalled)
+      : false;
+
   const constructors: ConstructorStatus[] = [
     {
       key: "codex",
@@ -91,10 +107,10 @@ export async function readConstructorsStatus(): Promise<ConstructorsStatus> {
       key: "khronoton",
       label: "Khronoton",
       npmPackage: "@ancientpantheon/khronoton-core",
-      installed: "not wired",
+      installed: khronotonInstalled,
       available: khronotonLatest,
-      wired: false,
-      updateAvailable: false,
+      wired: true,
+      updateAvailable: khronotonUpdate,
     },
   ];
 

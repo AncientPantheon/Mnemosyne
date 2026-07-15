@@ -9,6 +9,34 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.5.0] — 2026-07-15
+
+### Added
+- **Khronoton wired in as a constructor dependency** (`@ancientpantheon/khronoton-core`,
+  the finalized headless scheduler engine). Mnemosyne now installs Khronoton alongside
+  Codex, and the **Update Constructors** panel shows it as a first-class wired row
+  (installed version vs npm latest) that can drive a deploy — replacing the previous
+  "not wired" preview state.
+  - **Deploy plumbing:** both the localhost dev deploy (`lib/deploy/devDeploy.ts`) and
+    the on-box blue-green deployer (`deploy/host/mnemosyne-deploy.sh`) now pull
+    `@ancientpantheon/khronoton-core@latest` next to Codex, so every deploy keeps the
+    installed engine current.
+  - **`readKhronotonUiVersion()`** reads the installed engine version from
+    `node_modules` (mirrors the Codex reader); the ancient-gated
+    `/api/admin/khronoton-version` route now reports `{ installed, available,
+    updateAvailable, wired: true }`.
+
+### Notes
+- `wired: true` means Khronoton is an installed **dependency** that deploys with
+  Mnemosyne — it is **not** the same as switching on the autonomous engine. Turning on
+  codex-signed, no-human-in-the-loop firing (the six engine seams, incl. the
+  `ChainRuntime` backed by the Pythia network runtime) remains a separate, Pythia-gated
+  wire-in — see `docs/handoffs/05-khronoton-engine-wire-in.md`. The `/admin/khronoton`
+  surface stays a UI mockup until then.
+- `better-sqlite3` (Khronoton's optional reference DB backend) is an **optional**
+  dependency, resolved from prebuilt binaries; it is not required until the engine
+  wire-in and cannot fail the install/build.
+
 ## [0.4.0] — 2026-07-13
 
 ### Added

@@ -134,10 +134,21 @@ describe("admin — Update Constructors: single Deploy button (REQ-09, REVIEW M5
     expect(panel()).toMatch(/anyUpdateAvailable/);
   });
 
-  it("surfaces Khronoton as an unwired constructor inline (no redundant coming-soon card)", () => {
-    expect(panel()).toMatch(/not wired/i);
+  it("renders each constructor as a data-driven version row (no redundant coming-soon card)", () => {
+    // The row itself is data-driven (VersionRow reads `wired`/`installed` from the
+    // deploy status), so the panel source no longer hardcodes a Khronoton state.
+    expect(panel()).toMatch(/VersionRow/);
+    expect(panel()).toMatch(/status\.constructors\.map/);
     expect(panel()).not.toMatch(/coming soon/i);
     expect(panel()).not.toMatch(/KhronotonPreview/);
+  });
+
+  it("notes Khronoton is installed but its autonomous engine is Pythia-gated", () => {
+    // Khronoton is now a wired dependency (it deploys with Mnemosyne), but the
+    // autonomous codex-signing engine is a separate, still-gated wire-in.
+    expect(panel()).toMatch(/installed/i);
+    expect(panel()).toMatch(/not\s+switched\s+on|autonomous engine/i);
+    expect(panel()).toMatch(/Pythia/);
   });
 
   it("shows Mnemosyne itself as its own version row (app build vs deploy branch)", () => {
@@ -223,9 +234,10 @@ describe("/api/admin/khronoton-version — ancient-gated scaffold (source contra
     expect(route()).toMatch(/requireAncient/);
   });
 
-  it("reports wired:false (Khronoton is not yet a dependency)", () => {
-    expect(route()).toMatch(/wired:\s*false/);
-    expect(route()).toMatch(/not wired/);
+  it("reports wired:true (Khronoton is now a dependency) and reads the installed version", () => {
+    expect(route()).toMatch(/wired:\s*true/);
+    expect(route()).toMatch(/readKhronotonUiVersion/);
+    expect(route()).toMatch(/updateAvailable/);
   });
 });
 

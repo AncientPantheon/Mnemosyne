@@ -50,15 +50,37 @@ export async function fetchLatestCodexVersion(): Promise<string | null> {
   }
 }
 
-/** The npm package the (future) Khronoton automaton engine ships as. */
-const KHRONOTON_PACKAGE = "@ancientpantheon/khronoton-core";
+/** The npm package the Khronoton automaton engine ships as. */
+export const KHRONOTON_PACKAGE = "@ancientpantheon/khronoton-core";
+
+/**
+ * The currently-installed `@ancientpantheon/khronoton-core` version, read from the
+ * package's own `package.json` in `node_modules` — mirrors {@link readCodexUiVersion}.
+ * Khronoton is now a Mnemosyne dependency (the engine package is wired in; the
+ * autonomous signing seams are a separate, Pythia-gated follow-up), so there is a real
+ * installed version to read. Read directly from the node_modules path (the `exports`
+ * map does not expose `./package.json`). Returns `"unknown"` if unreadable.
+ */
+export function readKhronotonUiVersion(): string {
+  try {
+    const pkgPath = join(
+      process.cwd(),
+      "node_modules",
+      "@ancientpantheon",
+      "khronoton-core",
+      "package.json",
+    );
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { version?: string };
+    return typeof pkg.version === "string" ? pkg.version : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
 
 /**
  * The latest `@ancientpantheon/khronoton-core` version PUBLISHED on the npm registry,
- * read from the package's `dist-tags.latest`. Mirrors {@link fetchLatestCodexVersion}
- * but for the Khronoton engine package, which is NOT yet a Mnemosyne dependency — so
- * there is no installed version to read, only this "does the package exist yet?" npm
- * preview. Returns `null` on any failure (offline, registry down, package missing).
+ * read from the package's `dist-tags.latest`. Mirrors {@link fetchLatestCodexVersion}.
+ * Returns `null` on any failure (offline, registry down, package missing).
  */
 export async function fetchLatestKhronotonVersion(): Promise<string | null> {
   try {

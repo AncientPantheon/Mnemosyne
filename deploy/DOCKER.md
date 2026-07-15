@@ -54,7 +54,7 @@ deployer through the shared volume:
 2. A systemd **path unit** (`mnemosyne-deploy.path`) watches the spool and runs
    `mnemosyne-deploy.sh` (as root, on the host) for each request:
    - `git checkout -- package.json package-lock.json && git pull --ff-only`
-   - `npm install @ancientpantheon/codex@latest` (bump the pins)
+   - `npm install @ancientpantheon/codex@latest` + `@ancientpantheon/khronoton-core@latest` (bump the pins)
    - `docker build` the new image
    - start the OTHER color (`mnemosyne-blue`↔`mnemosyne-green`, ports 3005↔3006),
      health-check `/api/me`
