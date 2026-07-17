@@ -136,6 +136,16 @@
   color: var(--admin-gold);
 }
 
+/* A titled group inside a card (e.g. the Update & Deploy page's "Mnemosyne" and
+   "Constructors" version tables). Consecutive groups get clear vertical separation
+   plus a hairline rule, so a group heading never sits flush under the previous
+   group's rows. */
+.mnemo-admin-group + .mnemo-admin-group {
+  margin-top: 1.4rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--admin-border, #2a241c);
+}
+
 .mnemo-admin-muted {
   margin: 0.35rem 0;
   color: var(--admin-text-dim);
@@ -294,4 +304,38 @@
   font-size: 0.76rem;
   line-height: 1.45;
   color: #cdb98a;
+}
+
+/* ── Khronoton console theming ──────────────────────────────────────────────
+   The khronoton-core /ui screens theme entirely through --khr-* tokens declared
+   on `:root, .khronoton-ui`; overriding at `.mnemo-admin .khronoton-ui` recolors
+   the whole console to the admin bronze/parchment palette without touching the
+   package CSS. */
+.mnemo-admin .khronoton-ui {
+  --khr-bg: var(--admin-bg);
+  --khr-panel: var(--admin-surface);
+  --khr-inset: var(--admin-surface-2);
+  --khr-border: var(--admin-border);
+  --khr-text: var(--admin-text);
+  --khr-text-dim: var(--admin-text-dim);
+  --khr-text-dim2: #a3987f;
+  --khr-accent: var(--admin-gold);
+  --khr-accent-tint: rgba(212, 160, 74, 0.14);
+  --khr-error: var(--admin-danger);
+  --khr-error-bg: rgba(255, 107, 125, 0.12);
+  --khr-font: "Inter", system-ui, sans-serif;
+}
+
+/* The Builder is a two-pane editor — give the khronoton page more width than the
+   default 860px admin column. (:has scopes this to pages that mount the console.) */
+.mnemo-admin:has(.khronoton-ui) {
+  max-width: 1200px;
+}
+
+/* The confirm gate floats above the console, centered near the top. */
+.mnemo-khronoton-confirm {
+  position: sticky;
+  top: 0.75rem;
+  z-index: 30;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
 }

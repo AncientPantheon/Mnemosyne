@@ -44,5 +44,13 @@ export function randomBytes(size: number): Uint8Array {
   return bytes;
 }
 
-const cryptoShim = { createHash, createSign, constants, randomBytes };
+// khronoton-core's `/provider` barrel statically pulls its in-process memory
+// adapter, whose store chunk imports `randomUUID` (row ids). Mnemosyne's client
+// only ever uses the fetch adapter, but the static binding must resolve to
+// bundle — back it with WebCrypto's own randomUUID, a real implementation.
+export function randomUUID(): string {
+  return globalThis.crypto.randomUUID();
+}
+
+const cryptoShim = { createHash, createSign, constants, randomBytes, randomUUID };
 export default cryptoShim;

@@ -31,7 +31,7 @@ describe("/admin route files", () => {
   it("gives each function its own dedicated sub-page (Hub-style)", () => {
     for (const dir of [
       "pythia",
-      "update-constructors",
+      "update-deploy",
       "khronoton",
       "security",
       "network",
@@ -40,7 +40,7 @@ describe("/admin route files", () => {
     }
   });
 
-  it("has retired the standalone update-codex page (merged into update-constructors)", () => {
+  it("has retired the standalone update-codex page (merged into update-deploy)", () => {
     expect(existsSync(join(root, "app", "admin", "update-codex"))).toBe(false);
   });
 
@@ -48,7 +48,7 @@ describe("/admin route files", () => {
     const landing = read("app", "admin", "AdminLanding.client.tsx");
     for (const href of [
       "/admin/codex",
-      "/admin/update-constructors",
+      "/admin/update-deploy",
       "/admin/khronoton",
       "/admin/pythia",
       "/admin/security",
@@ -60,7 +60,7 @@ describe("/admin route files", () => {
 
   it("surfaces the two new automaton-constructor tiles on the landing", () => {
     const landing = read("app", "admin", "AdminLanding.client.tsx");
-    expect(landing).toMatch(/Update Constructors/);
+    expect(landing).toMatch(/Update & Deploy/);
     expect(landing).toMatch(/Mnemosyne Khronoton/);
   });
 });
@@ -103,9 +103,9 @@ describe("admin — Pythia connector control (REQ-10)", () => {
   });
 });
 
-describe("admin — Update Constructors: single Deploy button (REQ-09, REVIEW M5/M6)", () => {
+describe("admin — Update & Deploy: single Deploy button (REQ-09, REVIEW M5/M6)", () => {
   const panel = () =>
-    read("app", "admin", "update-constructors", "UpdateConstructorsPage.client.tsx");
+    read("app", "admin", "update-deploy", "UpdateDeployPage.client.tsx");
 
   it("is a client component behind the shared gate", () => {
     expect(panel()).toMatch(/^["']use client["'];?/m);
@@ -128,7 +128,7 @@ describe("admin — Update Constructors: single Deploy button (REQ-09, REVIEW M5
   it("reads all constructor versions from /api/admin/deploy (no server-passed version prop)", () => {
     // The page no longer reads a version server-side; the client fetches the whole
     // constructors status (installed vs npm-latest) from the deploy status endpoint.
-    expect(read("app", "admin", "update-constructors", "page.tsx")).not.toMatch(
+    expect(read("app", "admin", "update-deploy", "page.tsx")).not.toMatch(
       /readCodexUiVersion/,
     );
     expect(panel()).toMatch(/anyUpdateAvailable/);
@@ -143,12 +143,13 @@ describe("admin — Update Constructors: single Deploy button (REQ-09, REVIEW M5
     expect(panel()).not.toMatch(/KhronotonPreview/);
   });
 
-  it("notes Khronoton is installed but its autonomous engine is Pythia-gated", () => {
-    // Khronoton is now a wired dependency (it deploys with Mnemosyne), but the
-    // autonomous codex-signing engine is a separate, still-gated wire-in.
+  it("notes Khronoton is installed AND its autonomous engine is live", () => {
+    // The engine wire-in landed (handoff 05): the tick loop runs in the server and
+    // signs with the sealed operator codex — the panel says so, plainly.
     expect(panel()).toMatch(/installed/i);
-    expect(panel()).toMatch(/not\s+switched\s+on|autonomous engine/i);
-    expect(panel()).toMatch(/Pythia/);
+    expect(panel()).toMatch(/autonomous engine/i);
+    expect(panel()).toMatch(/live/);
+    expect(panel()).not.toMatch(/not\s+switched\s+on/i);
   });
 
   it("shows Mnemosyne itself as its own version row (app build vs deploy branch)", () => {
@@ -203,27 +204,61 @@ describe("deploy pipeline — spool + status routes (source contract)", () => {
   });
 });
 
-describe("admin — Mnemosyne Khronoton (mockup embed, handoff 04)", () => {
-  const panel = () => read("app", "admin", "khronoton", "KhronotonPage.client.tsx");
+describe("admin — Mnemosyne Khronoton (LIVE engine console, handoff 05)", () => {
+  const mount = () => read("app", "admin", "khronoton", "KhronotonPage.client.tsx");
+  const app = () => read("app", "admin", "khronoton", "KhronotonApp.tsx");
 
-  it("is a client component behind the shared gate", () => {
-    expect(panel()).toMatch(/^["']use client["'];?/m);
-    expect(panel()).toMatch(/AdminGate/);
+  it("is a client component behind the shared gate, mounted ssr:false (pollers)", () => {
+    expect(mount()).toMatch(/^["']use client["'];?/m);
+    expect(mount()).toMatch(/AdminGate/);
+    expect(mount()).toMatch(/ssr:\s*false/);
   });
 
-  it("frames the static UI mockup inline via iframe (visual review, not live wiring)", () => {
-    expect(panel()).toMatch(/Autonomous transactions/);
-    expect(panel()).toMatch(/<iframe/);
-    expect(panel()).toMatch(/\/khronoton-mockup\.html/);
+  it("mounts the REAL package UI over the ancient-gated API (no iframe, no mockup)", () => {
+    expect(app()).toMatch(/KhronotonProvider/);
+    expect(app()).toMatch(/createFetchAdapter\(["']\/api\/admin\/khronoton["']\)/);
+    expect(app()).toMatch(/KhronotonUiRoot/);
+    expect(app()).toMatch(/khronoton-core\/ui\.css/);
+    expect(mount()).not.toMatch(/<iframe/);
+    expect(app()).not.toMatch(/<iframe/);
   });
 
-  it("is explicit that it is NOT wired to the live engine (gated on handoff 05)", () => {
-    expect(panel()).toMatch(/[Nn]ot yet wired|not wired/);
-    expect(panel()).toMatch(/05-khronoton-engine-wire-in\.md/);
+  it("wires the three screens through the router-agnostic callbacks", () => {
+    expect(app()).toMatch(/CronotonList/);
+    expect(app()).toMatch(/Detail/);
+    expect(app()).toMatch(/Builder/);
+    expect(app()).toMatch(/onNeedConfirm/);
   });
 
-  it("ships the self-contained mockup as a public asset", () => {
-    expect(existsSync(join(root, "public", "khronoton-mockup.html"))).toBe(true);
+  it("has retired the static mockup asset", () => {
+    expect(existsSync(join(root, "public", "khronoton-mockup.html"))).toBe(false);
+  });
+});
+
+describe("khronoton engine — loop + API adapter (source contract)", () => {
+  it("instrumentation starts the tick loop with the kill switch + nodejs guard", () => {
+    const inst = read("instrumentation.ts");
+    expect(inst).toMatch(/startKhronotonLoop/);
+    expect(inst).toMatch(/KHRONOTON_DISABLED/);
+    expect(inst).toMatch(/NEXT_RUNTIME/);
+  });
+
+  it("the catch-all route is ancient-gated, Node-runtime, and confirm-header aware", () => {
+    const route = read("app", "api", "admin", "khronoton", "[[...path]]", "route.ts");
+    expect(route).toMatch(/requireAncient/);
+    expect(route).toMatch(/runtime = "nodejs"/);
+    expect(route).toMatch(/x-khronoton-confirmed/);
+    expect(route).toMatch(/admin_confirm_required/);
+  });
+
+  it("the engine context assembles all six seams around the sealed codex", () => {
+    const ctx = read("lib", "khronoton", "context.ts");
+    expect(ctx).toMatch(/getKhronotonDb/);
+    expect(ctx).toMatch(/createMnemosyneKeyResolver/);
+    expect(ctx).toMatch(/getChainRuntime/);
+    expect(ctx).toMatch(/onAudit/);
+    expect(ctx).toMatch(/resolveFireMode/);
+    expect(ctx).toMatch(/tickIntervalMs/);
   });
 });
 

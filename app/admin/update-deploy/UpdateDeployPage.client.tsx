@@ -81,12 +81,12 @@ function VersionRow({
 }
 
 /**
- * Update Constructors — the single Deploy surface. One status table shows every
- * constructor (Codex is wired; Khronoton is a preview until its package ships), and
- * ONE Deploy button rebuilds the automaton. The button "comes alive" (primary,
- * enabled-with-emphasis) when any wired constructor has a newer npm version, but a
- * manual re-deploy is always allowed (e.g. to pick up code changes). Progress streams
- * live into the terminal below over SSE.
+ * Update & Deploy — the single update-status + Deploy surface. Two grouped version
+ * tables — the automaton app itself, then every constructor (Codex, Khronoton) — and
+ * ONE Deploy button that rebuilds the automaton. The button "comes alive" (primary,
+ * enabled-with-emphasis) when the app or any wired constructor has a newer version,
+ * but a manual re-deploy is always allowed (e.g. to pick up code changes). Progress
+ * streams live into the terminal below over SSE.
  *
  * - Live (`bundle`): the on-box host deployer does a zero-downtime blue-green rebuild.
  * - Localhost (`dev`): pulls the constructors at `@latest`; reload picks them up.
@@ -196,48 +196,52 @@ function DeployPanel(): ReactElement {
 
   return (
     <section className="mnemo-admin-card">
-      <h2 className="mnemo-admin-h2">Mnemosyne</h2>
-      <ul className="mnemo-admin-chainlist">
-        {status ? (
-          <VersionRow
-            label="Mnemosyne"
-            subtitle={<em>the automaton</em>}
-            installed={status.mnemosyne.installed}
-            available={status.mnemosyne.available}
-            wired
-            updateAvailable={status.mnemosyne.updateAvailable}
-            installedTitle="Running build (this container)"
-            availableTitle="Latest on the deploy branch (main)"
-          />
-        ) : (
-          <li>
-            <span className="mnemo-admin-chain">Checking version…</span>
-          </li>
-        )}
-      </ul>
-
-      <h2 className="mnemo-admin-h2">Constructors</h2>
-      <ul className="mnemo-admin-chainlist">
-        {status ? (
-          status.constructors.map((c) => (
+      <div className="mnemo-admin-group">
+        <h2 className="mnemo-admin-h2">Mnemosyne</h2>
+        <ul className="mnemo-admin-chainlist">
+          {status ? (
             <VersionRow
-              key={c.key}
-              label={c.label}
-              subtitle={c.npmPackage}
-              installed={c.installed}
-              available={c.available}
-              wired={c.wired}
-              updateAvailable={c.updateAvailable}
-              installedTitle="Installed in this build"
-              availableTitle="Latest on npm"
+              label="Mnemosyne"
+              subtitle={<em>the automaton</em>}
+              installed={status.mnemosyne.installed}
+              available={status.mnemosyne.available}
+              wired
+              updateAvailable={status.mnemosyne.updateAvailable}
+              installedTitle="Running build (this container)"
+              availableTitle="Latest on the deploy branch (main)"
             />
-          ))
-        ) : (
-          <li>
-            <span className="mnemo-admin-chain">Checking constructors…</span>
-          </li>
-        )}
-      </ul>
+          ) : (
+            <li>
+              <span className="mnemo-admin-chain">Checking version…</span>
+            </li>
+          )}
+        </ul>
+      </div>
+
+      <div className="mnemo-admin-group">
+        <h2 className="mnemo-admin-h2">Constructors</h2>
+        <ul className="mnemo-admin-chainlist">
+          {status ? (
+            status.constructors.map((c) => (
+              <VersionRow
+                key={c.key}
+                label={c.label}
+                subtitle={c.npmPackage}
+                installed={c.installed}
+                available={c.available}
+                wired={c.wired}
+                updateAvailable={c.updateAvailable}
+                installedTitle="Installed in this build"
+                availableTitle="Latest on npm"
+              />
+            ))
+          ) : (
+            <li>
+              <span className="mnemo-admin-chain">Checking constructors…</span>
+            </li>
+          )}
+        </ul>
+      </div>
 
       <p className="mnemo-admin-muted">
         {status == null
@@ -253,10 +257,10 @@ function DeployPanel(): ReactElement {
       </p>
       {status?.constructors.some((c) => c.key === "khronoton" && c.wired) ? (
         <p className="mnemo-admin-muted">
-          Khronoton is <strong>installed</strong> and deploys with Mnemosyne, but its
-          autonomous engine (codex-signing, no human in the loop) is <strong>not
-          switched on</strong> yet — that wire-in is gated on the Pythia network runtime.
-          Preview its UI under <code>Mnemosyne Khronoton</code>.
+          Khronoton is <strong>installed</strong> and its autonomous engine is{" "}
+          <strong>live</strong> — the tick loop signs scheduled transactions with the
+          sealed operator codex, no human in the loop. Manage schedules under{" "}
+          <code>Mnemosyne Khronoton</code>.
         </p>
       ) : null}
 
@@ -322,12 +326,12 @@ function DeployPanel(): ReactElement {
   );
 }
 
-export function UpdateConstructorsPage(): ReactElement {
+export function UpdateDeployPage(): ReactElement {
   return (
-    <AdminGate title="Update Constructors">
+    <AdminGate title="Update & Deploy">
       <DeployPanel />
     </AdminGate>
   );
 }
 
-export default UpdateConstructorsPage;
+export default UpdateDeployPage;

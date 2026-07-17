@@ -9,6 +9,39 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.6.0] — 2026-07-17
+
+### Added
+- **Khronoton engine LIVE — Mnemosyne is now a full Automaton.** The six injection
+  seams from handoff 05 are wired and the tick loop runs in the server:
+  - **Signing (`KeyResolver`)**: the sealed operator codex signs autonomously —
+    `lib/khronoton/keyResolver.ts` unseals the backup + machine password per fire and
+    `smartDecrypt`s exactly the requested entry (pure keypairs, ouro accounts, and
+    seed-derived accounts re-derived at their recorded index with a pub-match guard).
+    No human in the loop; plaintext never outlives the call.
+  - **Chain (`ChainRuntime`)**: the package's own `/blockchain/stoachain` adapter
+    (`createStoachainRuntime`) — no more Pythia gate.
+  - **Store (`Database`)**: better-sqlite3 at `data/khronoton/khronoton.db` (on the
+    mounted data volume — survives redeploys), engine schema auto-installed.
+  - **Loop**: `instrumentation.ts` starts `startKhronotonLoop` at server boot
+    (exactly-once claim-before-fire). Kill switch `KHRONOTON_DISABLED=1`; cadence
+    `KHRONOTON_TICK_MS`. Audit trail: `data/khronoton/audit.jsonl`.
+- **Khronoton admin API** — `/api/admin/khronoton/[...path]` adapts the package's 16
+  framework-agnostic handlers (list/get/fires/signers/commit/edit/pause/resume/
+  delete/simulate/execute-now/trigger/recover/batch). Everything ancient-gated;
+  mutations additionally demand the `x-khronoton-confirmed` header (the UI's confirm
+  gate → `runGated` retry round-trip).
+- **Real Khronoton console** at `/admin/khronoton` — the package UI (List,
+  Detail/Observe with fire history, the two-pane Builder with Simulate → AUTO-gas)
+  replaces the static mockup iframe; themed to the admin bronze/parchment palette
+  via `--khr-*` tokens. The mockup asset is retired.
+
+### Changed
+- **"Update Constructors" → "Update & Deploy"** (Pythia's designation): route renamed
+  `/admin/update-constructors` → `/admin/update-deploy`; the panel's version tables
+  are now visually separated groups (Mnemosyne / Constructors) instead of headings
+  flush against the previous rows.
+
 ## [0.5.0] — 2026-07-15
 
 ### Added

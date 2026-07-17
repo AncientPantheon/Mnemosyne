@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 const NO_STORE = { "Cache-Control": "no-store" } as const;
 
 /**
- * Ancient-gated Khronoton version status for the admin "Update Constructors" panel.
+ * Ancient-gated Khronoton version status for the admin "Update & Deploy" panel.
  *
  * The Khronoton automaton engine (`@ancientpantheon/khronoton-core`) is now a Mnemosyne
  * dependency — the package is wired in and installed, so we read the real installed
