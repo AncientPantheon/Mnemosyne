@@ -51,17 +51,18 @@ describe("React landing route", () => {
     expect(src).toMatch(/href:\s*["']\/codex["']|href=["']\/codex["']/);
   });
 
-  it("mounts the fixed-stage page-turn deck, sliding via the Web Animations API (not a CSS transition)", () => {
+  it("mounts the fixed-stage page-turn deck with an INSTANT percentage transform (no animation to stall)", () => {
     const src = page();
     // The deck scaffold: the stage clips, the pages layer translates by -index*100%
     // (self-measuring — exact with border-box pages, so a topic lands flush at the top).
     expect(src).toMatch(/lp-stage/);
     expect(src).toMatch(/lp-pages/);
     expect(src).toMatch(/translateY\(-\$\{[^}]*100[^}]*\}%\)/);
-    // The slide runs imperatively (WAAPI) — a CSS `transition` on this transform gets
-    // stuck at 0 under the height:100% flex chain, so the deck never actually moves.
-    expect(src).toMatch(/\.animate\(/);
+    // The page change is an INSTANT transform — NO CSS transition and NO WAAPI slide.
+    // Both stall under a throttled rAF (backgrounded tab), leaving the deck stuck at 0;
+    // an instant transform always applies. Reliability over a slide animation.
     expect(css()).not.toMatch(/\.lp-pages\s*\{[^}]*transition\s*:/);
+    expect(src).not.toMatch(/\.animate\(/);
   });
 
   it("wires the hard page-turn input handlers so wheel/keys/touch advance exactly one page", () => {

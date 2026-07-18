@@ -9,6 +9,22 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.7.2] — 2026-07-18
+
+### Fixed
+- **Landing deck: topics now sit flush at the top of the stage.** Clicking a
+  Tier-1/Tier-2 tab (or scrolling) previously showed the topic mid-stage or far below
+  the fold. Causes: `.lp-page` was content-box, so `height:100% + padding` made each
+  page taller than the stage and every page drifted progressively lower under the
+  `translateY(-index·100%)`; content was vertically centred; and a CSS transition on
+  the transform stalled at 0 under the `height:100%` flex chain. Fix: `box-sizing:
+  border-box` (each page is exactly the stage height), `justify-content: flex-start`,
+  reset the shown page's scroll on navigation, and make the page change an INSTANT
+  transform (a CSS-transition/WAAPI slide stalls under a throttled requestAnimationFrame,
+  leaving the deck stuck at the first page — an instant transform always applies).
+- **Docs home links** point at the React landing (`/`); removed the orphaned static
+  `public/index.html`.
+
 ## [0.7.1] — 2026-07-18
 
 ### Changed

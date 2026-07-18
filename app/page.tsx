@@ -1354,8 +1354,6 @@ const SWIPE_THRESHOLD = 40;
 export default function LandingPage(): ReactElement {
   const [pageIndex, setPageIndex] = useState(0);
   const stageRef = useRef<HTMLDivElement>(null);
-  const pagesRef = useRef<HTMLDivElement>(null);
-  const prevIndex = useRef(0);
   const lastWheel = useRef(0);
 
   const goTo = useCallback((i: number): void => {
@@ -1467,30 +1465,6 @@ export default function LandingPage(): ReactElement {
     if (active) active.scrollTop = 0;
   }, [pageIndex]);
 
-  // Animate the page turn with the Web Animations API, NOT a CSS transition: a CSS
-  // `transition` on this transform gets stuck at 0 (it never reaches its target). The
-  // resting position is the inline percentage transform (below) — self-measuring, so it
-  // stays exact with border-box pages; the slide is run imperatively here from the
-  // previous page's offset to the current. Reduced-motion → snap, no slide.
-  useEffect(() => {
-    const el = pagesRef.current;
-    const from = prevIndex.current;
-    const to = pageIndex;
-    prevIndex.current = pageIndex;
-    if (!el || from === to) return;
-    const reduce =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) return;
-    el.animate(
-      [
-        { transform: `translateY(-${from * 100}%)` },
-        { transform: `translateY(-${to * 100}%)` },
-      ],
-      { duration: 450, easing: "cubic-bezier(0.4, 0, 0.2, 1)" },
-    );
-  }, [pageIndex]);
-
   const currentTopic = PAGES[pageIndex].topicId;
 
   // Tier-1: the seven topics jump to their first page; Documentation is an external link.
@@ -1534,7 +1508,6 @@ export default function LandingPage(): ReactElement {
       <div className="lp-stage" ref={stageRef}>
         <div
           className="lp-pages"
-          ref={pagesRef}
           style={{ transform: `translateY(-${pageIndex * 100}%)` }}
         >
           {PAGES.map((p, i) => {
