@@ -428,16 +428,73 @@
   margin-top: 0.15rem;
 }
 
-/* Mother-tongue pitch box */
-.lp .pitch-box {
-  margin: 2.5rem auto 0;
-  padding: 1.5rem;
-  border: 1px solid color-mix(in srgb, var(--accent-dim) 30%, transparent);
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--accent-dim) 5%, transparent);
-}
-
-
 /* Roadmap rows */
 .lp .roadmap-row { display: flex; align-items: center; gap: 1rem; }
 .lp .roadmap-list { display: flex; flex-direction: column; gap: 1rem; }
+
+/* ── Deck density: compact each page to fit ONE screen (~800px stage) ──────────
+   The deck shows one page at a time with no scroll, so the landing runs tighter than
+   a scroll page: smaller paddings/gaps/margins, capped hero visual, denser type. */
+.lp-page {
+  padding: 1.1rem 24px 1.4rem;
+}
+.lp-page-title {
+  font-family: "Cinzel", serif;
+  letter-spacing: 0.05em;
+  font-size: clamp(1.4rem, 2.4vw, 1.95rem);
+  font-weight: 400;
+  color: var(--accent);
+  text-align: center;
+  margin: 0 0 1rem;
+}
+.lp-grid {
+  gap: 1rem;
+}
+.lp-mt {
+  margin-top: 1.25rem;
+}
+.lp-mb {
+  margin-bottom: 1.1rem;
+}
+.lp-card {
+  padding: 1rem 1.15rem;
+}
+.lp-card--sm {
+  padding: 0.8rem 0.95rem;
+}
+.lp-card--xs {
+  padding: 0.65rem 0.85rem;
+}
+.lp p {
+  margin: 0 0 0.5rem;
+}
+.lp-sub {
+  line-height: 1.5;
+}
+.lp-h3 {
+  font-size: 1rem;
+  margin: 0 0 0.35rem;
+}
+.lp-h4 {
+  font-size: 1.1rem;
+  margin: 0 0 0.5rem;
+}
+.lp-h1,
+.lp-tagline {
+  font-size: clamp(1.35rem, 2.6vw, 1.95rem);
+  margin: 0 0 0.55rem;
+}
+.lp-glyph {
+  font-size: 1.4rem;
+  margin-bottom: 0.35rem;
+}
+.lp-divider,
+.lp-mt.lp-card {
+  margin-top: 1rem;
+}
+/* Cap the hero identity visual so the What-it-is page fits. */
+.identity-display {
+  transform: scale(0.82);
+  transform-origin: top center;
+  margin-bottom: -1.2rem;
+}

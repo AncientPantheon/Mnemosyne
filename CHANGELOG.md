@@ -9,6 +9,26 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.7.3] — 2026-07-18
+
+### Changed
+
+- **Landing deck — every page is now ONE self-contained screen with its own title.**
+  Each Tier-1 page (or Tier-2 sub-page) fits a standard desktop stage (~800px) with no
+  internal scroll, and carries a uniform Cinzel title rendered by the deck (`.lp-page-title`)
+  so no page reads as torn from context.
+- **"What it is" is a single page (no Tier-2).** It is the hero/landing home (tied to the
+  Mnemosyne wordmark): identity visual, tagline, lede, Launch Codex CTAs, the three pillars,
+  and a one-line "your own language" note. The redundant "What Mnemosyne is / is NOT" prose
+  and the four "Not a…" cards were dropped (they live in the docs).
+- **"Four Modes" is a single page (no Tier-2).** All four identity modes
+  (Sovereign / +Password / +Email / +Phone) shown compactly on one screen.
+- Trimmed the Storage and Dual-Apollo sub-pages to fit one screen — the Arweave explainer,
+  the "why three layers" rationale, and the off-chain-Schnorr detail are condensed to a line
+  with a link to the full docs.
+- Compacted the deck's CSS density (paddings, gaps, margins, hero visual cap) so pages fill
+  one screen; the overflow-y fallback stays for very short viewports.
+
 ## [0.7.2] — 2026-07-18
 
 ### Fixed

@@ -31,6 +31,8 @@ function Ouro(): ReactElement {
 interface DeckPage {
   topicId: string;
   subLabel: string;
+  /** Rendered once, uniformly, at the top of the page (`.lp-page-title`). */
+  title: string;
   node: ReactNode;
 }
 
@@ -51,7 +53,8 @@ const PAGES: DeckPage[] = [
   // ──────────────────────────── 1. WHAT IT IS ────────────────────────────
   {
     topicId: "what",
-    subLabel: "Intro",
+    subLabel: "",
+    title: "What it is",
     node: (
       <div className="lp-measure-5 lp-center">
         {/* Codex Identity display with braces */}
@@ -108,32 +111,12 @@ const PAGES: DeckPage[] = [
           </a>
         </div>
 
-        <p className="lp-small lp-muted lp-mt">
-          Mnemosyne — Greek goddess of memory, mother of the nine Muses.
+        <p className="lp-center lp-sub lp-small lp-measure-3 lp-mt">
+          Secure your vault with seed words in <strong>your own language</strong> —
+          no fixed English wordlist, any glyph in the{" "}
+          <a href="/docs/dalos-character-set.html">Dalos Character Set</a>. Memorize a
+          phrase that actually means something to you.
         </p>
-
-        {/* The mother-tongue / human-language pitch */}
-        <div className="pitch-box lp-measure-3">
-          <p className="lp-sub">
-            Secure your cryptographic vault with seed words composed in{" "}
-            <strong>your own language</strong> — your mother tongue, your dialect,
-            your private vocabulary. The first crypto system that doesn&apos;t force
-            you to memorize words from someone else&apos;s dictionary.
-          </p>
-          <p className="lp-sub lp-small">
-            No fixed English wordlist. No 2048 prescribed nouns. Compose your seed
-            from any glyph in any writing system — Latin, Cyrillic, Greek,
-            diacritics, mathematical symbols, anything that lives in the{" "}
-            <a href="/docs/dalos-character-set.html">Dalos Character Set</a>.
-            Memorize a phrase that actually means something to you. Keep your vault
-            in your head.
-          </p>
-          <p className="lp-small">
-            <a href="/docs/dalos-character-set.html">
-              <strong>How free-form seed words work →</strong>
-            </a>
-          </p>
-        </div>
 
         {/* The three pillars */}
         <div className="lp-grid lp-grid--3 lp-mt">
@@ -168,101 +151,14 @@ const PAGES: DeckPage[] = [
       </div>
     ),
   },
-  {
-    topicId: "what",
-    subLabel: "What it's NOT",
-    node: (
-      <div className="lp-measure-6">
-        <h2 className="lp-h2 lp-center">What Mnemosyne is</h2>
-        <p className="lp-center lp-sub lp-measure-3">
-          Mnemosyne is a Software-as-a-Service platform (a cloud-hosted service you
-          reach through a web browser) that stores your Codex encrypted-at-rest and
-          serves it to Codex Consumer apps under a unified credential.
-        </p>
-        <p className="lp-center lp-sub lp-measure-3 lp-mb">
-          Architecturally, Mnemosyne converges on the same zero-knowledge
-          cloud-storage pattern that Bitwarden landed on for password management —
-          encrypted blob server-side, decryption keys never visible to the operator,
-          multi-wrap envelope for credential rotation. Different problem, same shape
-          — and arriving there independently is reassuring: the design space has a
-          clean local optimum and this is it.
-        </p>
-
-        {/* Bidirectional sync explanation */}
-        <div className="sidebar lp-measure-4">
-          <div className="sidebar-title">
-            How Mnemosyne talks to Codex Consumers
-          </div>
-          <p className="lp-sub lp-small">
-            You can manage your Codex directly through Mnemosyne (add seed words,
-            mint accounts, store keys, edit your address book) <strong>or</strong>{" "}
-            through any Codex Consumer app that uses your Codex. The two stay in
-            sync, but in different directions:
-          </p>
-          <ul className="lp-small">
-            <li>
-              <strong>Mnemosyne → Consumers:</strong> modifications you make here
-              appear <em>automatically</em> on every Codex Consumer using your
-              Codex. No upload prompt — the changes are already there the next time
-              the consumer reads.
-            </li>
-            <li>
-              <strong>Consumers → Mnemosyne:</strong> modifications you make on a
-              Codex Consumer (e.g. OuronetUI) cause that app&apos;s interface to
-              prompt you: &quot;upload your modified Codex to Mnemosyne.&quot; You
-              confirm; the changes propagate.
-            </li>
-          </ul>
-          <p className="lp-muted lp-xs">
-            This asymmetry is deliberate. Mnemosyne is the authoritative store, so
-            pulls from it are trusted. Pushes from consumers are user-confirmed
-            because consumers run in less-trusted environments (browser extensions,
-            partner apps, third-party tools).
-          </p>
-        </div>
-
-        <h3 className="lp-h3 lp-center lp-mt">What Mnemosyne is NOT</h3>
-        <div className="lp-grid lp-grid--2 lp-measure-4">
-          <div className="lp-card lp-card--xs">
-            <p className="lp-sub lp-small">
-              <span className="pill pill-warn">Not</span> a decentralized protocol
-              — v0.1 is a centralized Software-as-a-Service. Decentralization
-              happens in layers (see <a href="#storage">Storage</a>).
-            </p>
-          </div>
-          <div className="lp-card lp-card--xs">
-            <p className="lp-sub lp-small">
-              <span className="pill pill-warn">Not</span> a custodial wallet in the
-              regulatory sense. The cryptographic design makes it{" "}
-              <em>technically</em> non-custodial.
-            </p>
-          </div>
-          <div className="lp-card lp-card--xs">
-            <p className="lp-sub lp-small">
-              <span className="pill pill-warn">Not</span> a replacement for{" "}
-              <code>@stoachain/ouronet-codex</code>. It&apos;s a new adapter for the
-              existing package.
-            </p>
-          </div>
-          <div className="lp-card lp-card--xs">
-            <p className="lp-sub lp-small">
-              <span className="pill pill-warn">Not</span> an identity provider for
-              non-Codex purposes at v0.1. Single sign-on flows and broader identity
-              uses are future possibilities.
-            </p>
-          </div>
-        </div>
-      </div>
-    ),
-  },
 
   // ──────────────────────────── 2. THE CODEX ────────────────────────────
   {
     topicId: "codex",
     subLabel: "Seeds & Accounts",
+    title: "The Codex — Seeds & Accounts",
     node: (
       <div className="lp-measure-6">
-        <h2 className="lp-h2 lp-center">What is the Codex?</h2>
         <p className="lp-center lp-sub lp-measure-3 lp-mb">
           The Codex is the single entity that holds <em>everything</em>{" "}
           cryptographic you have on <Stoa /> and <Ouro />. One file. One vault.
@@ -319,6 +215,7 @@ const PAGES: DeckPage[] = [
   {
     topicId: "codex",
     subLabel: "Keys & Tools",
+    title: "The Codex — Keys & Tools",
     node: (
       <div className="lp-measure-6">
         <div className="lp-grid lp-grid--2 lp-measure-5">
@@ -368,9 +265,9 @@ const PAGES: DeckPage[] = [
   {
     topicId: "codex",
     subLabel: "Onboarding",
+    title: "The Codex — Onboarding",
     node: (
       <div className="lp-measure-6">
-        <h2 className="lp-h2 lp-center">How you onboard</h2>
         <p className="lp-center lp-sub lp-measure-3 lp-mb">
           Three paths into Mnemosyne, orthogonal to your mode choice. The wizard
           adapts.
@@ -441,20 +338,17 @@ const PAGES: DeckPage[] = [
   // ──────────────────────────── 3. FOUR MODES ────────────────────────────
   {
     topicId: "modes",
-    subLabel: "Sovereign & +Password",
+    subLabel: "",
+    title: "Four Modes",
     node: (
       <div className="lp-measure-6">
-        <h2 className="lp-h2 lp-center">The identity modes</h2>
-        <p className="lp-center lp-sub lp-measure-3">
+        <p className="lp-center lp-sub lp-measure-3 lp-mb">
           The ladder runs from maximum sovereignty to maximum convenience.{" "}
-          <strong>Mode 1 is the secure base everyone gets</strong> — login is proof
-          you <em>possess a key</em>, never a server-side password. Each mode above
-          it only <em>adds</em> a more familiar (and weaker) door on top; it never
-          removes a strong one. You can never end up less secure than Mode 1. Switch
-          modes later without re-encrypting the Codex.
-        </p>
-        <p className="lp-center lp-muted lp-small lp-measure-3 lp-mb">
-          v0.1 ships Modes 1–3. Mode 4 (phone/SMS) is deferred to v0.2.
+          <strong>Mode 1 is the secure base everyone gets</strong> — login proves you{" "}
+          <em>possess a key</em>, never a server-side password. Each mode above only{" "}
+          <em>adds</em> a more familiar (and weaker) door; it never removes a strong
+          one. Switch modes later without re-encrypting the Codex. v0.1 ships Modes
+          1–3; Mode 4 (phone/SMS) is deferred to v0.2.
         </p>
 
         <div className="lp-grid lp-grid--2">
@@ -470,37 +364,15 @@ const PAGES: DeckPage[] = [
               </div>
             </div>
             <p className="lp-sub lp-small mode-card-description">
-              No username, no password, no email, no phone. The only ways in are
-              things you <em>possess</em>: a <strong>device passkey</strong>{" "}
-              (fingerprint / PIN / security key) for daily login, your{" "}
-              <strong>Standard key</strong> to set up a new device, and{" "}
-              <strong>either seed</strong> to recover. Two independent seeds — a
-              daily key and a cold guardian key — so losing one is survivable. Adding
-              a new device needs <em>both</em> keys, so a single stolen key
-              can&apos;t plant a standing backdoor.
+              No username, password, email, or phone. The only ways in are things you{" "}
+              <em>possess</em>: a device passkey for daily login, your Standard key to
+              set up a new device, and either seed to recover. Two independent seeds,
+              so losing one is survivable.
             </p>
-            <table className="mode-card-table lp-xs">
-              <tbody>
-                <tr>
-                  <th>Login</th>
-                  <td>device passkey · or Standard key</td>
-                </tr>
-                <tr>
-                  <th>Recovery</th>
-                  <td>either seed (Seed-A or Seed-B)</td>
-                </tr>
-                <tr>
-                  <th>Custody</th>
-                  <td>
-                    <span className="pill pill-good">strict self-custody</span>
-                  </td>
-                </tr>
-                <tr>
-                  <th>For</th>
-                  <td>everyone — crypto-natives, privacy-conscious users</td>
-                </tr>
-              </tbody>
-            </table>
+            <p className="lp-xs mode-card-tradeoff">
+              <span className="pill pill-good">strict self-custody</span> · for
+              everyone
+            </p>
           </div>
 
           {/* Mode 2 */}
@@ -513,47 +385,18 @@ const PAGES: DeckPage[] = [
               </div>
             </div>
             <p className="lp-sub lp-small mode-card-description">
-              Adds the username + password login that mainstream users expect.
-              It&apos;s a <strong>convenience door, never a recovery root</strong> —
-              and honestly the <em>weakest</em> door in your Codex, so we say so
-              plainly. All of Mode 1&apos;s strong doors stay fully present; forget
-              the password and you reset it with a seed, never via the operator.
+              Adds the username + password login mainstream users expect — a{" "}
+              <strong>convenience door, never a recovery root</strong>, and honestly
+              the <em>weakest</em> door in your Codex. All of Mode 1&apos;s strong
+              doors stay; forget the password and you reset it with a seed, never via
+              the operator.
             </p>
-            <table className="mode-card-table lp-xs">
-              <tbody>
-                <tr>
-                  <th>Login</th>
-                  <td>
-                    Mode 1 doors <em>or</em> username + password
-                  </td>
-                </tr>
-                <tr>
-                  <th>Recovery</th>
-                  <td>either seed</td>
-                </tr>
-                <tr>
-                  <th>Custody</th>
-                  <td>
-                    <span className="pill pill-good">strict self-custody</span>
-                  </td>
-                </tr>
-                <tr>
-                  <th>For</th>
-                  <td>consumer onboarding, web2 familiarity</td>
-                </tr>
-              </tbody>
-            </table>
+            <p className="lp-xs mode-card-tradeoff">
+              <span className="pill pill-good">strict self-custody</span> · web2
+              familiarity
+            </p>
           </div>
-        </div>
-      </div>
-    ),
-  },
-  {
-    topicId: "modes",
-    subLabel: "+Email & +Phone",
-    node: (
-      <div className="lp-measure-6">
-        <div className="lp-grid lp-grid--2">
+
           {/* Mode 3 */}
           <div className="lp-card mode-card">
             <div className="mode-head">
@@ -565,34 +408,14 @@ const PAGES: DeckPage[] = [
             </div>
             <p className="lp-sub lp-small mode-card-description">
               Adds an email-based recovery path. At signup, Mnemosyne emails you a
-              one-shot Email Recovery Secret — save it like any important credential.
-              &quot;Forgot access&quot; then works for real, without exposing
-              anything the operator can decrypt. Email is for recovery, not login.
+              one-shot Email Recovery Secret; &quot;Forgot access&quot; then works
+              without exposing anything the operator can decrypt. Email is for
+              recovery, not login.
             </p>
-            <table className="mode-card-table lp-xs">
-              <tbody>
-                <tr>
-                  <th>Login</th>
-                  <td>Mode 1/2 doors</td>
-                </tr>
-                <tr>
-                  <th>Recovery</th>
-                  <td>
-                    either seed <em>or</em> email magic link + Email Recovery Secret
-                  </td>
-                </tr>
-                <tr>
-                  <th>Custody</th>
-                  <td>
-                    <span className="pill">hybrid (user-held paths)</span>
-                  </td>
-                </tr>
-                <tr>
-                  <th>For</th>
-                  <td>users who want a seed-free recovery option</td>
-                </tr>
-              </tbody>
-            </table>
+            <p className="lp-xs mode-card-tradeoff">
+              <span className="pill">hybrid (user-held paths)</span> · seed-free
+              recovery
+            </p>
           </div>
 
           {/* Mode 4 */}
@@ -616,135 +439,23 @@ const PAGES: DeckPage[] = [
             </div>
             <p className="lp-sub lp-small mode-card-description">
               <strong>Not in v0.1.</strong> The planned addition: phone identity, an
-              SMS Recovery Secret, and personal-facts recovery (mother&apos;s maiden
-              name, first pet, plus a chosen secret word) for the most accessible
-              onboarding. The Demiourgos Streaming Platform preset will use this with
-              full autopilot. Running an SMS stack is operationally heavy, so it
-              ships once the streaming platform genuinely needs phone onboarding.
+              SMS Recovery Secret, and personal-facts recovery for the most accessible
+              onboarding. Deferred to v0.2 — running an SMS stack is operationally
+              heavy, so it ships once the streaming platform genuinely needs it.
             </p>
-            <table className="mode-card-table lp-xs">
-              <tbody>
-                <tr>
-                  <th>Login</th>
-                  <td>Mode 1/2 doors (phone is recovery-only)</td>
-                </tr>
-                <tr>
-                  <th>Recovery</th>
-                  <td>either seed / email / SMS Recovery Secret / facts</td>
-                </tr>
-                <tr>
-                  <th>Custody</th>
-                  <td>
-                    <span className="pill pill-warn">
-                      hybrid, accessibility-leaning
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <th>For</th>
-                  <td>Demiourgos Streaming Platform, non-technical users</td>
-                </tr>
-              </tbody>
-            </table>
+            <p className="lp-xs mode-card-tradeoff">
+              <span className="pill pill-warn">hybrid, accessibility-leaning</span> ·
+              non-technical users
+            </p>
           </div>
         </div>
 
-        {/* Cumulative table */}
-        <div className="lp-mt lp-card">
-          <h4 className="lp-h4">Each mode only adds doors</h4>
-          <p className="lp-sub lp-small">
-            Every mode keeps all of Mode 1&apos;s strong doors (passkey + seeds) and
-            only adds weaker, more convenient alternatives on top — never removing
-            one. Adding a mode adds new wraps of your Codex Key; removing one (after
-            a 24-hour cooling-off) deletes only those extra wraps. Your two seeds are
-            always recovery roots and can never be removed. The encrypted Codex blob
-            is byte-identical across all your mode changes.
-          </p>
-          <div className="scroll-x">
-            <table>
-              <thead>
-                <tr>
-                  <th>Mode</th>
-                  <th>Identifier(s)</th>
-                  <th>Login doors</th>
-                  <th>Recovery surfaces</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>
-                    <span
-                      className="mode-badge"
-                      style={{
-                        width: "1.8rem",
-                        height: "1.8rem",
-                        fontSize: "0.85rem",
-                      }}
-                    >
-                      Ⅰ
-                    </span>
-                  </td>
-                  <td>CodexID</td>
-                  <td>passkey, Standard key</td>
-                  <td>Seed-A, Seed-B</td>
-                </tr>
-                <tr>
-                  <td>
-                    <span
-                      className="mode-badge"
-                      style={{
-                        width: "1.8rem",
-                        height: "1.8rem",
-                        fontSize: "0.85rem",
-                      }}
-                    >
-                      Ⅱ
-                    </span>
-                  </td>
-                  <td>CodexID, username</td>
-                  <td>passkey, Standard key, username+password</td>
-                  <td>Seed-A, Seed-B</td>
-                </tr>
-                <tr>
-                  <td>
-                    <span
-                      className="mode-badge"
-                      style={{
-                        width: "1.8rem",
-                        height: "1.8rem",
-                        fontSize: "0.85rem",
-                      }}
-                    >
-                      Ⅲ
-                    </span>
-                  </td>
-                  <td>CodexID, username, email</td>
-                  <td>passkey, Standard key, username+password</td>
-                  <td>Seed-A, Seed-B, email-secret</td>
-                </tr>
-                <tr style={{ opacity: 0.6 }}>
-                  <td>
-                    <span
-                      className="mode-badge"
-                      style={{
-                        width: "1.8rem",
-                        height: "1.8rem",
-                        fontSize: "0.85rem",
-                      }}
-                    >
-                      Ⅳ
-                    </span>
-                  </td>
-                  <td>
-                    + phone <span className="pill pill-warn">v0.2</span>
-                  </td>
-                  <td>(same — phone is recovery-only)</td>
-                  <td>+ SMS-secret, facts</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <p className="lp-center lp-muted lp-small lp-measure-3 lp-mt">
+          Every mode keeps all of Mode 1&apos;s strong doors (passkey + seeds) and
+          only adds weaker, more convenient alternatives — never removing one. Your
+          two seeds are always recovery roots and can never be removed; the encrypted
+          Codex blob is byte-identical across all your mode changes.
+        </p>
       </div>
     ),
   },
@@ -753,9 +464,9 @@ const PAGES: DeckPage[] = [
   {
     topicId: "storage",
     subLabel: "Three-layer architecture",
+    title: "Three-layer storage architecture",
     node: (
       <div className="lp-measure-6">
-        <h2 className="lp-h2 lp-center">Three-layer storage architecture</h2>
         <p className="lp-center lp-sub lp-measure-3 lp-mb">
           Mnemosyne separates the storage layer from the trust anchor. Your encrypted
           Codex lives in the database (always) and optionally on Arweave (opt-in,
@@ -822,74 +533,12 @@ const PAGES: DeckPage[] = [
           </div>
         </div>
 
-        {/* Arweave intro sidebar */}
-        <div className="sidebar lp-measure-4 lp-mt">
-          <div className="sidebar-title">
-            What is Arweave, and why we chose it for permanence
-          </div>
-          <p className="lp-sub lp-small">
-            Arweave is a decentralized data-storage protocol with a single, unusual
-            promise: <strong>pay once, stored forever</strong>. There&apos;s no
-            monthly bill, no annual renewal, no risk of your storage provider going
-            under and taking your data with them. The protocol&apos;s economics are
-            designed around a 200-year endowment that funds the network&apos;s
-            storage operators indefinitely.
-          </p>
-          <p className="lp-sub lp-small">
-            For Mnemosyne, that property makes Arweave the right tool for the
-            optional permanence layer. Storing your Codex there means:
-          </p>
-          <ul className="lp-small">
-            <li>
-              <span className="lp-classical">•</span> The encrypted blob outlives
-              Mnemosyne. If <strong>AncientHoldings GmbH</strong> as an operator ever
-              ceases to exist, your Codex still does.
-            </li>
-            <li>
-              <span className="lp-classical">•</span> No subscription liability.
-              You&apos;re not renting space; you bought it.
-            </li>
-            <li>
-              <span className="lp-classical">•</span> Multiple gateways can serve your
-              blob (<code>arweave.net</code>, <code>ar.io</code>, others). You&apos;re
-              not bound to any single distribution point.
-            </li>
-            <li>
-              <span className="lp-classical">•</span> Combined with the <Stoa />{" "}
-              pointer (Layer 3), Arweave becomes a <em>verifiable</em> backup — not
-              just &quot;some blob somewhere claiming to be yours.&quot;
-            </li>
-          </ul>
-          <p className="lp-muted lp-xs">
-            Arweave is optional, not default. The base Mnemosyne service stores your
-            Codex in its own database (Layer 1) — fast, free, deletable. Arweave is
-            what you reach for when you want belt-and-suspenders permanence.
-          </p>
-        </div>
-
-        <div className="lp-mt lp-card lp-measure-4">
-          <h4 className="lp-h4">Why three layers, not one?</h4>
-          <ul className="lp-small">
-            <li>
-              <strong>L1 alone</strong> = standard cloud service. Fast, cheap, but
-              Mnemosyne dying = data lost.
-            </li>
-            <li>
-              <strong>L1 + L2</strong> = backup story. But no way to <em>trust</em>{" "}
-              that a fetched L2 blob is the right one.
-            </li>
-            <li>
-              <strong>L1 + L2 + L3</strong> = full trust anchor. The chain proves
-              which Arweave blob is canonically yours.
-            </li>
-          </ul>
-          <p className="lp-sub lp-small">
-            The chain pointer is what makes Arweave a <em>backup</em> rather than just{" "}
-            <em>another place data sits</em>. Without L3, an attacker could publish
-            decoy blobs and a recovering user would have no way to tell which one was
-            theirs.
-          </p>
-        </div>
+        <p className="lp-center lp-muted lp-xs lp-measure-3 lp-mt">
+          Why three layers? L1 alone is a standard cloud service (fast, but its
+          operator dying means data lost); L2 adds a backup; only L3&apos;s chain
+          pointer proves <em>which</em> Arweave blob is canonically yours.{" "}
+          <a href="/docs">Full storage architecture →</a>
+        </p>
       </div>
     ),
   },
@@ -898,11 +547,9 @@ const PAGES: DeckPage[] = [
   {
     topicId: "identity",
     subLabel: "Standard & Smart keys",
+    title: "Codex Identity — Standard & Smart keys",
     node: (
       <div className="lp-measure-6">
-        <h2 className="lp-h2 lp-center">
-          Codex Identity — the double-Apollo construction
-        </h2>
         <p className="lp-center lp-sub lp-measure-3 lp-mb">
           Every Codex has a public identity on the <Stoa />. It&apos;s a{" "}
           <em>pair</em> of Apollo-curve keys — a Standard key for daily operations
@@ -989,6 +636,7 @@ const PAGES: DeckPage[] = [
   {
     topicId: "identity",
     subLabel: "Dual-Apollo details",
+    title: "Codex Identity — Dual-Apollo details",
     node: (
       <div className="lp-measure-6">
         {/* Apollo curve sidebar */}
@@ -1070,33 +718,12 @@ const PAGES: DeckPage[] = [
           </p>
         </div>
 
-        <div className="lp-mt lp-card lp-measure-4">
-          <h4 className="lp-h4">Off-chain Schnorr verification</h4>
-          <p className="lp-sub lp-small">
-            Apollo signatures are verified off-chain by Mnemosyne&apos;s web app and
-            backend. This enables cross-domain identity proofs without chain calls:
-          </p>
-          <ul className="lp-small">
-            <li>
-              <span className="lp-classical">•</span> Visit a new Codex Consumer
-              (e.g., OuronetUI at <code>wallet.ouro.network</code>) — sign a challenge
-              with Standard, consumer verifies against on-chain pubkey, accepts your
-              Codex Identity.
-            </li>
-            <li>
-              <span className="lp-classical">•</span> Issue session tokens bound to
-              Standard pubkey.
-            </li>
-            <li>
-              <span className="lp-classical">•</span> Prove identity in
-              StoicTag-based messaging.
-            </li>
-            <li>
-              <span className="lp-classical">•</span> Sign-in-with-Codex-Identity on
-              third-party services.
-            </li>
-          </ul>
-        </div>
+        <p className="lp-center lp-muted lp-xs lp-measure-3 lp-mt">
+          Apollo signatures verify off-chain in Mnemosyne&apos;s app and backend,
+          enabling cross-domain identity proofs (sign-in-with-Codex, session tokens,
+          StoicTag messaging) without chain calls.{" "}
+          <a href="/docs/apollo-curve.html">Off-chain Schnorr verification →</a>
+        </p>
       </div>
     ),
   },
@@ -1105,11 +732,9 @@ const PAGES: DeckPage[] = [
   {
     topicId: "stoictags",
     subLabel: "StoicTags",
+    title: "StoicTags — human-readable names",
     node: (
       <div className="lp-measure-5">
-        <h2 className="lp-h2 lp-center">
-          StoicTags — human-readable account names
-        </h2>
         <p className="lp-center lp-sub lp-measure-3 lp-mb">
           Optional convenience: tie a name like <code>§bytales</code> to one of your{" "}
           <Ouro /> Accounts. Lives on the <Stoa />. Codex-agnostic — works without
@@ -1160,11 +785,9 @@ const PAGES: DeckPage[] = [
   {
     topicId: "security",
     subLabel: "Guarantees",
+    title: "Security & custody — Guarantees",
     node: (
       <div className="lp-measure-6">
-        <h2 className="lp-h2 lp-center">
-          Security &amp; custody — what the operator can &amp; cannot do
-        </h2>
         <p className="lp-center lp-sub lp-measure-3 lp-mb">
           Cryptographic guarantees are real. Operational risks are standard for the
           zero-knowledge cloud-storage pattern and accepted as part of the trade-off.
@@ -1269,9 +892,9 @@ const PAGES: DeckPage[] = [
   {
     topicId: "security",
     subLabel: "Roadmap",
+    title: "Security & custody — Status & roadmap",
     node: (
       <div className="lp-measure-6">
-        <h2 className="lp-h2 lp-center">Status &amp; roadmap</h2>
         <p className="lp-center lp-sub lp-measure-3 lp-mb">
           Mnemosyne is in the design-locked phase. Implementation begins after v0.3.0
           of the <code>@stoachain/ouronet-codex</code> package ships.
@@ -1519,7 +1142,10 @@ export default function LandingPage(): ReactElement {
                 aria-hidden={!isActive}
                 inert={!isActive}
               >
-                <div className="lp-page-inner">{p.node}</div>
+                <div className="lp-page-inner">
+                  <h2 className="lp-page-title">{p.title}</h2>
+                  {p.node}
+                </div>
               </section>
             );
           })}

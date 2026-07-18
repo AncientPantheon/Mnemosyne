@@ -147,9 +147,39 @@ describe("React landing route", () => {
 
   it("preserves the distinctive marketing copy so the HTML→JSX port didn't paraphrase away the content", () => {
     const src = page();
-    expect(src).toContain("What Mnemosyne is");
+    // "What Mnemosyne is / is NOT" prose was intentionally dropped (it lives in the
+    // docs); these three survive as hero CTA, Codex intro, and the Storage title.
+    expect(src).toContain("Privacy by construction");
     expect(src).toContain("What is the Codex?");
     expect(src).toContain("Three-layer storage architecture");
+  });
+
+  it("collapses 'What it is' and 'Four Modes' to a single deck page each (AC1/AC2 — no redundant Tier-2 split)", () => {
+    const src = page();
+    const count = (re: RegExp): number => (src.match(re) ?? []).length;
+    // A single page per topic → the deck's subviews stay empty (length < 2) and no
+    // sub-page reads as torn from context.
+    expect(count(/topicId:\s*"what"/g)).toBe(1);
+    expect(count(/topicId:\s*"modes"/g)).toBe(1);
+  });
+
+  it("drops the 'What Mnemosyne is NOT' / Software-as-a-Service prose (AC1 — it lives in the docs now)", () => {
+    const src = page();
+    expect(src).not.toContain("What Mnemosyne is NOT");
+    expect(src).not.toContain("Software-as-a-Service");
+  });
+
+  it("gives every deck page its own uniform title, rendered once by the deck (AC3/AC4)", () => {
+    const src = page();
+    // The DeckPage carries a title and the deck renders it at the top of each page,
+    // so no page reads as torn from context.
+    expect(src).toMatch(/title:\s*string/);
+    expect(src).toMatch(/<h2 className="lp-page-title">\{p\.title\}<\/h2>/);
+    // Every PAGES entry supplies a title string — one per topicId page object.
+    const titleCount = (src.match(/^\s*title:\s*["']/gm) ?? []).length;
+    const pageCount = (src.match(/topicId:\s*"/g) ?? []).length;
+    expect(pageCount).toBeGreaterThanOrEqual(7);
+    expect(titleCount).toBe(pageCount);
   });
 
   it("styles via the canonical Pantheonic tokens (not Tailwind palette names) so the landing shares the one :root", () => {
