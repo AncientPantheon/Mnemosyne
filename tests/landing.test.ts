@@ -124,10 +124,9 @@ describe("React landing route", () => {
     expect(src).toMatch(/inert=\{!\s*isActive\}/);
   });
 
-  it("renders the seven Tier-1 topic labels so the header exposes every topic as a jump target", () => {
+  it("renders the six Tier-1 topic labels so the header exposes every topic as a jump target", () => {
     const src = page();
     for (const label of [
-      "What it is",
       "The Codex",
       "Four Modes",
       "Storage",
@@ -137,6 +136,16 @@ describe("React landing route", () => {
     ]) {
       expect(src).toContain(label);
     }
+  });
+
+  it("does NOT expose 'What it is' as a Tier-1 button — it's the landing home, reached via the wordmark", () => {
+    // The hero (deck page 0) stays, but its redundant header button is gone: the
+    // Mnemosyne wordmark (ph-medallion → homeHref "/") already lands on it, so there
+    // is no `{ id: "what", label: "What it is" }` topic entry driving a Tier-1 button.
+    const src = page();
+    expect(src).not.toMatch(/label:\s*["']What it is["']/);
+    // …but "What it is" survives as the hero page's own title.
+    expect(src).toMatch(/title:\s*["']What it is["']/);
   });
 
   it("restores Documentation as a Tier-1 button linking to /docs (external, not a stage page)", () => {

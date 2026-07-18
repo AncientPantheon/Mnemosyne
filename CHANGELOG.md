@@ -9,6 +9,15 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.7.5] — 2026-07-19
+
+### Changed
+
+- **Dropped the redundant "What it is" Tier-1 header button.** The hero is the landing
+  home and is already reached by clicking the Mnemosyne wordmark (left of the version
+  medallion, `homeHref` "/"). It stays as the first deck page — only its duplicate header
+  button is removed, leaving six Tier-1 topics.
+
 ## [0.7.4] — 2026-07-19
 
 ### Fixed

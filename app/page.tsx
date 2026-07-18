@@ -39,7 +39,9 @@ interface DeckPage {
 /** The seven Tier-1 topics, in deck order. Each topic owns one or more consecutive
  *  pages in PAGES; Documentation is a separate Tier-1 LINK (not a stage page). */
 const TOPICS: { id: string; label: string }[] = [
-  { id: "what", label: "What it is" },
+  // "What it is" is intentionally NOT a Tier-1 button: it IS the landing home (the
+  // hero, deck page 0), reached via the Mnemosyne wordmark (ph-medallion → homeHref
+  // "/"). It stays as the first deck page; only its redundant header button is dropped.
   { id: "codex", label: "The Codex" },
   { id: "modes", label: "Four Modes" },
   { id: "storage", label: "Storage" },
