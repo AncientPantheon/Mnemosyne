@@ -9,6 +9,24 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.7.1] — 2026-07-18
+
+### Changed
+- **Landing is now a fixed-stage "page-turn" deck** (Pantheonic design §4). Each Tier-1
+  header topic (What it is · The Codex · Four Modes · Storage · Identity · StoicTags ·
+  Security) shows on a single ~960px page; big topics paginate into Tier-2 sub-pages
+  (Onboarding folds under The Codex, Roadmap under Security). Wheel/trackpad, arrow/
+  page/space keys, and touch-swipe turn one page at a time (discrete, no partial
+  scroll); the header buttons jump and highlight the active page; `prefers-reduced-
+  motion` cuts the transition. All content is preserved and rendered in the DOM
+  (inactive pages `aria-hidden`). The fixed height is scoped to the landing only —
+  `/admin` and `/codex` keep normal scroll.
+- **Documentation** restored as a Tier-1 header button (→ `/docs`).
+
+### Fixed
+- **Launch Codex button contrast** — near-black text on the gold accent fill so the
+  label reads clearly.
+
 ## [0.7.0] — 2026-07-18
 
 ### Changed — Pantheonic Design Architecture conformance (UI rehaul)

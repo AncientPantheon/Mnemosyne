@@ -3,10 +3,12 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 // Source-contract for the React landing (app/page.tsx + app/landing.css). The page
-// mounts a browser tree (PantheonHeader → useMe → fetch), untestable in this node-env
-// vitest, so each assertion pins a concrete regression in the landing's contract:
-// a landing that stops using the ONE shared header, a Tailwind-CDN dependency creeping
-// back in, a lost section anchor the header can no longer scroll to, or dropped copy.
+// mounts a browser tree (PantheonHeader → useMe → fetch) plus imperative wheel/key/touch
+// listeners, untestable in this node-env vitest, so each assertion pins a concrete
+// regression in the landing's contract: a landing that stops using the ONE shared header,
+// a Tailwind-CDN dependency creeping back in, the fixed-stage page-turn deck losing its
+// stage/pages scaffold or its navigation handlers, the seven Tier-1 topics or the
+// Documentation link going missing, or dropped marketing copy.
 
 const root = process.cwd();
 const read = (...p: string[]) => readFileSync(join(root, ...p), "utf8");
@@ -49,20 +51,73 @@ describe("React landing route", () => {
     expect(src).toMatch(/href:\s*["']\/codex["']|href=["']\/codex["']/);
   });
 
-  it("keeps every tier-1 section as an in-page anchor id AND a header nav item so the buttons scroll to a real target", () => {
+  it("mounts the fixed-stage page-turn deck (stage + translating pages layer) so one topic shows at a time", () => {
     const src = page();
-    for (const id of [
-      "what",
-      "codex",
-      "modes",
-      "storage",
-      "identity",
-      "stoictags",
-      "security",
+    // The deck scaffold: the stage clips, the pages layer translates.
+    expect(src).toMatch(/lp-stage/);
+    expect(src).toMatch(/lp-pages/);
+    // The pages layer is driven by the current index via a transform.
+    expect(src).toMatch(/translateY/);
+  });
+
+  it("wires the hard page-turn input handlers so wheel/keys/touch advance exactly one page", () => {
+    const src = page();
+    // A source-contract proxy for the imperative listeners (untestable headless):
+    // dropping any handler is the regression that silently breaks navigation — wheel
+    // + keys on desktop, touchstart/touchend on mobile.
+    expect(src).toMatch(/["']wheel["']/);
+    expect(src).toMatch(/["']keydown["']/);
+    expect(src).toMatch(/["']touchstart["']/);
+    expect(src).toMatch(/["']touchend["']/);
+  });
+
+  it("keeps the fixed-stage deck mechanism in CSS (else it degrades to a long scroll)", () => {
+    // AC1: the deck only works because .lp is a fixed-height, overflow-hidden viewport
+    // and .lp-stage clips. If either is dropped, all pages stack and the body scrolls —
+    // the exact pre-v0.7.1 behaviour. This is the most behaviorally load-bearing CSS.
+    const lpBlock = css().match(/\.lp\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(lpBlock).toMatch(/height:\s*100dvh/);
+    expect(lpBlock).toMatch(/overflow:\s*hidden/);
+    const stageBlock = css().match(/\.lp-stage\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(stageBlock).toMatch(/overflow:\s*hidden/);
+  });
+
+  it("derives the active Tier-1/Tier-2 highlight from the current page (AC5)", () => {
+    const src = page();
+    // Tier-1 active tracks the current topic; Tier-2 active tracks the current page.
+    // Wiring either to a constant/wrong field silently kills the current-page highlight.
+    expect(src).toMatch(/active:\s*currentTopic === t\.id/);
+    expect(src).toMatch(/active:\s*index === pageIndex/);
+  });
+
+  it("guards inactive pages for a11y — aria-hidden AND inert (all pages stay mounted)", () => {
+    // Every page renders in the DOM (crawlable); inactive ones must be out of the a11y
+    // tree AND the tab order, or a keyboard user tabs into off-screen links. `inert`
+    // does both without collapsing layout (so the translate animation still works).
+    const src = page();
+    expect(src).toMatch(/aria-hidden=\{!\s*isActive\}/);
+    expect(src).toMatch(/inert=\{!\s*isActive\}/);
+  });
+
+  it("renders the seven Tier-1 topic labels so the header exposes every topic as a jump target", () => {
+    const src = page();
+    for (const label of [
+      "What it is",
+      "The Codex",
+      "Four Modes",
+      "Storage",
+      "Identity",
+      "StoicTags",
+      "Security",
     ]) {
-      expect(src).toMatch(new RegExp(`id=["']${id}["']`)); // the scroll target section
-      expect(src).toMatch(new RegExp(`href:\\s*["']#${id}["']`)); // the header nav anchor
+      expect(src).toContain(label);
     }
+  });
+
+  it("restores Documentation as a Tier-1 button linking to /docs (external, not a stage page)", () => {
+    const src = page();
+    expect(src).toMatch(/Documentation/);
+    expect(src).toMatch(/href:\s*["']\/docs["']|href=["']\/docs["']/);
   });
 
   it("preserves the distinctive marketing copy so the HTML→JSX port didn't paraphrase away the content", () => {

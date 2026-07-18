@@ -12,8 +12,70 @@
   background: linear-gradient(180deg, var(--bg) 0%, var(--panel) 100%);
   color: var(--ink);
   font-family: "Inter", system-ui, sans-serif;
-  min-height: 100vh;
-  scroll-behavior: smooth;
+  /* Fixed-stage deck: `.lp` fills the viewport and never body-scrolls. Scoped to the
+     landing root ONLY (never `body`), so /admin and /codex keep their normal scroll. */
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Fixed-stage HARD PAGE-TURN deck ── */
+/* The stage clips; the pages layer stacks all `.lp-page` nodes and translates by
+   -index*100% so exactly one page is on screen. */
+.lp-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+.lp-pages {
+  height: 100%;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-pages {
+    transition: none;
+  }
+}
+.lp-page {
+  height: 100%;
+  /* overflow-y is the safety valve when a page is taller than the stage (short
+     viewport). `safe center` centres a page that fits but aligns to the start when it
+     overflows, so the top is never clipped out of scroll reach. */
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: safe center;
+  padding: 2.5rem 24px;
+}
+.lp-page-inner {
+  width: 100%;
+  max-width: var(--maxw);
+  margin: 0 auto;
+}
+
+/* ── Slim deck footer ── */
+.lp-foot {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 1.5rem;
+  padding: 0.6rem 24px;
+  border-top: 1px solid color-mix(in srgb, var(--accent-dim) 20%, transparent);
+  background: var(--bg);
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  text-align: center;
+}
+.lp-foot a {
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+.lp-foot a:hover {
+  color: var(--accent-dim);
 }
 
 /* Content shells: prose blocks use readability measures (rem), never the old
@@ -23,16 +85,6 @@
 .lp-measure-4 { max-width: 56rem; margin-left: auto; margin-right: auto; }
 .lp-measure-3 { max-width: 48rem; margin-left: auto; margin-right: auto; }
 .lp-center { text-align: center; }
-
-.lp-section {
-  padding: 5rem 24px;
-}
-.lp-section--alt {
-  background: color-mix(in srgb, var(--panel-2) 30%, transparent);
-}
-.lp-section--hero {
-  padding: 8rem 24px 5rem;
-}
 
 /* ── Typography ── */
 .lp-classical {
@@ -69,11 +121,6 @@
   color: var(--accent-dim);
   margin: 0 0 1rem;
 }
-.lp-lead {
-  color: var(--ink-soft);
-  line-height: 1.7;
-  margin: 0 0 1.5rem;
-}
 .lp-tagline {
   font-size: clamp(1.5rem, 3vw, 1.875rem);
   color: var(--accent-dim);
@@ -97,11 +144,9 @@
 .lp-grid { display: grid; gap: 1.5rem; }
 .lp-grid--2 { grid-template-columns: 1fr; }
 .lp-grid--3 { grid-template-columns: 1fr; }
-.lp-grid--4 { grid-template-columns: 1fr; }
 @media (min-width: 768px) {
   .lp-grid--2 { grid-template-columns: repeat(2, 1fr); }
   .lp-grid--3 { grid-template-columns: repeat(3, 1fr); }
-  .lp-grid--4 { grid-template-columns: repeat(2, 1fr); }
 }
 .lp-mt { margin-top: 3rem; }
 .lp-mb { margin-bottom: 3rem; }
@@ -109,11 +154,16 @@
 /* ── Cards ── */
 .lp-card {
   background: color-mix(in srgb, var(--panel-2) 60%, transparent);
-  backdrop-filter: blur(8px);
   border: 1px solid color-mix(in srgb, var(--accent-dim) 20%, transparent);
   border-radius: var(--radius);
   padding: 1.5rem;
-  transition: all 0.3s ease;
+  /* No backdrop-filter: every deck page stays mounted and the whole layer transforms
+     on a page-turn, so blurring all cards every frame stutters on weaker GPUs. The
+     semi-opaque background reads fine over the panel gradient. Transition only the
+     hover properties (not `all`, which would also animate layout). */
+  transition:
+    border-color 0.3s ease,
+    background 0.3s ease;
 }
 .lp-card:hover {
   border-color: color-mix(in srgb, var(--accent-dim) 50%, transparent);
@@ -169,17 +219,6 @@
 }
 
 /* ── Dividers, glyphs ── */
-.lp-divider {
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    color-mix(in srgb, var(--accent-dim) 50%, transparent) 50%,
-    transparent 100%
-  );
-  height: 1px;
-  max-width: 48rem;
-  margin: 3rem auto;
-}
 .lp-glyph {
   font-family: "Cinzel", serif;
   color: var(--accent-dim);
@@ -394,22 +433,6 @@
   background: color-mix(in srgb, var(--accent-dim) 5%, transparent);
 }
 
-/* ── Footer ── */
-.lp-footer {
-  padding: 3rem 24px;
-  border-top: 1px solid color-mix(in srgb, var(--accent-dim) 20%, transparent);
-  background: var(--bg);
-  text-align: center;
-}
-.lp-footer-links {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 1.5rem;
-  font-size: 0.875rem;
-}
-.lp-footer-links a { color: var(--ink-soft); text-decoration: none; }
-.lp-footer-links a:hover { color: var(--accent-dim); }
 
 /* Roadmap rows */
 .lp .roadmap-row { display: flex; align-items: center; gap: 1rem; }

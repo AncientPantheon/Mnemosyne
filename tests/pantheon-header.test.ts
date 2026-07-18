@@ -52,4 +52,15 @@ describe("PantheonHeader — the shared 3-level header", () => {
     const innerBlock = c.match(/\.ph-inner\s*\{([^}]*)\}/)?.[1] ?? "";
     expect(innerBlock).not.toMatch(/border-bottom/);
   });
+
+  it("gives the primary button (Launch Codex) high-contrast near-black text on the gold fill", () => {
+    // The gold --accent fill needs dark text to stay legible; a mid-tone (e.g. the old
+    // #1a1206) reads as low-contrast. Guard: the primary variant uses a near-black
+    // (#0…) text colour, bold.
+    const primary = css().match(/\.ph-btn--primary\s*\{([^}]*)\}/)?.[1] ?? "";
+    // Each RGB channel's high nibble must be 0 (every channel < 16) — a genuine
+    // near-black guard, so a merely-red-channel-low colour (e.g. #0fff00) can't pass.
+    expect(primary).toMatch(/color:\s*#0[0-9a-f]0[0-9a-f]0[0-9a-f]\b/);
+    expect(primary).toMatch(/font-weight:\s*700/);
+  });
 });
