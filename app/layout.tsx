@@ -12,15 +12,20 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    // stoa-deep base for ALL React routes (/admin, /codex, /_not-found) so a
-    // centered/short page never shows the browser's white body behind it. The
-    // landing route serves its own <body>, so this doesn't touch it.
+    // stoa-deep base for ALL React routes (the landing /, /admin, /codex,
+    // /_not-found) so a centered/short page never shows the browser's white body
+    // behind it. The landing is now a React route (app/page.tsx) rendered through
+    // this layout, so it shares this body.
     <html lang="en" style={{ background: "#0d0a07" }}>
       <body style={{ margin: 0, minHeight: "100vh", background: "#0d0a07" }}>
-        {/* Cinzel — the Mnemosyne display face (matches the landing wordmark).
-            Rendered here so the React routes (/codex host bar) get it; Next
-            hoists the stylesheet link into <head>. The landing route serves its
-            own Cinzel via its inline CDN <link>. */}
+        {/* Canonical Pantheonic design tokens (:root { --bg … --accent … --maxw }).
+            Linked ahead of the codex ui.css import so the token custom-properties
+            are the cascade base every React surface (/admin, /codex) resolves
+            against. Served as a static public asset, hence a <link> not an import. */}
+        <link rel="stylesheet" href="/assets/pantheon-tokens.css" />
+        {/* Cinzel — the Mnemosyne display face (the header medallion + landing
+            headings). Rendered here so every React route (the landing, /admin,
+            /codex) gets it; Next hoists the stylesheet link into <head>. */}
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&display=swap"

@@ -9,6 +9,39 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.7.0] — 2026-07-18
+
+### Changed — Pantheonic Design Architecture conformance (UI rehaul)
+
+Aligned every Mnemosyne surface to the Pantheonic Design Architecture (the cross-site
+UI law; reference implementation Pythia). Presentational/structural only — no auth,
+crypto, deploy, or engine behaviour changed.
+
+- **One canonical token contract.** `public/assets/pantheon-tokens.css` declares the
+  Pantheon-standard `:root` names (`--bg/--bg-2/--panel/--panel-2/--line/--ink/--ink-soft/
+  --ink-mute/--accent/--accent-dim/--danger/--radius`) carrying Mnemosyne's own
+  bronze/parchment values. The four parallel token namespaces (`--admin-*`, `--cxpg-*`,
+  the landing's Tailwind config + raw hex) collapse onto it.
+- **One content width.** A single `--maxw: 1536px` everywhere; the 860 / 1080 / 1200 /
+  1280 width drift and the dead `.cxpg-main/-header/-shell` selectors are gone.
+- **One shared header + one session source.** A `useMe()` hook is the single `/api/me`
+  consumer; the 3-level `PantheonHeader` (sticky `.ph`, full-chrome-width separator,
+  ancient-gated Admin, text-node identity) is worn by the landing and the admin (admin
+  variant = L1 only). The four hand-rolled headers and duplicate fetches are removed.
+- **Sidebar + content-pane admin.** The tile-list-of-pages becomes one hash-routed
+  shell (`/admin` = "select a section" prompt, `/admin#<section>`), driven by a static
+  section-config; sections are gate-free panes behind ONE `AdminGate`; the old
+  per-function routes redirect into the shell.
+- **React landing.** The static Tailwind-CDN `public/index.html` is replaced by a React
+  route (`app/page.tsx`) styled with the canonical tokens, using the shared header with
+  anchor-nav; all marketing content preserved. The Tailwind Play CDN is dropped.
+- **Cleanup.** Removed the duplicated `/api/me` client types (now the shared
+  `MeResponse`), the unused `AuthStatus` component, and dead admin-header CSS.
+
+Notes: the embedded `/codex` product keeps its own functional topbar (view-tabs +
+callback back/logout) — the shared header covers the site surfaces (landing + admin).
+Plan + design captured under `docs/work/pantheonic-ui-migration/`.
+
 ## [0.6.2] — 2026-07-18
 
 ### Fixed

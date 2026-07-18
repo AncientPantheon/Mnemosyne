@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useState, type ReactElement } from "react";
 
-import { AdminGate } from "../AdminGate.client";
-
 /**
  * Pythia connector: set/clear the operator gateway that becomes the Codex `global`
  * connection for all Mnemosyne users. Loads the current value from the public
@@ -98,11 +96,7 @@ function PythiaConnectorSection(): ReactElement {
 }
 
 export function PythiaPage(): ReactElement {
-  return (
-    <AdminGate title="Pythia Connector">
-      <PythiaConnectorSection />
-    </AdminGate>
-  );
+  return <PythiaConnectorSection />;
 }
 
 export default PythiaPage;

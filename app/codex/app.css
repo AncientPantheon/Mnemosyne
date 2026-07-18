@@ -8,17 +8,9 @@
    parchment #f5ecd9 · bronze #b8860b · bronze-dim #8b6914 · gold #d4a04a
    stoa-stone #2a2520 · stoa-stone-light #3d3530 · stoa-deep #0d0a07 */
 :root {
-  --cxpg-bg: #0d0a07;            /* stoa-deep */
-  --cxpg-bg-soft: #b8860b12;     /* bronze tint */
-  --cxpg-surface: #2a2520;       /* stoa-stone */
-  --cxpg-surface-2: #1a1612;     /* ink */
-  --cxpg-border: #3d3530;        /* stoa-stone-light */
-  --cxpg-text: #f5ecd9;          /* parchment */
-  --cxpg-text-dim: #c9bfa8;      /* dim parchment */
-  --cxpg-accent: #b8860b;        /* bronze */
-  --cxpg-accent-soft: #b8860b22;
-  --cxpg-danger: #ff6b7d;
-  --cxpg-radius: 14px;
+  /* Codex-local font with no canonical equivalent (colour/width tokens migrated
+     to the canonical set in public/assets/pantheon-tokens.css; the bronze
+     background/accent tints — #b8860b12 / #b8860b22 — are inlined at use sites). */
   --cxpg-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
     Arial, sans-serif;
 }
@@ -29,11 +21,11 @@
    so the loaded dashboard, its cards and inputs pick up the Mnemosyne palette. */
 :root,
 body .codex-ui {
-  --codex-bg: #0d0a07;           /* stoa-deep */
-  --codex-surface: #2a2520;      /* stoa-stone */
-  --codex-surface-2: #1a1612;    /* ink */
-  --codex-accent: #d4a04a;       /* gold */
-  --codex-accent-strong: #b8860b;/* bronze */
+  --codex-bg: var(--bg);                  /* stoa-deep */
+  --codex-surface: var(--panel-2);        /* stoa-stone */
+  --codex-surface-2: var(--panel);        /* ink */
+  --codex-accent: var(--accent);          /* gold */
+  --codex-accent-strong: var(--accent-dim);/* bronze */
 }
 
 /* Global page background — the loaded-dashboard shell is now the centered
@@ -43,14 +35,14 @@ html,
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--cxpg-bg);
+  background: var(--bg);
 }
 
 /* ---- Landing / status screens -------------------------------------------- */
 
 .cxpg-app {
   font-family: var(--cxpg-font);
-  color: var(--cxpg-text);
+  color: var(--ink);
   box-sizing: border-box;
 }
 
@@ -63,7 +55,7 @@ body {
   background:
     radial-gradient(1200px 600px at 50% -10%, #2a2520 0%, transparent 60%),
     radial-gradient(900px 500px at 90% 110%, #1a1612 0%, transparent 55%),
-    var(--cxpg-bg);
+    var(--bg);
 }
 
 /* ==========================================================================
@@ -167,8 +159,8 @@ body {
 .cxpg-card {
   width: 100%;
   max-width: 440px;
-  background: var(--cxpg-surface);
-  border: 1px solid var(--cxpg-border);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
   border-radius: 20px;
   padding: 40px 36px;
   text-align: center;
@@ -188,9 +180,9 @@ body {
 .cxpg-logo {
   font-size: 34px;
   line-height: 1;
-  color: var(--cxpg-accent);
+  color: var(--accent-dim);
   margin-bottom: 14px;
-  filter: drop-shadow(0 0 18px var(--cxpg-accent-soft));
+  filter: drop-shadow(0 0 18px #b8860b22);
 }
 
 .cxpg-title {
@@ -202,7 +194,7 @@ body {
 
 .cxpg-subtitle {
   margin: 8px 0 28px;
-  color: var(--cxpg-text-dim);
+  color: var(--ink-soft);
   font-size: 14.5px;
 }
 
@@ -213,9 +205,9 @@ body {
   align-items: center;
   gap: 6px;
   padding: 30px 20px;
-  border: 1.5px dashed var(--cxpg-border);
-  border-radius: var(--cxpg-radius);
-  background: var(--cxpg-bg-soft);
+  border: 1.5px dashed var(--line);
+  border-radius: var(--radius);
+  background: #b8860b12;
   cursor: pointer;
   transition:
     border-color 0.15s ease,
@@ -224,8 +216,8 @@ body {
 }
 
 .cxpg-upload:hover {
-  border-color: var(--cxpg-accent);
-  background: var(--cxpg-accent-soft);
+  border-color: var(--accent-dim);
+  background: #b8860b22;
 }
 
 .cxpg-upload:active {
@@ -233,13 +225,13 @@ body {
 }
 
 .cxpg-upload:focus-within {
-  outline: 2px solid var(--cxpg-accent);
+  outline: 2px solid var(--accent-dim);
   outline-offset: 2px;
 }
 
 .cxpg-upload-icon {
   font-size: 26px;
-  color: var(--cxpg-accent);
+  color: var(--accent-dim);
 }
 
 .cxpg-upload-title {
@@ -249,7 +241,7 @@ body {
 
 .cxpg-upload-hint {
   font-size: 12.5px;
-  color: var(--cxpg-text-dim);
+  color: var(--ink-soft);
 }
 
 .cxpg-upload-hint code {
@@ -257,7 +249,7 @@ body {
   padding: 1px 5px;
   border-radius: 5px;
   background: #ffffff12;
-  color: var(--cxpg-text);
+  color: var(--ink);
 }
 
 /* Visually-hidden native file input (kept in the a11y tree via the label). */
@@ -276,42 +268,23 @@ body {
 .cxpg-note {
   margin: 22px 0 0;
   font-size: 12px;
-  color: var(--cxpg-text-dim);
+  color: var(--ink-soft);
 }
 
 .cxpg-status {
   margin: 0;
-  color: var(--cxpg-text-dim);
+  color: var(--ink-soft);
   font-size: 15px;
 }
 
 .cxpg-error {
   margin: 0;
-  color: var(--cxpg-danger);
+  color: var(--danger);
   font-size: 15px;
   font-weight: 500;
 }
 
 /* ---- Loaded shell -------------------------------------------------------- */
-
-.cxpg-shell {
-  min-height: 100vh;
-  background: var(--cxpg-bg);
-}
-
-.cxpg-header {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 12px 22px;
-  background: #0b0e17e6;
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--cxpg-border);
-}
 
 .cxpg-brand {
   margin: 0;
@@ -321,17 +294,12 @@ body {
   font-size: 17px;
   font-weight: 700;
   letter-spacing: -0.01em;
-  color: var(--cxpg-text);
+  color: var(--ink);
 }
 
 .cxpg-brand-mark {
-  color: var(--cxpg-accent);
+  color: var(--accent-dim);
   font-size: 16px;
-}
-
-.cxpg-header-actions {
-  display: flex;
-  gap: 10px;
 }
 
 .cxpg-btn {
@@ -349,7 +317,7 @@ body {
 }
 
 .cxpg-btn--primary {
-  background: var(--cxpg-accent);
+  background: var(--accent-dim);
   color: #0a0d16;
 }
 
@@ -359,13 +327,13 @@ body {
 
 .cxpg-btn--ghost {
   background: transparent;
-  color: var(--cxpg-text-dim);
-  border-color: var(--cxpg-border);
+  color: var(--ink-soft);
+  border-color: var(--line);
 }
 
 .cxpg-btn--ghost:hover {
-  color: var(--cxpg-text);
-  border-color: var(--cxpg-text-dim);
+  color: var(--ink);
+  border-color: var(--ink-soft);
 }
 
 /* Codex UI / Codex UI Settings view toggle (segmented control). */
@@ -375,7 +343,7 @@ body {
   padding: 4px;
   border-radius: 12px;
   background: #0e1220;
-  border: 1px solid var(--cxpg-border);
+  border: 1px solid var(--line);
 }
 
 .cxpg-viewtab {
@@ -386,7 +354,7 @@ body {
   border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
-  color: var(--cxpg-text-dim);
+  color: var(--ink-soft);
   cursor: pointer;
   transition:
     background 0.15s ease,
@@ -394,11 +362,11 @@ body {
 }
 
 .cxpg-viewtab:hover {
-  color: var(--cxpg-text);
+  color: var(--ink);
 }
 
 .cxpg-viewtab--active {
-  background: var(--cxpg-accent);
+  background: var(--accent-dim);
   color: #0a0d16;
 }
 
@@ -443,8 +411,8 @@ body {
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 999px;
-  color: var(--cxpg-text-dim);
-  border: 1px solid var(--cxpg-border);
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
   font-family: var(--cxpg-font-mono, ui-monospace, monospace);
 }
 
@@ -454,16 +422,10 @@ body {
   justify-content: center;
 }
 
-.cxpg-main {
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 22px;
-}
-
 /* ── OuronetUI-mirrored layout (container mx-auto + header + unified body card) ── */
 .cxpg-container {
   width: 100%;
-  max-width: 1280px;
+  max-width: var(--maxw);
   margin: 0 auto;
   padding: 24px 20px 64px;
   box-sizing: border-box;
@@ -497,9 +459,9 @@ body {
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 999px;
-  color: var(--cxpg-accent);
-  background: color-mix(in srgb, var(--cxpg-accent) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--cxpg-accent) 40%, transparent);
+  color: var(--accent-dim);
+  background: color-mix(in srgb, var(--accent-dim) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-dim) 40%, transparent);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -507,7 +469,7 @@ body {
 .cxpg-tagline {
   margin: 0;
   font-size: 12px;
-  color: var(--cxpg-text-dim);
+  color: var(--ink-soft);
 }
 
 .cxpg-topbar-right {
@@ -519,7 +481,7 @@ body {
 
 .cxpg-bodycard {
   border-radius: 16px;
-  border: 1px solid var(--cxpg-border);
+  border: 1px solid var(--line);
   background: #0a0a0a;
   padding: 24px;
   display: flex;
@@ -538,9 +500,9 @@ body {
 .cxpg-foreign {
   margin-top: 22px;
   padding: 18px 20px 22px;
-  background: var(--cxpg-surface);
-  border: 1px solid var(--cxpg-border);
-  border-radius: var(--cxpg-radius);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
 }
 
 .cxpg-foreign-title {
@@ -562,7 +524,7 @@ body {
 .cxpg-field-label {
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--cxpg-text-dim);
+  color: var(--ink-soft);
   letter-spacing: 0.01em;
 }
 
@@ -571,11 +533,11 @@ body {
   box-sizing: border-box;
   font-family: var(--cxpg-font);
   font-size: 15px;
-  color: var(--cxpg-text);
+  color: var(--ink);
   padding: 12px 14px;
-  border-radius: var(--cxpg-radius);
-  border: 1px solid var(--cxpg-border);
-  background: var(--cxpg-bg-soft);
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: #b8860b12;
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease,
@@ -592,9 +554,9 @@ body {
 
 .cxpg-input:focus {
   outline: none;
-  border-color: var(--cxpg-accent);
-  background: var(--cxpg-surface-2);
-  box-shadow: 0 0 0 3px var(--cxpg-accent-soft);
+  border-color: var(--accent-dim);
+  background: var(--panel);
+  box-shadow: 0 0 0 3px #b8860b22;
 }
 
 .cxpg-btn--block {
@@ -628,7 +590,7 @@ body {
   border: none;
   border-radius: 9px;
   background: transparent;
-  color: var(--cxpg-text-dim);
+  color: var(--ink-soft);
   cursor: pointer;
   transition:
     color 0.15s ease,
@@ -636,12 +598,12 @@ body {
 }
 
 .cxpg-eye:hover {
-  color: var(--cxpg-text);
+  color: var(--ink);
   background: #ffffff12;
 }
 
 .cxpg-eye:active {
-  color: var(--cxpg-accent);
+  color: var(--accent-dim);
 }
 
 /* Codex engine version badge on the load screen — a monospace, muted line so the

@@ -3,8 +3,6 @@
 import dynamic from "next/dynamic";
 import type { ReactElement } from "react";
 
-import { AdminGate } from "../AdminGate.client";
-
 /**
  * Mnemosyne Khronoton — the ancient admin's autonomous-transaction scheduler,
  * WIRED TO THE LIVE ENGINE (`@ancientpantheon/khronoton-core`): the sealed
@@ -25,11 +23,7 @@ const KhronotonApp = dynamic(() => import("./KhronotonApp"), {
 });
 
 export function KhronotonPage(): ReactElement {
-  return (
-    <AdminGate title="Mnemosyne Khronoton">
-      <KhronotonApp />
-    </AdminGate>
-  );
+  return <KhronotonApp />;
 }
 
 export default KhronotonPage;

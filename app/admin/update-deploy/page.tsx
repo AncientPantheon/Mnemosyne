@@ -1,17 +1,12 @@
-import type { ReactElement } from "react";
+"use client";
 
-import { UpdateDeployPage } from "./UpdateDeployPage.client";
+import { useEffect } from "react";
 
-// Ancient-gated Update & Deploy page. The client control does the live /api/me
-// gate and reads the app + all constructor versions (installed vs latest) from
-// /api/admin/deploy, so nothing is read server-side here. The single Deploy button
-// rebuilds the automaton (on-box blue-green on live; npm pull on dev).
-export const dynamic = "force-dynamic";
-
-export const metadata = {
-  title: "Update & Deploy",
-};
-
-export default function Page(): ReactElement {
-  return <UpdateDeployPage />;
+// Legacy route — the admin is now one hash-routed shell at /admin#update-deploy. Redirect any
+// old deep link (bookmark, external nav) into the shell, preserving the section.
+export default function RedirectToShell(): null {
+  useEffect(() => {
+    window.location.replace("/admin#update-deploy");
+  }, []);
+  return null;
 }

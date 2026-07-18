@@ -1,16 +1,12 @@
-import type { ReactElement } from "react";
+"use client";
 
-import { KhronotonPage } from "./KhronotonPage.client";
+import { useEffect } from "react";
 
-// Ancient-gated Mnemosyne Khronoton scaffold. A placeholder for the autonomous-
-// transaction scheduler that turns Mnemosyne into a full Pantheonic Automaton once the
-// Khronoton engine package is wired in (see docs/handoffs/03-khronoton-automaton-package.md).
-export const dynamic = "force-dynamic";
-
-export const metadata = {
-  title: "Mnemosyne Khronoton",
-};
-
-export default function Page(): ReactElement {
-  return <KhronotonPage />;
+// Legacy route — the admin is now one hash-routed shell at /admin#khronoton. Redirect any
+// old deep link (bookmark, external nav) into the shell, preserving the section.
+export default function RedirectToShell(): null {
+  useEffect(() => {
+    window.location.replace("/admin#khronoton");
+  }, []);
+  return null;
 }

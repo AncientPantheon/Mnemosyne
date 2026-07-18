@@ -2,40 +2,13 @@
    codex bar and the landing wordmark. Scoped under .mnemo-admin so it never bleeds
    into the marketing pages or the codex-ui-scoped styles. */
 .mnemo-admin {
-  --admin-bg: #0d0a07; /* stoa-deep */
-  --admin-surface: #1a1612; /* ink */
-  --admin-surface-2: #2a2520; /* stoa-stone */
-  --admin-border: #3d3530; /* stoa-stone-light */
-  --admin-text: #f5ecd9; /* parchment */
-  --admin-text-dim: #c9bfa8; /* dim parchment */
-  --admin-accent: #b8860b; /* bronze */
-  --admin-gold: #d4a04a; /* gold */
-  --admin-danger: #ff6b7d;
-
   min-height: 100vh;
   margin: 0 auto;
-  max-width: 860px;
+  max-width: var(--maxw);
   padding: 2.5rem 1.5rem 4rem;
-  background: var(--admin-bg);
-  color: var(--admin-text);
+  background: var(--bg);
+  color: var(--ink);
   font-family: "Inter", system-ui, sans-serif;
-}
-
-.mnemo-admin-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid #b8860b33;
-}
-
-.mnemo-admin-headleft {
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  flex-wrap: wrap;
 }
 
 .mnemo-admin-title {
@@ -43,17 +16,7 @@
   font-family: "Cinzel", serif;
   font-weight: 600;
   letter-spacing: 0.02em;
-  color: var(--admin-gold);
-}
-
-.mnemo-admin-btn--ghost {
-  background: transparent;
-  border: 1px solid #b8860b66;
-  color: var(--admin-gold, #d4a04a);
-}
-.mnemo-admin-btn--ghost:hover {
-  border-color: #b8860b;
-  background: #b8860b1a;
+  color: var(--accent);
 }
 
 .mnemo-admin-sections {
@@ -65,64 +28,9 @@
 
 .mnemo-admin-card {
   padding: 1.25rem 1.4rem;
-  background: var(--admin-surface);
-  border: 1px solid var(--admin-border);
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 12px;
-}
-
-/* Hub-style landing: a vertical list of entry tiles, each the whole link. */
-.mnemo-admin-tilelist {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.mnemo-admin-tile {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1.15rem 1.4rem;
-  background: var(--admin-surface);
-  border: 1px solid var(--admin-border);
-  border-radius: 12px;
-  color: inherit;
-  text-decoration: none;
-  transition:
-    border-color 0.15s ease,
-    background 0.15s ease,
-    transform 0.15s ease;
-}
-
-.mnemo-admin-tile:hover {
-  border-color: var(--admin-accent);
-  background: #b8860b12;
-  transform: translateY(-1px);
-}
-
-.mnemo-admin-tile-icon {
-  font-size: 1.6rem;
-  line-height: 1;
-  flex: 0 0 auto;
-}
-
-.mnemo-admin-tile-body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 0;
-}
-
-.mnemo-admin-tile-title {
-  font-family: "Cinzel", serif;
-  font-weight: 600;
-  color: var(--admin-gold);
-  font-size: 1.02rem;
-}
-
-.mnemo-admin-tile-desc {
-  color: var(--admin-text-dim);
-  font-size: 0.88rem;
-  line-height: 1.45;
 }
 
 .mnemo-admin-gate {
@@ -133,7 +41,7 @@
 .mnemo-admin-h2 {
   margin: 0 0 0.5rem;
   font-size: 1.05rem;
-  color: var(--admin-gold);
+  color: var(--accent);
 }
 
 /* A titled group inside a card (e.g. the Update & Deploy page's "Mnemosyne" and
@@ -143,24 +51,24 @@
 .mnemo-admin-group + .mnemo-admin-group {
   margin-top: 1.4rem;
   padding-top: 1.1rem;
-  border-top: 1px solid var(--admin-border, #2a241c);
+  border-top: 1px solid var(--line, #2a241c);
 }
 
 .mnemo-admin-muted {
   margin: 0.35rem 0;
-  color: var(--admin-text-dim);
+  color: var(--ink-soft);
   font-size: 0.9rem;
   line-height: 1.5;
 }
 
 .mnemo-admin-notice {
-  color: var(--admin-danger);
+  color: var(--danger);
   font-size: 0.95rem;
 }
 
 .mnemo-admin-status {
   margin: 0.6rem 0 0;
-  color: var(--admin-gold);
+  color: var(--accent);
   font-size: 0.88rem;
 }
 
@@ -174,16 +82,16 @@
 .mnemo-admin-input {
   flex: 1 1 260px;
   padding: 0.55rem 0.7rem;
-  background: var(--admin-surface-2);
+  background: var(--panel-2);
   border: 1px solid #b8860b66;
   border-radius: 8px;
-  color: var(--admin-text);
+  color: var(--ink);
   font-size: 0.9rem;
 }
 
 .mnemo-admin-input:focus {
   outline: none;
-  border-color: var(--admin-accent);
+  border-color: var(--accent-dim);
 }
 
 .mnemo-admin-btn {
@@ -192,20 +100,20 @@
   background: transparent;
   border: 1px solid #b8860b66;
   border-radius: 8px;
-  color: var(--admin-text);
+  color: var(--ink);
   font-size: 0.88rem;
   cursor: pointer;
   text-decoration: none;
 }
 
 .mnemo-admin-btn:hover:not(:disabled) {
-  border-color: var(--admin-accent);
+  border-color: var(--accent-dim);
   background: #b8860b1a;
 }
 
 .mnemo-admin-btn--primary {
-  background: var(--admin-accent);
-  border-color: var(--admin-accent);
+  background: var(--accent-dim);
+  border-color: var(--accent-dim);
   color: #0d0a07;
   font-weight: 600;
 }
@@ -224,9 +132,9 @@
   overflow: auto;
   padding: 0.7rem;
   background: #0d0a07;
-  border: 1px solid var(--admin-border);
+  border: 1px solid var(--line);
   border-radius: 8px;
-  color: var(--admin-text-dim);
+  color: var(--ink-soft);
   font-size: 0.78rem;
   white-space: pre-wrap;
   word-break: break-word;
@@ -246,8 +154,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.5rem 0.75rem;
-  background: var(--admin-surface-2);
-  border: 1px solid var(--admin-border);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
   border-radius: 8px;
 }
 
@@ -260,13 +168,13 @@
   border-radius: 999px;
   font-size: 0.75rem;
   background: #3d353066;
-  color: var(--admin-text-dim);
-  border: 1px solid var(--admin-border);
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
 }
 
 .mnemo-admin-badge--live {
   background: #b8860b22;
-  color: var(--admin-gold);
+  color: var(--accent);
   border-color: #b8860b66;
 }
 
@@ -278,7 +186,7 @@
 }
 
 .mnemo-admin-arrow {
-  color: var(--admin-text-dim);
+  color: var(--ink-soft);
   font-size: 0.8rem;
 }
 
@@ -286,8 +194,8 @@
 .mnemo-admin-confirm {
   margin-top: 0.75rem;
   padding: 0.75rem;
-  background: var(--admin-surface-2);
-  border: 1px solid var(--admin-border);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
   border-radius: 8px;
 }
 
@@ -312,24 +220,18 @@
    the whole console to the admin bronze/parchment palette without touching the
    package CSS. */
 .mnemo-admin .khronoton-ui {
-  --khr-bg: var(--admin-bg);
-  --khr-panel: var(--admin-surface);
-  --khr-inset: var(--admin-surface-2);
-  --khr-border: var(--admin-border);
-  --khr-text: var(--admin-text);
-  --khr-text-dim: var(--admin-text-dim);
-  --khr-text-dim2: #a3987f;
-  --khr-accent: var(--admin-gold);
+  --khr-bg: var(--bg);
+  --khr-panel: var(--panel);
+  --khr-inset: var(--panel-2);
+  --khr-border: var(--line);
+  --khr-text: var(--ink);
+  --khr-text-dim: var(--ink-soft);
+  --khr-text-dim2: var(--ink-mute);
+  --khr-accent: var(--accent);
   --khr-accent-tint: rgba(212, 160, 74, 0.14);
-  --khr-error: var(--admin-danger);
+  --khr-error: var(--danger);
   --khr-error-bg: rgba(255, 107, 125, 0.12);
   --khr-font: "Inter", system-ui, sans-serif;
-}
-
-/* The Builder is a two-pane editor — give the khronoton page more width than the
-   default 860px admin column. (:has scopes this to pages that mount the console.) */
-.mnemo-admin:has(.khronoton-ui) {
-  max-width: 1200px;
 }
 
 /* The confirm gate floats above the console, centered near the top. */
@@ -338,4 +240,110 @@
   top: 0.75rem;
   z-index: 30;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+}
+
+/* ── Admin shell: sidebar + content pane (Pantheonic master–detail) ──────────── */
+.mnemo-admin-shell {
+  display: grid;
+  grid-template-columns: 264px minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.mnemo-admin-sidebar {
+  position: sticky;
+  top: 88px; /* clears the sticky Pantheonic header */
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: calc(100vh - 108px);
+  overflow-y: auto;
+}
+
+.mnemo-admin-navitem {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid transparent;
+  border-left: 3px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  font-family: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.mnemo-admin-navitem:hover:not(.mnemo-admin-navitem--disabled) {
+  background: var(--panel);
+  color: var(--ink);
+}
+.mnemo-admin-navitem--active {
+  background: var(--panel-2);
+  color: var(--ink);
+  border-left-color: var(--accent);
+}
+.mnemo-admin-navitem--disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.mnemo-admin-navicon {
+  font-size: 1.1rem;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+.mnemo-admin-navbadge {
+  margin-left: auto;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-mute);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 1px 6px;
+}
+
+.mnemo-admin-pane {
+  min-width: 0;
+}
+.mnemo-admin-pagetitle {
+  margin: 0 0 1rem;
+  font-family: "Cinzel", serif;
+  font-weight: 600;
+  color: var(--accent);
+  font-size: 1.3rem;
+}
+.mnemo-admin-emptyprompt {
+  padding: 2.5rem 0;
+  font-size: 1rem;
+}
+
+/* ≤820px: the sidebar collapses above the pane as a horizontal scrollable chip row;
+   the hash routing model is unchanged. */
+@media (max-width: 820px) {
+  .mnemo-admin-shell {
+    grid-template-columns: 1fr;
+  }
+  .mnemo-admin-sidebar {
+    position: static;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    max-height: none;
+  }
+  .mnemo-admin-navitem {
+    border-left: none;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+  }
+  .mnemo-admin-navitem--active {
+    border-left: none;
+    border-bottom-color: var(--accent);
+  }
 }

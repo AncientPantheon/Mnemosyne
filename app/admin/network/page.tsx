@@ -1,11 +1,12 @@
-import type { ReactElement } from "react";
+"use client";
 
-import { NetworkPage } from "./NetworkPage.client";
+import { useEffect } from "react";
 
-export const metadata = {
-  title: "Network Status",
-};
-
-export default function Page(): ReactElement {
-  return <NetworkPage />;
+// Legacy route — the admin is now one hash-routed shell at /admin#network. Redirect any
+// old deep link (bookmark, external nav) into the shell, preserving the section.
+export default function RedirectToShell(): null {
+  useEffect(() => {
+    window.location.replace("/admin#network");
+  }, []);
+  return null;
 }

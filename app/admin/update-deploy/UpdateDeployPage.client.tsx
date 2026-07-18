@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 
-import { AdminGate } from "../AdminGate.client";
-
 /** One constructor row from `/api/admin/deploy` (GET). */
 interface ConstructorStatus {
   key: "codex" | "khronoton";
@@ -327,11 +325,7 @@ function DeployPanel(): ReactElement {
 }
 
 export function UpdateDeployPage(): ReactElement {
-  return (
-    <AdminGate title="Update & Deploy">
-      <DeployPanel />
-    </AdminGate>
-  );
+  return <DeployPanel />;
 }
 
 export default UpdateDeployPage;

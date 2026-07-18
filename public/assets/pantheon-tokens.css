@@ -1,0 +1,33 @@
+/* Pantheonic canonical token contract — Mnemosyne theme.
+ *
+ * The NAMES are the Pantheon-wide contract (identical across every site); the VALUES
+ * are Mnemosyne's own bronze/parchment identity, mapped 1:1 from the pre-migration
+ * --admin-* / --cxpg-* sets so swapping the names never changes the rendered colour:
+ *   --admin-gold   #d4a04a  → --accent      (bright gold — headings, accents, primary)
+ *   --admin-accent #b8860b  → --accent-dim  (bronze — hover, borders, dim fills)
+ *   --admin-bg     #0d0a07  → --bg          (stoa-deep, the deepest surface)
+ *   --admin-surface#1a1612  → --panel        (ink — card surface)
+ *   --admin-surface-2 #2a2520 → --panel-2   (stoa-stone — raised surface)
+ *   --admin-border #3d3530  → --line
+ *   --admin-text   #f5ecd9  → --ink          (parchment)
+ *   --admin-text-dim #c9bfa8 → --ink-soft
+ *
+ * Loaded on every surface (static landing + React app) so the whole family shares one
+ * :root. Consumers reference these tokens only — no site invents new token names.
+ */
+:root {
+  --bg: #0d0a07;        /* page background (deepest — stoa-deep) */
+  --bg-2: #14100b;      /* secondary background (a warm step above --bg) */
+  --panel: #1a1612;     /* panel / card surface (ink) */
+  --panel-2: #2a2520;   /* raised panel surface (stoa-stone) */
+  --line: #3d3530;      /* borders / dividers */
+  --ink: #f5ecd9;       /* primary text (parchment) */
+  --ink-soft: #c9bfa8;  /* secondary text (dim parchment) */
+  --ink-mute: #a3987f;  /* muted text / captions */
+  --accent: #d4a04a;    /* brand accent — Mnemosyne gold */
+  --accent-dim: #b8860b;/* dimmed accent — bronze (hover / borders) */
+  --danger: #ff6b7d;    /* destructive / error */
+  --radius: 14px;       /* corner radius */
+
+  --maxw: 1536px;       /* the single content max-width, every surface */
+}

@@ -10,58 +10,66 @@ import { join } from "node:path";
 // removed. The interactive ancient view is owner-verify-in-browser (needs a real hub
 // session).
 //
-// The admin surface is now a landing (a list of entry tiles) + one dedicated page per
-// function, each wrapping its section in the shared <AdminGate>. The gate — not each
-// section — owns the three auth states.
+// The admin surface is now a single sidebar + content-pane shell (AdminShell) behind
+// ONE shared <AdminGate>, hash-routed (/admin#<section>). The gate owns the auth
+// states; sections are gate-free panes driven by the static adminSections config.
 
 const root = process.cwd();
 const read = (...p: string[]) => readFileSync(join(root, ...p), "utf8");
 
-describe("/admin route files", () => {
-  it("has the server landing page + client landing so the gated UI is behind a client boundary", () => {
-    expect(existsSync(join(root, "app", "admin", "page.tsx"))).toBe(true);
-    expect(existsSync(join(root, "app", "admin", "AdminLanding.client.tsx"))).toBe(true);
+describe("/admin route files — sidebar + content-pane shell", () => {
+  it("the admin page mounts AdminShell behind the shared AdminGate", () => {
+    const page = read("app", "admin", "page.tsx");
+    expect(page).toMatch(/AdminShell/);
+    expect(page).toMatch(/AdminGate/);
   });
 
-  it("has a shared client gate the pages reuse", () => {
-    expect(existsSync(join(root, "app", "admin", "AdminGate.client.tsx"))).toBe(true);
+  it("has a shared client gate + a client shell", () => {
     expect(read("app", "admin", "AdminGate.client.tsx")).toMatch(/^["']use client["'];?/m);
+    expect(read("app", "admin", "AdminShell.client.tsx")).toMatch(/^["']use client["'];?/m);
   });
 
-  it("gives each function its own dedicated sub-page (Hub-style)", () => {
+  it("has retired the tile-list landing (AdminLanding)", () => {
+    expect(existsSync(join(root, "app", "admin", "AdminLanding.client.tsx"))).toBe(false);
+  });
+
+  it("drives the sidebar off the static section config — all six sections", () => {
+    const cfg = read("app", "admin", "adminSections.ts");
+    for (const id of [
+      "codex",
+      "update-deploy",
+      "khronoton",
+      "pythia",
+      "security",
+      "network",
+    ]) {
+      expect(cfg).toMatch(new RegExp(`hash:\\s*["']${id}["']`));
+    }
+  });
+
+  it("keeps the two automaton-constructor sections (Update & Deploy, Khronoton)", () => {
+    const cfg = read("app", "admin", "adminSections.ts");
+    expect(cfg).toMatch(/Update & Deploy/);
+    expect(cfg).toMatch(/Mnemosyne Khronoton/);
+  });
+
+  it("redirects the old per-function routes into the hash-routed shell", () => {
     for (const dir of [
       "pythia",
       "update-deploy",
       "khronoton",
       "security",
       "network",
+      "codex",
     ]) {
-      expect(existsSync(join(root, "app", "admin", dir, "page.tsx"))).toBe(true);
+      expect(read("app", "admin", dir, "page.tsx")).toMatch(
+        new RegExp(`/admin#${dir}`),
+      );
     }
   });
 
   it("has retired the standalone update-codex page (merged into update-deploy)", () => {
     expect(existsSync(join(root, "app", "admin", "update-codex"))).toBe(false);
-  });
-
-  it("lists every sub-page as an entry tile on the landing", () => {
-    const landing = read("app", "admin", "AdminLanding.client.tsx");
-    for (const href of [
-      "/admin/codex",
-      "/admin/update-deploy",
-      "/admin/khronoton",
-      "/admin/pythia",
-      "/admin/security",
-      "/admin/network",
-    ]) {
-      expect(landing).toMatch(new RegExp(href.replace(/\//g, "\\/")));
-    }
-  });
-
-  it("surfaces the two new automaton-constructor tiles on the landing", () => {
-    const landing = read("app", "admin", "AdminLanding.client.tsx");
-    expect(landing).toMatch(/Update & Deploy/);
-    expect(landing).toMatch(/Mnemosyne Khronoton/);
   });
 });
 
@@ -72,8 +80,10 @@ describe("admin gate — the three auth states (REQ-08)", () => {
     expect(gate()).toMatch(/^["']use client["'];?/m);
   });
 
-  it("drives its gate off /api/me so the panel reflects the live session, never a cached one", () => {
-    expect(gate()).toMatch(/\/api\/me/);
+  it("drives its gate off the shared useMe source (which reads /api/me no-store), never a cached one", () => {
+    // Session now comes from the single useMe hook; its no-store fetch is pinned in
+    // tests/useMe.test.ts. The gate must consume that source, not re-fetch bespoke.
+    expect(gate()).toMatch(/useMe/);
   });
 
   it("offers a login link for an anonymous visitor instead of the panel", () => {
@@ -84,14 +94,24 @@ describe("admin gate — the three auth states (REQ-08)", () => {
     expect(gate()).toMatch(/ancient/i);
     expect(gate()).toMatch(/not authorized/i);
   });
+
+  it("wears the shared Pantheonic header (admin variant) and the single useMe source", () => {
+    // The gate must use the ONE shared header + identity source, not a bespoke
+    // .mnemo-admin-header / AuthStatus / its own /api/me fetch.
+    expect(gate()).toMatch(/PantheonHeader/);
+    expect(gate()).toMatch(/variant=["']admin["']/);
+    expect(gate()).toMatch(/useMe/);
+    expect(gate()).not.toMatch(/AuthStatus/);
+    expect(gate()).not.toMatch(/mnemo-admin-header/);
+  });
 });
 
 describe("admin — Pythia connector control (REQ-10)", () => {
   const panel = () => read("app", "admin", "pythia", "PythiaPage.client.tsx");
 
-  it("is a client component behind the shared gate", () => {
+  it("is a gate-free pane body — gated by the shell, not itself", () => {
     expect(panel()).toMatch(/^["']use client["'];?/m);
-    expect(panel()).toMatch(/AdminGate/);
+    expect(panel()).not.toMatch(/AdminGate/);
   });
 
   it("POSTs the operator gateway to the ancient-gated route", () => {
@@ -107,9 +127,9 @@ describe("admin — Update & Deploy: single Deploy button (REQ-09, REVIEW M5/M6)
   const panel = () =>
     read("app", "admin", "update-deploy", "UpdateDeployPage.client.tsx");
 
-  it("is a client component behind the shared gate", () => {
+  it("is a gate-free pane body — gated by the shell, not itself", () => {
     expect(panel()).toMatch(/^["']use client["'];?/m);
-    expect(panel()).toMatch(/AdminGate/);
+    expect(panel()).not.toMatch(/AdminGate/);
   });
 
   it("is ONE unified Deploy panel — the two separate updater sections are gone", () => {
@@ -208,9 +228,9 @@ describe("admin — Mnemosyne Khronoton (LIVE engine console, handoff 05)", () =
   const mount = () => read("app", "admin", "khronoton", "KhronotonPage.client.tsx");
   const app = () => read("app", "admin", "khronoton", "KhronotonApp.tsx");
 
-  it("is a client component behind the shared gate, mounted ssr:false (pollers)", () => {
+  it("is a gate-free pane body, mounted ssr:false (pollers)", () => {
     expect(mount()).toMatch(/^["']use client["'];?/m);
-    expect(mount()).toMatch(/AdminGate/);
+    expect(mount()).not.toMatch(/AdminGate/);
     expect(mount()).toMatch(/ssr:\s*false/);
   });
 
@@ -279,9 +299,9 @@ describe("/api/admin/khronoton-version — ancient-gated scaffold (source contra
 describe("admin — Codex Security control (master-key rotation)", () => {
   const panel = () => read("app", "admin", "security", "SecurityPage.client.tsx");
 
-  it("is a client component behind the shared gate", () => {
+  it("is a gate-free pane body — gated by the shell, not itself", () => {
     expect(panel()).toMatch(/^["']use client["'];?/m);
-    expect(panel()).toMatch(/AdminGate/);
+    expect(panel()).not.toMatch(/AdminGate/);
   });
 
   it("reads master-key + codex status and rotates through the ancient-gated route", () => {

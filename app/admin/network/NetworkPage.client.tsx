@@ -2,8 +2,6 @@
 
 import type { ReactElement } from "react";
 
-import { AdminGate } from "../AdminGate.client";
-
 /**
  * Network surfacing: the per-chain connection status. StoaChain is live; the Arweave
  * path is not yet verified for Mnemosyne (its connection factory is not publicly
@@ -28,11 +26,7 @@ function NetworkStatusSection(): ReactElement {
 }
 
 export function NetworkPage(): ReactElement {
-  return (
-    <AdminGate title="Network Status">
-      <NetworkStatusSection />
-    </AdminGate>
-  );
+  return <NetworkStatusSection />;
 }
 
 export default NetworkPage;

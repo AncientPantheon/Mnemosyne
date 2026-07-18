@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useState, type ReactElement } from "react";
 
-import { AdminGate } from "../AdminGate.client";
-
 /** `/api/admin/security/rotate-master-key` GET payload (no secrets). */
 interface SecurityStatus {
   configured: boolean;
@@ -144,11 +142,7 @@ function SecuritySection(): ReactElement {
 }
 
 export function SecurityPage(): ReactElement {
-  return (
-    <AdminGate title="Codex Security">
-      <SecuritySection />
-    </AdminGate>
-  );
+  return <SecuritySection />;
 }
 
 export default SecurityPage;

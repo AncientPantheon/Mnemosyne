@@ -15,6 +15,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
+<!-- Canonical Pantheonic design tokens (:root { --bg … --accent … --maxw }).
+     Loaded FIRST so the token custom-properties form the cascade base that every
+     later stylesheet and inline style resolves against. -->
+<link rel="stylesheet" href="/assets/pantheon-tokens.css" />
+
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
   tailwind.config = {

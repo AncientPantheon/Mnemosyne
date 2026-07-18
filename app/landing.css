@@ -1,0 +1,416 @@
+/* Mnemosyne marketing landing — real CSS on the canonical Pantheonic tokens.
+   Ported from the pre-migration Tailwind-CDN page (public/index.html) + shared
+   public/assets/styles.css: the WORDS are preserved verbatim in app/page.tsx; only
+   the styling MECHANISM changed (Tailwind utility classes → these classes, resolved
+   against /assets/pantheon-tokens.css). Everything is scoped under `.lp` so the
+   generic component names (.card/.pill/.sidebar/…) never leak into /admin or the
+   codex-ui surface (this sheet is imported by a client component, hence global).
+   The old palette literals map onto tokens (--accent = #d4a04a, --accent-dim =
+   #b8860b); the Ouronet mention colour (#5b8ec2) has no token and stays literal. */
+
+.lp {
+  background: linear-gradient(180deg, var(--bg) 0%, var(--panel) 100%);
+  color: var(--ink);
+  font-family: "Inter", system-ui, sans-serif;
+  min-height: 100vh;
+  scroll-behavior: smooth;
+}
+
+/* Content shells: prose blocks use readability measures (rem), never the old
+   860/1080/1200/1280 literals; the header/section widths derive from --maxw. */
+.lp-measure-6 { max-width: 72rem; margin-left: auto; margin-right: auto; }
+.lp-measure-5 { max-width: 64rem; margin-left: auto; margin-right: auto; }
+.lp-measure-4 { max-width: 56rem; margin-left: auto; margin-right: auto; }
+.lp-measure-3 { max-width: 48rem; margin-left: auto; margin-right: auto; }
+.lp-center { text-align: center; }
+
+.lp-section {
+  padding: 5rem 24px;
+}
+.lp-section--alt {
+  background: color-mix(in srgb, var(--panel-2) 30%, transparent);
+}
+.lp-section--hero {
+  padding: 8rem 24px 5rem;
+}
+
+/* ── Typography ── */
+.lp-classical {
+  font-family: "Cinzel", serif;
+  letter-spacing: 0.05em;
+}
+.lp-h1 {
+  font-family: "Cinzel", serif;
+  letter-spacing: 0.05em;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 400;
+  color: var(--accent);
+  margin: 0 0 1rem;
+  line-height: 1.15;
+}
+.lp-h2 {
+  font-family: "Cinzel", serif;
+  letter-spacing: 0.05em;
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-weight: 400;
+  color: var(--accent-dim);
+  margin: 0 0 1rem;
+}
+.lp-h3 {
+  font-family: "Cinzel", serif;
+  letter-spacing: 0.05em;
+  color: var(--accent-dim);
+  margin: 0 0 0.75rem;
+}
+.lp-h4 {
+  font-family: "Cinzel", serif;
+  letter-spacing: 0.05em;
+  font-size: 1.25rem;
+  color: var(--accent-dim);
+  margin: 0 0 1rem;
+}
+.lp-lead {
+  color: var(--ink-soft);
+  line-height: 1.7;
+  margin: 0 0 1.5rem;
+}
+.lp-tagline {
+  font-size: clamp(1.5rem, 3vw, 1.875rem);
+  color: var(--accent-dim);
+  font-weight: 300;
+  margin: 0 0 1rem;
+}
+.lp-sub {
+  color: var(--ink-soft);
+  line-height: 1.7;
+}
+.lp-muted { color: var(--ink-mute); }
+.lp-small { font-size: 0.875rem; }
+.lp-xs { font-size: 0.75rem; }
+.lp p { margin: 0 0 0.75rem; }
+.lp strong { color: var(--accent-dim); }
+.lp a { color: var(--accent-dim); }
+.lp a:hover { color: var(--accent); }
+.lp em { font-style: italic; }
+
+/* ── Grid helpers ── */
+.lp-grid { display: grid; gap: 1.5rem; }
+.lp-grid--2 { grid-template-columns: 1fr; }
+.lp-grid--3 { grid-template-columns: 1fr; }
+.lp-grid--4 { grid-template-columns: 1fr; }
+@media (min-width: 768px) {
+  .lp-grid--2 { grid-template-columns: repeat(2, 1fr); }
+  .lp-grid--3 { grid-template-columns: repeat(3, 1fr); }
+  .lp-grid--4 { grid-template-columns: repeat(2, 1fr); }
+}
+.lp-mt { margin-top: 3rem; }
+.lp-mb { margin-bottom: 3rem; }
+
+/* ── Cards ── */
+.lp-card {
+  background: color-mix(in srgb, var(--panel-2) 60%, transparent);
+  backdrop-filter: blur(8px);
+  border: 1px solid color-mix(in srgb, var(--accent-dim) 20%, transparent);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+.lp-card:hover {
+  border-color: color-mix(in srgb, var(--accent-dim) 50%, transparent);
+  background: color-mix(in srgb, var(--panel-2) 85%, transparent);
+}
+.lp-card--sm { padding: 1.25rem; }
+.lp-card--xs { padding: 1rem; }
+
+/* ── Buttons ── */
+.lp-btn {
+  display: inline-block;
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.lp-btn--primary {
+  background: var(--accent-dim);
+  color: var(--bg);
+}
+.lp-btn--primary:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+.lp-btn--ghost {
+  border: 1px solid color-mix(in srgb, var(--accent-dim) 50%, transparent);
+  color: var(--ink);
+}
+.lp-btn--ghost:hover {
+  border-color: var(--accent-dim);
+  background: color-mix(in srgb, var(--accent-dim) 10%, transparent);
+  color: var(--ink);
+}
+.lp-btn--outline {
+  border: 1px solid var(--accent-dim);
+  color: var(--accent-dim);
+}
+.lp-btn--outline:hover {
+  background: var(--accent-dim);
+  color: var(--bg);
+}
+.lp-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 2.5rem;
+}
+@media (min-width: 640px) {
+  .lp-actions { flex-direction: row; }
+}
+
+/* ── Dividers, glyphs ── */
+.lp-divider {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--accent-dim) 50%, transparent) 50%,
+    transparent 100%
+  );
+  height: 1px;
+  max-width: 48rem;
+  margin: 3rem auto;
+}
+.lp-glyph {
+  font-family: "Cinzel", serif;
+  color: var(--accent-dim);
+  font-size: 1.875rem;
+  margin-bottom: 0.75rem;
+}
+.lp-glyph--sm { font-size: 1.5rem; margin-bottom: 0.5rem; }
+
+/* ── Pills ── */
+.lp .pill {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: color-mix(in srgb, var(--accent-dim) 15%, transparent);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent-dim) 30%, transparent);
+}
+.lp .pill-warn {
+  background: rgba(220, 100, 50, 0.15);
+  color: #e89a6f;
+  border-color: rgba(220, 100, 50, 0.3);
+}
+.lp .pill-good {
+  background: rgba(100, 180, 100, 0.15);
+  color: #8fd18f;
+  border-color: rgba(100, 180, 100, 0.3);
+}
+
+/* ── Branded mentions (StoaChain™ / Ouronet™) ── */
+.lp .stoachain { color: var(--accent); font-weight: 700; }
+.lp .stoachain::after {
+  content: "™";
+  font-size: 0.65em;
+  vertical-align: super;
+  margin-left: 1px;
+  color: var(--accent);
+}
+.lp .ouronet { color: #5b8ec2; font-weight: 700; }
+.lp .ouronet::after {
+  content: "™";
+  font-size: 0.65em;
+  vertical-align: super;
+  margin-left: 1px;
+  color: #5b8ec2;
+}
+
+/* ── Inline code ── */
+.lp code {
+  background: color-mix(in srgb, var(--bg) 60%, transparent);
+  padding: 0.125rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+  color: var(--accent);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* ── Sidebar info block ── */
+.lp .sidebar {
+  background: color-mix(in srgb, var(--accent-dim) 8%, transparent);
+  border-left: 4px solid var(--accent-dim);
+  border-radius: 0 0.5rem 0.5rem 0;
+  padding: 1.25rem 1.5rem;
+  margin: 1rem auto;
+}
+.lp .sidebar-title {
+  color: var(--accent);
+  font-family: "Cinzel", serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.05em;
+}
+.lp ul,
+.lp ol { margin: 0 0 0.75rem; padding-left: 1.25rem; }
+.lp ul { list-style: none; padding-left: 0; }
+.lp li { margin: 0 0 0.5rem; color: var(--ink-soft); }
+
+/* ── Mode cards ── */
+.lp .mode-card { display: flex; flex-direction: column; }
+.lp .mode-card-description { min-height: 7.5rem; }
+.lp .mode-card-table { margin-top: auto; }
+.lp .mode-head { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.lp .mode-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  font-family: "Cinzel", serif;
+  font-weight: 600;
+  border: 2px solid var(--accent-dim);
+  color: var(--accent-dim);
+  background: color-mix(in srgb, var(--accent-dim) 10%, transparent);
+  flex: none;
+}
+
+/* ── Layer blocks ── */
+.lp .layer-block {
+  background: color-mix(in srgb, var(--panel-2) 50%, transparent);
+  border-left: 3px solid var(--accent-dim);
+  padding: 1rem 1.5rem;
+  margin: 0.5rem 0;
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+.lp .layer-head { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+
+/* ── Tables ── */
+.lp table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+.lp th,
+.lp td {
+  padding: 0.6rem 0.8rem;
+  text-align: left;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent-dim) 15%, transparent);
+}
+.lp th {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.lp td { font-size: 0.92rem; color: var(--ink-soft); }
+.lp .scroll-x { overflow-x: auto; }
+
+/* ── Hero Codex Identity display with braces ── */
+.lp .identity-display {
+  display: inline-block;
+  margin: 0 auto 2rem;
+  text-align: center;
+}
+.lp .identity-line {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.lp .braces-line {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  align-items: start;
+}
+.lp .identity-half {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  white-space: nowrap;
+}
+.lp .id-prefix {
+  font-family: "Cinzel", serif;
+  font-size: 2.6rem;
+  color: var(--accent);
+  font-weight: 700;
+  text-shadow: 0 0 25px color-mix(in srgb, var(--accent-dim) 50%, transparent);
+  line-height: 1;
+}
+.lp .id-payload {
+  font-family: "Cinzel", serif;
+  font-size: 1.1rem;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  margin-left: 0.15rem;
+  line-height: 1.2;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--accent-dim) 40%, transparent);
+}
+.lp .halves-separator {
+  font-family: "Cinzel", serif;
+  font-size: 2.6rem;
+  color: var(--accent);
+  font-weight: 700;
+  line-height: 1;
+  padding: 0 0.3rem;
+  text-shadow: 0 0 25px color-mix(in srgb, var(--accent-dim) 50%, transparent);
+}
+@media (min-width: 768px) {
+  .lp .id-prefix { font-size: 3.2rem; }
+  .lp .id-payload { font-size: 1.3rem; }
+  .lp .halves-separator { font-size: 3.2rem; }
+}
+.lp .brace-section { text-align: center; }
+.lp .brace-u {
+  border-left: 2px solid var(--accent-dim);
+  border-right: 2px solid var(--accent-dim);
+  border-bottom: 2px solid var(--accent-dim);
+  border-radius: 0 0 14px 14px;
+  height: 12px;
+  margin: 0 8px 0.5rem 8px;
+}
+.lp .brace-label {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  font-family: "Inter", sans-serif;
+}
+.lp .brace-sublabel {
+  font-size: 0.7rem;
+  color: var(--ink-mute);
+  font-family: "Inter", sans-serif;
+  display: block;
+  margin-top: 0.15rem;
+}
+
+/* Mother-tongue pitch box */
+.lp .pitch-box {
+  margin: 2.5rem auto 0;
+  padding: 1.5rem;
+  border: 1px solid color-mix(in srgb, var(--accent-dim) 30%, transparent);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--accent-dim) 5%, transparent);
+}
+
+/* ── Footer ── */
+.lp-footer {
+  padding: 3rem 24px;
+  border-top: 1px solid color-mix(in srgb, var(--accent-dim) 20%, transparent);
+  background: var(--bg);
+  text-align: center;
+}
+.lp-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.5rem;
+  font-size: 0.875rem;
+}
+.lp-footer-links a { color: var(--ink-soft); text-decoration: none; }
+.lp-footer-links a:hover { color: var(--accent-dim); }
+
+/* Roadmap rows */
+.lp .roadmap-row { display: flex; align-items: center; gap: 1rem; }
+.lp .roadmap-list { display: flex; flex-direction: column; gap: 1rem; }
