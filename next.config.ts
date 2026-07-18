@@ -44,6 +44,15 @@ const turboWeb = toAbs("@ardrive", "turbo-sdk", "lib", "esm", "web", "index.js")
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // The Documentation Tier-1 link points at the clean `/docs` URL, but the docs are
+  // static files under `public/docs/` — Next serves them at their exact path
+  // (`/docs/index.html`), so a bare `/docs` 404s (and `/docs/` just 308-strips back
+  // to `/docs`). Rewrite the clean URL onto the static index. Safe for in-page links:
+  // every doc cross-link is absolute (`/docs/apollo-curve.html`, home `/`), so URL
+  // resolution never depends on a trailing slash.
+  async rewrites() {
+    return [{ source: "/docs", destination: "/docs/index.html" }];
+  },
   // better-sqlite3 (the Khronoton engine's store) is a NATIVE module — it must be
   // require()'d from node_modules at runtime, never webpack-bundled into the server
   // chunks. Next traces it (prebuilt .node binary included) into the standalone output.

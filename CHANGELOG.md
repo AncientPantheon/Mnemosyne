@@ -9,6 +9,16 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.7.4] — 2026-07-19
+
+### Fixed
+
+- **Documentation Tier-1 link no longer 404s.** The clean `/docs` URL is now rewritten
+  onto the static docs index (`public/docs/index.html`) in `next.config.ts`. The docs are
+  static files, so Next served them only at `/docs/index.html`; a bare `/docs` 404'd (and
+  `/docs/` merely 308-stripped back to `/docs`). In-page doc cross-links are unaffected —
+  they are all absolute (`/docs/apollo-curve.html`, home `/`).
+
 ## [0.7.3] — 2026-07-18
 
 ### Changed

@@ -205,4 +205,14 @@ describe("folded marketing assets", () => {
     const docIndex = read("public", "docs", "index.html");
     expect(docIndex).toContain('href="/assets/styles.css"');
   });
+
+  it("rewrites the clean /docs URL onto the static docs index so the Documentation link doesn't 404", () => {
+    // The Documentation Tier-1 button links to `/docs`, but the docs are static files
+    // under public/docs/ — Next serves them at `/docs/index.html`, so a bare `/docs`
+    // 404s without this rewrite (and `/docs/` just 308-strips back to `/docs`).
+    const cfg = read("next.config.ts");
+    expect(cfg).toMatch(/async rewrites\s*\(/);
+    expect(cfg).toMatch(/source:\s*["']\/docs["']/);
+    expect(cfg).toMatch(/destination:\s*["']\/docs\/index\.html["']/);
+  });
 });
