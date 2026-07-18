@@ -9,6 +9,17 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.6.2] — 2026-07-18
+
+### Fixed
+- **Deploy auto-provisions BuildKit (`buildx`) on the host.** The on-box deployer runs
+  `docker build --progress=plain`, which needs the `buildx` component — absent on boxes
+  using Ubuntu's `docker.io` package (or any fresh host), which aborted the build before
+  it began. `mnemosyne-deploy.sh` now has an `ensure_build_prereqs` preflight that
+  checks for `buildx` and installs `docker-buildx` on the spot if missing (idempotent;
+  a no-op once present), so a deploy never needs a manual host step. Extensible for any
+  future host-side build prerequisite.
+
 ## [0.6.1] — 2026-07-17
 
 ### Fixed

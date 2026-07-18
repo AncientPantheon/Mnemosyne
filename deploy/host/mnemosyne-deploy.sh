@@ -38,6 +38,26 @@ phase() { log ""; log "═══ [$(elapsed)] $* ═══"; }
 fail()  { log "✗ $*"; echo failed >"$STATUS"; exit 1; }
 trap 'log "✗ deploy aborted (error near line $LINENO)"; echo failed >"$STATUS"' ERR
 
+# Ensure the host build prerequisites exist, installing any that are missing ON THE
+# SPOT so a deploy never needs manual host prep. Today that means BuildKit's `buildx`
+# component: `docker build --progress=plain` requires it, and a box on Ubuntu's
+# `docker.io` package (or a fresh host) ships without it. Extend this with any other
+# host-side prerequisite a future build step needs. Idempotent: a no-op once present.
+ensure_build_prereqs() {
+  if docker buildx version >/dev/null 2>&1; then
+    log "→ buildx present ($(docker buildx version 2>/dev/null | head -1))"
+    return 0
+  fi
+  log "→ docker buildx missing — installing it now (one-time host provisioning)"
+  command -v apt-get >/dev/null 2>&1 \
+    || fail "docker buildx is missing and apt-get is unavailable — install the buildx CLI plugin on the host"
+  DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tee -a "$LOG" || true
+  DEBIAN_FRONTEND=noninteractive apt-get install -y docker-buildx 2>&1 | tee -a "$LOG" || true
+  docker buildx version >/dev/null 2>&1 \
+    || fail "could not provision docker buildx — deploy cannot build the image"
+  log "✓ docker buildx installed ($(docker buildx version 2>/dev/null | head -1))"
+}
+
 echo running >"$STATUS"
 log "▶ host deployer started ($(date -u +%FT%TZ))"
 
@@ -57,6 +77,7 @@ npm install @ancientpantheon/khronoton-core@latest --no-audit --no-fund 2>&1 | t
 #    line-by-line with per-step timing (no cursor-rewrite), so the admin terminal
 #    shows live, granular progress instead of the terse legacy-builder output.
 phase "2/5 · Build image (BuildKit)"
+ensure_build_prereqs
 DOCKER_BUILDKIT=1 docker build --progress=plain -t "$IMAGE" "$REPO" 2>&1 | tee -a "$LOG"
 
 # 3) Pick the target color (the one NOT currently serving).
