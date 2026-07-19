@@ -225,3 +225,41 @@ describe("folded marketing assets", () => {
     expect(cfg).toMatch(/destination:\s*["']\/docs\/index\.html["']/);
   });
 });
+
+describe("§3.7 — every deck view has its own URL (no single opaque link)", () => {
+  const page = () => read("app", "page.tsx");
+
+  it("derives the shown page FROM the URL hash (source of truth) — parsed on load, popstate AND hashchange", () => {
+    const src = page();
+    // A pure parser turns the address into the view index...
+    expect(src).toMatch(/function parseHash/);
+    expect(src).toMatch(/location\.hash/);
+    // ...and the view is re-derived on Back/forward (popstate) and on manual URL edits /
+    // native hash anchors (hashchange) — never flipped in memory with the URL left stale.
+    expect(src).toMatch(/["']popstate["']/);
+    expect(src).toMatch(/["']hashchange["']/);
+  });
+
+  it("writes each view's own URL via the History API when navigating (never a single frozen link)", () => {
+    const src = page();
+    // Discrete jumps push (Back returns to the previous view); continuous stepping replaces
+    // (the address always reflects the current view without flooding history).
+    expect(src).toMatch(/history\.pushState/);
+    expect(src).toMatch(/history\.replaceState/);
+  });
+
+  it("gives every deck page a canonical slug, with the hero at the bare root (no hash)", () => {
+    const src = page();
+    // slug is part of the DeckPage contract, one per page.
+    expect(src).toMatch(/slug:\s*string/);
+    const slugCount = (src.match(/^\s*slug:\s*["']/gm) ?? []).length;
+    const pageCount = (src.match(/topicId:\s*"/g) ?? []).length;
+    expect(slugCount).toBe(pageCount);
+    // The hero carries the empty slug (bare "/"); deep sub-views carry topic/sub slugs so
+    // each is individually deep-linkable.
+    expect(src).toMatch(/slug:\s*["']["']/);
+    expect(src).toContain('slug: "security/guarantees"');
+    expect(src).toContain('slug: "identity/dual-apollo"');
+    expect(src).toContain('slug: "codex/seeds-accounts"');
+  });
+});

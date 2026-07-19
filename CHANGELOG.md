@@ -9,6 +9,24 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.7.6] — 2026-07-19
+
+### Changed
+
+- **Landing deck now conforms to Pantheonic §3.7 — every navigable view has its own URL.**
+  The deck previously turned pages in memory with the address frozen at `/` (the "single
+  opaque link" anti-pattern). Now the **URL is the source of truth**: each of the eleven views
+  is addressable — the hero at the bare `/`, and `#codex/seeds-accounts`, `#codex/keys-tools`,
+  `#codex/onboarding`, `#modes`, `#storage`, `#identity/standard-smart`, `#identity/dual-apollo`,
+  `#stoictags`, `#security/guarantees`, `#security/roadmap`. A bare topic hash (`#codex`)
+  resolves to that topic's first page.
+- The shown page is derived from `location.hash` on load (deep-link), on `popstate` (Back/
+  forward), and on `hashchange` (manual URL edit / native hash anchor). Navigation writes the
+  view's own URL via the History API: discrete jumps (Tier-1/Tier-2 buttons, in-content CTAs,
+  Home/End) push a history entry so **Back** returns to the previous view; continuous stepping
+  (wheel/swipe/arrows) replaces, so the address always reflects the current view without
+  flooding history. Deep-links, Back/forward, and hash edits are all browser-verified.
+
 ## [0.7.5] — 2026-07-19
 
 ### Changed

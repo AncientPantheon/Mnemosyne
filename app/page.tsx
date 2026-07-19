@@ -33,6 +33,10 @@ interface DeckPage {
   subLabel: string;
   /** Rendered once, uniformly, at the top of the page (`.lp-page-title`). */
   title: string;
+  /** §3.7 canonical URL hash for this view — deep-linkable, shareable, back-navigable.
+   *  Empty for the hero (the landing home, addressed by the bare `/`); otherwise
+   *  `topic` (single-page topics) or `topic/sub` (Tier-2 sub-views). */
+  slug: string;
   node: ReactNode;
 }
 
@@ -56,6 +60,7 @@ const PAGES: DeckPage[] = [
   {
     topicId: "what",
     subLabel: "",
+    slug: "",
     title: "What it is",
     node: (
       <div className="lp-measure-5 lp-center">
@@ -158,6 +163,7 @@ const PAGES: DeckPage[] = [
   {
     topicId: "codex",
     subLabel: "Seeds & Accounts",
+    slug: "codex/seeds-accounts",
     title: "The Codex — Seeds & Accounts",
     node: (
       <div className="lp-measure-6">
@@ -217,6 +223,7 @@ const PAGES: DeckPage[] = [
   {
     topicId: "codex",
     subLabel: "Keys & Tools",
+    slug: "codex/keys-tools",
     title: "The Codex — Keys & Tools",
     node: (
       <div className="lp-measure-6">
@@ -267,6 +274,7 @@ const PAGES: DeckPage[] = [
   {
     topicId: "codex",
     subLabel: "Onboarding",
+    slug: "codex/onboarding",
     title: "The Codex — Onboarding",
     node: (
       <div className="lp-measure-6">
@@ -341,6 +349,7 @@ const PAGES: DeckPage[] = [
   {
     topicId: "modes",
     subLabel: "",
+    slug: "modes",
     title: "Four Modes",
     node: (
       <div className="lp-measure-6">
@@ -466,6 +475,7 @@ const PAGES: DeckPage[] = [
   {
     topicId: "storage",
     subLabel: "Three-layer architecture",
+    slug: "storage",
     title: "Three-layer storage architecture",
     node: (
       <div className="lp-measure-6">
@@ -549,6 +559,7 @@ const PAGES: DeckPage[] = [
   {
     topicId: "identity",
     subLabel: "Standard & Smart keys",
+    slug: "identity/standard-smart",
     title: "Codex Identity — Standard & Smart keys",
     node: (
       <div className="lp-measure-6">
@@ -638,6 +649,7 @@ const PAGES: DeckPage[] = [
   {
     topicId: "identity",
     subLabel: "Dual-Apollo details",
+    slug: "identity/dual-apollo",
     title: "Codex Identity — Dual-Apollo details",
     node: (
       <div className="lp-measure-6">
@@ -734,6 +746,7 @@ const PAGES: DeckPage[] = [
   {
     topicId: "stoictags",
     subLabel: "StoicTags",
+    slug: "stoictags",
     title: "StoicTags — human-readable names",
     node: (
       <div className="lp-measure-5">
@@ -787,6 +800,7 @@ const PAGES: DeckPage[] = [
   {
     topicId: "security",
     subLabel: "Guarantees",
+    slug: "security/guarantees",
     title: "Security & custody — Guarantees",
     node: (
       <div className="lp-measure-6">
@@ -894,6 +908,7 @@ const PAGES: DeckPage[] = [
   {
     topicId: "security",
     subLabel: "Roadmap",
+    slug: "security/roadmap",
     title: "Security & custody — Status & roadmap",
     node: (
       <div className="lp-measure-6">
@@ -970,6 +985,25 @@ const TOPIC_FIRST_PAGE: Record<string, number> = TOPICS.reduce(
   {} as Record<string, number>,
 );
 
+/** §3.7: the URL is the source of truth. Turn a location hash into the page index it
+ *  addresses — empty → the hero (0); an exact page `slug`; else a bare topic hash
+ *  (`#codex`) resolved to that topic's first page; else the hero. Pure + SSR-safe. */
+function parseHash(rawHash: string): number {
+  const h = decodeURIComponent(rawHash.replace(/^#/, "")).trim();
+  if (!h) return 0;
+  const exact = PAGES.findIndex((p) => p.slug === h);
+  if (exact >= 0) return exact;
+  const topicFirst = PAGES.findIndex((p) => p.topicId === h);
+  return topicFirst >= 0 ? topicFirst : 0;
+}
+
+/** The address (relative to the current path) for a page index — the bare path for the
+ *  hero (no hash), else `#slug`. This is the one canonical URL for that view. */
+function urlForIndex(i: number): string {
+  const slug = PAGES[i]?.slug ?? "";
+  return slug ? `#${slug}` : window.location.pathname + window.location.search;
+}
+
 const WHEEL_THRESHOLD = 10;
 // A wheel gesture keeps emitting events (trackpad momentum lasts ~1s); only the FIRST
 // event after a pause this long counts as a new gesture, so one flick = one flip.
@@ -980,15 +1014,43 @@ export default function LandingPage(): ReactElement {
   const [pageIndex, setPageIndex] = useState(0);
   const stageRef = useRef<HTMLDivElement>(null);
   const lastWheel = useRef(0);
+  // Mirror pageIndex for the imperative input handlers — they subscribe once and must
+  // read the CURRENT page without re-binding the listeners on every turn.
+  const pageRef = useRef(0);
+  useEffect(() => {
+    pageRef.current = pageIndex;
+  }, [pageIndex]);
 
-  const goTo = useCallback((i: number): void => {
-    setPageIndex(Math.max(0, Math.min(PAGES.length - 1, i)));
+  // §3.7: navigation writes the view's OWN URL (History API), then reflects it in state.
+  // `push` for discrete jumps (Back returns to the previously-shown view); replace for
+  // continuous stepping (the address always shows the current view without flooding
+  // history). Either way the address bar is never stale.
+  const go = useCallback((i: number, push = false): void => {
+    const clamped = Math.max(0, Math.min(PAGES.length - 1, i));
+    const url = urlForIndex(clamped);
+    if (push) window.history.pushState(null, "", url);
+    else window.history.replaceState(null, "", url);
+    setPageIndex(clamped);
   }, []);
   const next = useCallback((): void => {
-    setPageIndex((p) => Math.min(PAGES.length - 1, p + 1));
-  }, []);
+    go(pageRef.current + 1, false);
+  }, [go]);
   const prev = useCallback((): void => {
-    setPageIndex((p) => Math.max(0, p - 1));
+    go(pageRef.current - 1, false);
+  }, [go]);
+
+  // §3.7: the URL is the source of truth. Derive the shown page FROM location.hash on
+  // mount (deep link), on Back/forward (popstate), and on manual URL edits / native hash
+  // anchors (hashchange). go()'s pushState/replaceState fire neither, so no double-apply.
+  useEffect(() => {
+    const applyFromUrl = (): void => setPageIndex(parseHash(window.location.hash));
+    applyFromUrl();
+    window.addEventListener("popstate", applyFromUrl);
+    window.addEventListener("hashchange", applyFromUrl);
+    return () => {
+      window.removeEventListener("popstate", applyFromUrl);
+      window.removeEventListener("hashchange", applyFromUrl);
+    };
   }, []);
 
   // Hard page-turn input: one wheel gesture / one key / one swipe = exactly one page.
@@ -1017,14 +1079,17 @@ export default function LandingPage(): ReactElement {
       else if (e.deltaY < -WHEEL_THRESHOLD) prev();
     };
 
-    // In-content hash CTAs (e.g. the hero's "What is the Codex?" → #codex) turn the
-    // deck to that topic — the deck has no scroll anchors, so a raw #hash is inert.
+    // In-content hash CTAs (e.g. the hero's "What is the Codex?" → #codex) navigate the
+    // deck to that view via its own URL (§3.7) — a discrete jump, so it pushes history.
+    // Only intercept hashes that address a real view; anything else stays a native link.
     const onClick = (e: MouseEvent): void => {
       const anchor = (e.target as HTMLElement | null)?.closest?.('a[href^="#"]');
-      const id = anchor?.getAttribute("href")?.slice(1) ?? "";
-      if (id && Object.prototype.hasOwnProperty.call(TOPIC_FIRST_PAGE, id)) {
+      const raw = anchor?.getAttribute("href")?.replace(/^#/, "") ?? "";
+      if (!raw) return;
+      const known = PAGES.some((p) => p.slug === raw || p.topicId === raw);
+      if (known) {
         e.preventDefault();
-        goTo(TOPIC_FIRST_PAGE[id]);
+        go(parseHash(`#${raw}`), true);
       }
     };
 
@@ -1043,11 +1108,11 @@ export default function LandingPage(): ReactElement {
           break;
         case "Home":
           e.preventDefault();
-          goTo(0);
+          go(0, true);
           break;
         case "End":
           e.preventDefault();
-          goTo(PAGES.length - 1);
+          go(PAGES.length - 1, true);
           break;
         default:
           break;
@@ -1079,7 +1144,7 @@ export default function LandingPage(): ReactElement {
       stage.removeEventListener("touchend", onTouchEnd);
       stage.removeEventListener("click", onClick);
     };
-  }, [next, prev, goTo]);
+  }, [next, prev, go]);
 
   // On navigation, show the newly-active page from its TOP — so a topic heading always
   // sits at the top of the stage, even if that page had been scrolled before.
@@ -1092,21 +1157,24 @@ export default function LandingPage(): ReactElement {
 
   const currentTopic = PAGES[pageIndex].topicId;
 
-  // Tier-1: the seven topics jump to their first page; Documentation is an external link.
+  // Tier-1: each topic navigates (§3.7, discrete → push) to its own URL — its first
+  // page. Documentation is an external link. The active highlight tracks the URL-derived
+  // current topic.
   const sections = useMemo(
     () => [
       ...TOPICS.map((t) => ({
         id: t.id,
         label: t.label,
-        onSelect: () => goTo(TOPIC_FIRST_PAGE[t.id]),
+        onSelect: () => go(TOPIC_FIRST_PAGE[t.id], true),
         active: currentTopic === t.id,
       })),
       { id: "docs", label: "Documentation", href: "/docs" },
     ],
-    [currentTopic, goTo],
+    [currentTopic, go],
   );
 
   // Tier-2: the current topic's pages (only when the topic spans more than one page).
+  // Each sub-view navigates to its own deep-linkable URL (§3.7, discrete → push).
   const subviews = useMemo(() => {
     const topicPages = PAGES.map((p, i) => ({ page: p, index: i })).filter(
       ({ page }) => page.topicId === currentTopic,
@@ -1115,10 +1183,10 @@ export default function LandingPage(): ReactElement {
     return topicPages.map(({ page, index }) => ({
       id: `${page.topicId}-${index}`,
       label: page.subLabel,
-      onSelect: () => goTo(index),
+      onSelect: () => go(index, true),
       active: index === pageIndex,
     }));
-  }, [currentTopic, pageIndex, goTo]);
+  }, [currentTopic, pageIndex, go]);
 
   return (
     <div className="lp">
