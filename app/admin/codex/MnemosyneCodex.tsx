@@ -19,9 +19,10 @@
 //        - PasswordAutoResolver: whenever ANY package flow needs the password
 //          (signing, reveal, spawn, or re-auth after the cache TTL), it submits
 //          the master-key password automatically — so operations "unlock on
-//          their own", with no modal.
-//        - MnemosyneLockControl: an explicit Lock / Unlock affordance (no
-//          password field).
+//          their own", with no modal. This also backs the ONE lock/unlock
+//          affordance — the codex package's identity-row control (unlock there
+//          auto-submits the master key). Per the automaton codex-mount convention
+//          the top bar carries NO second Lock button — portability actions only.
 //   3. Network: the SAME wiring as /codex — the operator-set GLOBAL Pythia (from
 //      /api/config) plus this admin's per-browser local StoaChain node override.
 //      Both surfaces read the same global connector; the local Network-tab
@@ -30,13 +31,7 @@
 // Loaded via next/dynamic({ ssr: false }) from the gate — browser-only.
 // ============================================================================
 
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ReactElement,
-} from "react";
+import { useEffect, useRef, type ReactElement } from "react";
 
 import {
   CodexProvider,
@@ -124,53 +119,12 @@ function PasswordAutoResolver(): null {
   return null;
 }
 
-/** One-click lock/unlock — unlock fetches the master-key password (no field). */
-function MnemosyneLockControl(): ReactElement {
-  const { isLocked, authenticate, lock } = useCodexAuth();
-  const [busy, setBusy] = useState(false);
-
-  const onUnlock = useCallback(async () => {
-    setBusy(true);
-    try {
-      const pw = await fetchCodexPassword();
-      authenticate(pw, SESSION_TTL_MINUTES);
-    } catch {
-      /* stays locked; admin can retry */
-    } finally {
-      setBusy(false);
-    }
-  }, [authenticate]);
-
-  if (isLocked) {
-    return (
-      <button
-        type="button"
-        className="cxpg-btn cxpg-btn--primary cxpg-btn--sm"
-        onClick={() => void onUnlock()}
-        disabled={busy}
-        title="Sealed under the Mnemosyne Master Key. Unlock without a password — access is already restricted to the ancient admin."
-      >
-        {busy ? "Unlocking…" : "🔓 Unlock with Master Key"}
-      </button>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      className="cxpg-btn cxpg-btn--ghost cxpg-btn--sm"
-      onClick={() => lock()}
-      title="Hide decrypted views. Operations still auto-unlock with the Master Key when needed."
-    >
-      🔒 Lock Codex
-    </button>
-  );
-}
-
 /**
  * The body — the SAME shared CodexShell as the consumer /codex surface, so the two
- * render identically. Only the top-bar action differs (Lock instead of
- * Export/Load). Gates on the codex init state first (server-adapter load).
+ * render identically. The top-bar action differs only in the portability pair
+ * (Download/Load here vs Export/Load on /codex); the lock/unlock affordance is the
+ * codex package's identity-row control on both — the top bar adds no Lock button.
+ * Gates on the codex init state first (server-adapter load).
  */
 function CodexBody(): ReactElement {
   const { isReady, initError } = useCodex();
@@ -203,12 +157,7 @@ function CodexBody(): ReactElement {
       badge="server-sealed"
       tagline="Sealed on the server · auto-unlocked · saves live."
       consumerName="Mnemosyne"
-      topbarActions={
-        <>
-          <CodexPortabilityControls />
-          <MnemosyneLockControl />
-        </>
-      }
+      topbarActions={<CodexPortabilityControls />}
     />
   );
 }

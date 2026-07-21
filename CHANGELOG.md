@@ -9,6 +9,19 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.7.7] — 2026-07-21
+
+### Changed
+
+- **Operator codex (server-sealed) top bar no longer duplicates the Lock Codex button.**
+  The codex package already renders a working Lock/Unlock control in its identity row (which,
+  backed by the master-key auto-resolver, needs no password field); the wrapper's second Lock
+  button in the top bar was redundant. `MnemosyneCodex` now mounts
+  `topbarActions={<CodexPortabilityControls />}` (Download/Load only). This follows the new
+  Pantheonic **automaton codex-mount convention §6b** (one lock control, in the identity row;
+  top-bar actions are portability only) — documented in the architecture so every automaton
+  mounts the codex the same way.
+
 ## [0.7.6] — 2026-07-19
 
 ### Changed

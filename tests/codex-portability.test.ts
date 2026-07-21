@@ -60,4 +60,15 @@ describe("codex portability routes + UI (source contract)", () => {
     expect(c).toMatch(/replaces/i); // the destructive-load warning
     expect(c).toMatch(/ackReplace/); // must confirm before loading
   });
+
+  it("does NOT duplicate a Lock Codex control in the topbar — the sole lock is the package identity row", () => {
+    // Automaton codex-mount convention (arch: automaton master-key doc): server-held
+    // auto-unlock means the ONE lock/unlock affordance is the codex package's identity-row
+    // control; the automaton wrapper must not add a second Lock button in the top bar.
+    const src = read("app", "admin", "codex", "MnemosyneCodex.tsx");
+    expect(src).not.toMatch(/MnemosyneLockControl/);
+    expect(src).not.toMatch(/Lock Codex/);
+    // Topbar actions are portability only.
+    expect(src).toMatch(/topbarActions=\{<CodexPortabilityControls \/>\}/);
+  });
 });
