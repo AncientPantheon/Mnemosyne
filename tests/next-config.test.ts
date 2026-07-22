@@ -36,8 +36,8 @@ describe("next.config bundler seam", () => {
       "@ancientpantheon/arweave-core",
       "@stoachain/stoa-core",
       "@stoachain/kadena-stoic-legacy",
-      "@stoachain/ouronet-core",
-      "@stoachain/dalos-crypto",
+      "@ouronet/ouronet-core",
+      "@ouronet/dalos-crypto",
       "@noble/curves",
     ];
     expect(nextConfig.transpilePackages).toEqual(expect.arrayContaining(expected));

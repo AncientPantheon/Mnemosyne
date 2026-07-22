@@ -662,7 +662,7 @@ const PAGES: DeckPage[] = [
             The Codex Identity is built on the <strong>Apollo Elliptic Curve</strong>{" "}
             — our own cryptographic curve, designed and implemented for the <Stoa />/
             <Ouro /> ecosystem and shipped as part of the{" "}
-            <code>@stoachain/dalos-crypto</code> package. Apollo gives us the
+            <code>@ouronet/dalos-crypto</code> package. Apollo gives us the
             derivation properties we need (deterministic keypairs from arbitrary
             entropy, Schnorr signatures, address-format glyphs) without depending on
             any external curve library.
@@ -914,7 +914,7 @@ const PAGES: DeckPage[] = [
       <div className="lp-measure-6">
         <p className="lp-center lp-sub lp-measure-3 lp-mb">
           Mnemosyne is in the design-locked phase. Implementation begins after v0.3.0
-          of the <code>@stoachain/ouronet-codex</code> package ships.
+          of the <code>@ouronet/ouronet-codex</code> package ships.
         </p>
 
         <div className="roadmap-list lp-measure-4">

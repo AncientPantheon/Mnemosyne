@@ -85,8 +85,8 @@ const nextConfig: NextConfig = {
     "@ancientpantheon/arweave-core",
     "@stoachain/stoa-core",
     "@stoachain/kadena-stoic-legacy",
-    "@stoachain/ouronet-core",
-    "@stoachain/dalos-crypto",
+    "@ouronet/ouronet-core",
+    "@ouronet/dalos-crypto",
     "@noble/curves",
   ],
   // Pin the workspace root so Next does not infer a wider root from the
