@@ -51,6 +51,20 @@ export interface ConstructorsStatus {
 }
 
 /**
+ * THE bundle-vs-dev rule — one definition, so every surface agrees.
+ *
+ * Deliberately a standalone helper rather than an inline check inside
+ * `readConstructorsStatus()`: the deploy-status endpoint needs only this boolean, and
+ * routing it through the full constructors read would drag three network probes
+ * (npm ×2 + GitHub raw) into a call the admin panel makes on every mount to
+ * auto-attach. Callers that want ONLY the mode import this; callers that want the
+ * whole version readout still get `deployMode` on the aggregate.
+ */
+export function deployMode(): "bundle" | "dev" {
+  return process.env.NODE_ENV === "production" ? "bundle" : "dev";
+}
+
+/**
  * Read every constructor's installed-vs-available pair. Codex and Khronoton are both
  * wired (installed version read from node_modules; update flagged when npm is newer),
  * so either can drive a deploy. `wired` reflects dependency presence — Khronoton's
@@ -120,6 +134,6 @@ export async function readConstructorsStatus(): Promise<ConstructorsStatus> {
     anyUpdateAvailable:
       mnemosyne.updateAvailable ||
       constructors.some((c) => c.wired && c.updateAvailable),
-    deployMode: process.env.NODE_ENV === "production" ? "bundle" : "dev",
+    deployMode: deployMode(),
   };
 }

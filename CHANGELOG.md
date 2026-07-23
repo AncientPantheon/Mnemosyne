@@ -9,6 +9,42 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.8.0] — 2026-07-21
+
+### Added
+
+- **Deploy panel now conforms to Pantheonic `automaton/05` — status readout + always-moving
+  progress.** The governing rule: *at any instant while a deploy runs, something in the deploy box
+  must be visibly moving; if motion stops, the deploy is stuck.* A blue-green rebuild sits inside
+  single silent steps for minutes (native addon compile, `chown -R`), so a streamed build log goes
+  motionless and a healthy deploy was indistinguishable from a wedged one.
+- **Server heartbeat (the load-bearing half).** `deploy/host/mnemosyne-deploy.sh` emits
+  `· still working · elapsed <t>` every ~6s for the whole run, killed on **every** exit path via an
+  `EXIT` trap (success, `fail()`, and the `ERR` path). This makes the panel's motion a genuine
+  liveness signal rather than decoration, and yields the three-state diagnosis: ticking+advancing =
+  healthy · ticking+frozen = slow but fine · **stopped** = genuinely stuck. Success now states the
+  total (`✓ deploy complete in <t>`). A new `TERM`/`INT` trap lands on a terminal status so a killed
+  deployer can't leave a phantom `running` that the panel would auto-attach to forever.
+- **`GET /api/admin/deploy/status`** returning the documented shape
+  `{ mode, color, port, container, version, active }`. `active` is the newest non-terminal deploy with
+  its **real** `startedAt` (the log file's birth time), so a late-joining browser shows true elapsed.
+- **On-box deploy readout** — **Mode · Live color · Loopback port · Container · Version** plus the
+  blue-green explainer, so a colour/port incident is diagnosable without an SSH session. The host
+  deployer injects `MNEMOSYNE_COLOR`/`MNEMOSYNE_LOOPBACK_PORT`/`MNEMOSYNE_CONTAINER` into the
+  container it starts (the container deliberately has no docker/nginx power to inspect this itself).
+- **Progress display** — status chip, real `Step N/M` parsed from the build log, a 1s ticking timer,
+  a looping CSS "pacman" heartbeat animation, a **>20s stall watchdog** that pauses and reddens it
+  with an explanatory line (≥3× the 6s heartbeat, so jitter never false-alarms), **auto-attach** to a
+  running deploy this browser did not trigger, and **auto-reload on success** with a short countdown.
+- Dev mode gets the same heartbeat and log contract, so the whole progress display works on localhost.
+
+### Changed
+
+- Version rows show a green **"up to date"** instead of the `→` when current.
+- Deploy confirmation now appears **below** the button (the button stays put) instead of replacing it.
+- Admin responses carry `Cache-Control: no-cache` so the post-deploy auto-reload revalidates and
+  actually fetches the new build instead of silently re-rendering the old UI.
+
 ## [0.7.7] — 2026-07-21
 
 ### Changed

@@ -1,6 +1,6 @@
 {
   "name": "mnemosyne",
-  "version": "0.7.7",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@ancientpantheon/codex": "^0.6.1",
-    "@ancientpantheon/khronoton-core": "^0.4.1",
+    "@ancientpantheon/khronoton-core": "^0.4.2",
     "@ardrive/turbo-sdk": "^1.42.0",
     "@codemirror/autocomplete": "^6.18.0",
     "@codemirror/language": "^6.12.1",

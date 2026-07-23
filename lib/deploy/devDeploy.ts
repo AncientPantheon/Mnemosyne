@@ -23,6 +23,21 @@ function append(id: string, line: string): void {
   appendFileSync(deployLogPath(id), line.endsWith("\n") ? line : `${line}\n`);
 }
 
+/**
+ * Heartbeat interval (ms). Pantheonic §3 (automaton/05): while a deploy runs, the
+ * deployer MUST emit a line on a fixed ~6s cadence for the WHOLE run, so the panel's
+ * motion is caused by the deploy being alive rather than being decorative. Dev mode
+ * writes the same contract as the host deployer, so the client's stall watchdog
+ * (>20s, ≥3× this interval) and progress display work identically on localhost.
+ */
+const HEARTBEAT_MS = 6_000;
+
+/** `8m18s` — the host deployer's `printf '%dm%02ds'` format, matched exactly. */
+function formatElapsed(sinceMs: number): string {
+  const total = Math.floor((Date.now() - sinceMs) / 1000);
+  return `${Math.floor(total / 60)}m${String(total % 60).padStart(2, "0")}s`;
+}
+
 /** Start a dev deploy for `id`. Never throws — failures land in the log + status. */
 export function startDevDeploy(id: string): void {
   ensureSpoolDir();
@@ -30,6 +45,20 @@ export function startDevDeploy(id: string): void {
   const command = `npm install ${PACKAGES.join(" ")} --no-audit --no-fund`;
   append(id, `$ ${command}`);
   append(id, "");
+
+  const startedAt = Date.now();
+  // Started before the spawn so even a spawn that hangs still shows motion; stopped on
+  // EVERY exit path below (spawn throw, child error, close) — the equivalent of the
+  // host deployer's `trap stop_heartbeat EXIT`. Idempotent.
+  let beat: ReturnType<typeof setInterval> | null = setInterval(() => {
+    append(id, `  · still working · elapsed ${formatElapsed(startedAt)}`);
+  }, HEARTBEAT_MS);
+  const stopHeartbeat = (): void => {
+    if (beat !== null) {
+      clearInterval(beat);
+      beat = null;
+    }
+  };
 
   let child;
   try {
@@ -39,6 +68,7 @@ export function startDevDeploy(id: string): void {
       { cwd: process.cwd(), shell: process.platform === "win32", env: process.env },
     );
   } catch (err) {
+    stopHeartbeat();
     append(id, `spawn failed: ${err instanceof Error ? err.message : String(err)}`);
     writeFileSync(deployStatusPath(id), "failed");
     return;
@@ -47,13 +77,19 @@ export function startDevDeploy(id: string): void {
   child.stdout?.on("data", (b: Buffer) => append(id, b.toString()));
   child.stderr?.on("data", (b: Buffer) => append(id, b.toString()));
   child.on("error", (err) => {
+    stopHeartbeat();
     append(id, `error: ${err.message}`);
     writeFileSync(deployStatusPath(id), "failed");
   });
   child.on("close", (code) => {
+    stopHeartbeat();
     append(id, "");
     if (code === 0) {
-      append(id, "✓ Constructors pulled. Reload the page to pick up the new build.");
+      // Success states the TOTAL elapsed (§3), same as the host deployer.
+      append(
+        id,
+        `✓ Constructors pulled in ${formatElapsed(startedAt)}. Reload the page to pick up the new build.`,
+      );
       writeFileSync(deployStatusPath(id), "success");
     } else {
       append(id, `✗ npm exited with code ${code ?? "unknown"}.`);

@@ -214,6 +214,162 @@
   color: #cdb98a;
 }
 
+/* A "current" version chip — green, so an up-to-date row reads at a glance and never
+   needs the installed → available arrow. (No green token exists in the admin palette;
+   these are the only two literals, kept next to the badge rules they extend.) */
+.mnemo-admin-badge--ok {
+  background: #2f6d4a33;
+  color: #7fd6a1;
+  border-color: #7fd6a166;
+}
+
+/* ── On-box deploy readout: Mode · Live color · Loopback port · Container · Version ── */
+.mnemo-deploy-line {
+  margin: 0.2rem 0;
+  font-size: 0.86rem;
+}
+
+.mnemo-deploy-key {
+  display: inline-block;
+  min-width: 8.5rem;
+  color: var(--ink-mute);
+}
+
+.mnemo-deploy-val {
+  color: var(--ink);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+}
+
+/* ── Deploy progress: chip · step · timer, above the heartbeat animation ──────
+   The rule this serves: while a deploy runs, something here must be visibly moving.
+   A stall (>20s with no output) reddens the frame and freezes the muncher. */
+.mnemo-deploy-progress {
+  margin-bottom: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.mnemo-deploy-progress.is-stalled {
+  border-color: var(--danger);
+}
+
+.mnemo-deploy-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+}
+
+.mnemo-deploy-chip {
+  padding: 0.15rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+}
+
+.mnemo-deploy-chip--running {
+  background: #b8860b22;
+  border-color: #b8860b66;
+  color: var(--accent);
+}
+
+.mnemo-deploy-chip--success {
+  background: #2f6d4a33;
+  border-color: #7fd6a166;
+  color: #7fd6a1;
+}
+
+.mnemo-deploy-chip--failed {
+  background: #ff6b7d1a;
+  border-color: #ff6b7d66;
+  color: var(--danger);
+}
+
+.mnemo-deploy-step,
+.mnemo-deploy-timer {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+}
+
+.mnemo-deploy-step {
+  color: var(--ink-soft);
+}
+
+.mnemo-deploy-timer {
+  margin-left: auto;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The "pacman" heartbeat — a muncher travelling a field of dots. Pure CSS, infinite,
+   no JS timer and no data dependency, so it is always smooth; the stall watchdog is
+   what makes it honest (it pauses the loop the moment the output goes silent). */
+.mnemo-deploy-pac {
+  position: relative;
+  overflow: hidden;
+  margin-top: 0.5rem;
+  height: 1.3em;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  line-height: 1.3em;
+}
+
+.mnemo-deploy-pac-dots {
+  color: var(--ink-mute);
+  white-space: nowrap;
+}
+
+.mnemo-deploy-pac-muncher {
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: var(--accent);
+  animation: mnemo-pac-travel 3.6s linear infinite;
+}
+
+@keyframes mnemo-pac-travel {
+  from {
+    left: 0;
+  }
+  to {
+    left: calc(100% - 1ch);
+  }
+}
+
+/* Stalled: freeze the muncher mid-track and turn the whole line red — this is the
+   moment the operator learns the deploy is stuck. */
+.mnemo-deploy-pac.is-stalled .mnemo-deploy-pac-muncher {
+  animation-play-state: paused;
+  color: var(--danger);
+}
+
+.mnemo-deploy-pac.is-stalled .mnemo-deploy-pac-dots {
+  color: var(--danger);
+  opacity: 0.55;
+}
+
+/* Done: stop the loop and park the muncher at the end of the track. */
+.mnemo-deploy-pac.is-done .mnemo-deploy-pac-muncher {
+  animation: none;
+  left: calc(100% - 1ch);
+}
+
+.mnemo-deploy-stall {
+  margin: 0.45rem 0 0;
+  color: var(--danger);
+  font-size: 0.8rem;
+}
+
+.mnemo-deploy-reload {
+  margin: 0.45rem 0 0;
+  color: #7fd6a1;
+  font-size: 0.8rem;
+}
+
 /* ── Khronoton console theming ──────────────────────────────────────────────
    The khronoton-core /ui screens theme entirely through --khr-* tokens declared
    on `:root, .khronoton-ui`; overriding at `.mnemo-admin .khronoton-ui` recolors

@@ -36,7 +36,31 @@ elapsed() { printf '%dm%02ds' $(( ($(date +%s)-START)/60 )) $(( ($(date +%s)-STA
 log()   { printf '%s\n' "$*" >>"$LOG"; }
 phase() { log ""; log "═══ [$(elapsed)] $* ═══"; }
 fail()  { log "✗ $*"; echo failed >"$STATUS"; exit 1; }
+
+# ── Heartbeat: the canonical "always-moving" guarantee ────────────────────────────
+# A long docker step (a native module compile, the chown -R over node_modules) emits
+# nothing for minutes, so the SSE terminal looks frozen even though the deploy is fine.
+# A background ticker appends a heartbeat line every 6s so the log ALWAYS grows — the
+# operator can tell at a glance the deploy is alive; if the heartbeat STOPS, it is
+# genuinely stuck. Killed on EVERY exit path (success, fail(), ERR) by the EXIT trap.
+HEARTBEAT_PID=""
+start_heartbeat() {
+  ( while true; do sleep 6; printf '  · still working · elapsed %s\n' "$(elapsed)" >>"$LOG"; done ) &
+  HEARTBEAT_PID=$!
+}
+# `|| true`: under `set -Eeuo pipefail` a no-op stop (empty PID) or a kill of an
+# already-gone ticker must never itself trip errexit/ERR from inside a trap.
+stop_heartbeat() { [ -n "$HEARTBEAT_PID" ] && kill "$HEARTBEAT_PID" 2>/dev/null || true; HEARTBEAT_PID=""; }
+trap 'stop_heartbeat' EXIT
+
 trap 'log "✗ deploy aborted (error near line $LINENO)"; echo failed >"$STATUS"' ERR
+
+# A killed deployer (systemd timeout, operator Ctrl-C, box reboot) must NOT leave the
+# status file stuck at `running`. That would be a phantom: `active` in the deploy-status
+# endpoint reports the newest NON-TERMINAL deploy, so a stuck `running` makes the admin
+# panel auto-attach to a dead deploy on every page load, forever. Land on a terminal
+# status instead. (The EXIT trap above still kills the heartbeat.)
+trap 'log "✗ deploy terminated (signal)"; echo failed >"$STATUS" 2>/dev/null; exit 1' TERM INT
 
 # Ensure the host build prerequisites exist, installing any that are missing ON THE
 # SPOT so a deploy never needs manual host prep. Today that means BuildKit's `buildx`
@@ -59,6 +83,7 @@ ensure_build_prereqs() {
 }
 
 echo running >"$STATUS"
+start_heartbeat
 log "▶ host deployer started ($(date -u +%FT%TZ))"
 
 # 1) Refresh source and bump constructor pins to @latest. Discard the previous
@@ -96,6 +121,9 @@ docker run -d --name "mnemosyne-$NEW" --restart unless-stopped \
   --env-file "$ENV_FILE" \
   -e MNEMOSYNE_ENV_FILE=/app/.env.local \
   -e MNEMOSYNE_CODEX_DIR=/app/data/mnemosyne-codex \
+  -e MNEMOSYNE_COLOR="$NEW" \
+  -e MNEMOSYNE_LOOPBACK_PORT="$NEW_PORT" \
+  -e MNEMOSYNE_CONTAINER="mnemosyne-$NEW" \
   -v "$ENV_FILE:/app/.env.local" \
   -v "$DATA_DIR:/app/data" \
   "$IMAGE" 2>&1 | tee -a "$LOG"
@@ -128,5 +156,6 @@ log "✓ nginx now routing to $NEW (127.0.0.1:$NEW_PORT)"
 docker rm -f "mnemosyne-$OLD" >/dev/null 2>&1 || true
 log "✓ old container ($OLD) removed"
 
-log "✓ deploy complete"
+stop_heartbeat
+log "✓ deploy complete in $(elapsed)"
 echo success >"$STATUS"

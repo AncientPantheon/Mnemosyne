@@ -53,6 +53,24 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [{ source: "/docs", destination: "/docs/index.html" }];
   },
+  // Pantheonic automaton/05 §5e: a successful deploy auto-reloads the admin so the
+  // operator lands on the freshly-deployed build. That only works if the reload
+  // REVALIDATES — with a cached admin document the reload silently re-renders the OLD
+  // UI and the deploy looks like it did nothing. `no-cache` (revalidate before reuse,
+  // not "never store") is exactly the required semantic. Hashed `_next/static` assets
+  // are content-addressed and stay immutable; this covers the admin document itself.
+  async headers() {
+    return [
+      {
+        source: "/admin/:path*",
+        headers: [{ key: "Cache-Control", value: "no-cache" }],
+      },
+      {
+        source: "/admin",
+        headers: [{ key: "Cache-Control", value: "no-cache" }],
+      },
+    ];
+  },
   // better-sqlite3 (the Khronoton engine's store) is a NATIVE module — it must be
   // require()'d from node_modules at runtime, never webpack-bundled into the server
   // chunks. Next traces it (prebuilt .node binary included) into the standalone output.
