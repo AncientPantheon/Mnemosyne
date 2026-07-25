@@ -44,6 +44,20 @@ const turboWeb = toAbs("@ardrive", "turbo-sdk", "lib", "esm", "web", "index.js")
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Root-caused a real "the login button never appears" report against Claudstermind's
+  // LocalHost mirror (which serves this dev server through a reverse proxy on a DIFFERENT
+  // origin — a different port at minimum, a different host entirely for the remote/tunnel
+  // case). Confirmed by direct reproduction: `useMe()`'s effect — and its `fetch("/api/me")`
+  // call — never fires at all when this page is reached from any origin OTHER than the exact
+  // one Next's dev server expects (confirmed even for a perfectly byte-identical proxied
+  // response — same HTML, same JS bundle, same headers). The dev-mode HMR WebSocket
+  // successfully connecting turned out to be the gate: hydration of at least this app's
+  // Client Components doesn't complete without it, and Next 16's `allowedDevOrigins` is what
+  // decides whether that connection is even allowed to happen from a non-default origin.
+  // 127.0.0.1/localhost cover every local port Claudstermind's mirror might use; the relay
+  // domain covers the remote/tunnel case once Claudstermind's mirror can carry a WebSocket
+  // that far too (not yet — see Claudstermind's own mirror.mjs for that follow-up).
+  allowedDevOrigins: ["127.0.0.1", "localhost", "brain.ancientholdings.eu"],
   // The Documentation Tier-1 link points at the clean `/docs` URL, but the docs are
   // static files under `public/docs/` — Next serves them at their exact path
   // (`/docs/index.html`), so a bare `/docs` 404s (and `/docs/` just 308-strips back
