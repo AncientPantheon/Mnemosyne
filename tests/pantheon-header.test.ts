@@ -31,9 +31,16 @@ describe("PantheonHeader — the shared 3-level header", () => {
     expect(src()).toMatch(/aria-disabled/); // non-ancient gets the disabled chip
   });
 
-  it("holds the identity block until /api/me resolves (no wrong-state flash)", () => {
-    // While `me` is null the identity area must render nothing.
-    expect(src()).toMatch(/me === null|me == null|!me\b|me\s*\?\s*/);
+  it("shows the signed-out login link immediately, rather than nothing, while /api/me is in flight", () => {
+    // REGRESSION: this used to `return null` (render nothing at all) while `me` was still
+    // `null` — confirmed in production that "nothing" is indistinguishable from broken on a
+    // slow connection (20+ seconds through a mirrored tunnel), whereas the login link itself
+    // is a plain `<a href>` that needs no session check to exist or work. The guard must now
+    // read as "not confirmed authenticated" (true for BOTH `me === null` and
+    // `me.authenticated === false`), not gate on `me` being resolved at all.
+    const s = src();
+    expect(s).not.toMatch(/if\s*\(\s*me\s*===\s*null\s*\)\s*return\s*null/);
+    expect(s).toMatch(/!me\?\.\s*authenticated|!me\s*\|\|\s*!me\.authenticated/);
   });
 
   it("admin variant is L1-only — the L2 and L3 rows are each guarded by variant === 'full'", () => {

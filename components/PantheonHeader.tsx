@@ -43,13 +43,23 @@ export interface PantheonHeaderProps {
 }
 
 /** The right-hand identity block — the ONE shared implementation, reading `useMe`.
- *  Holds (renders nothing) until the first `/api/me` resolves so there's no flash of
- *  the wrong auth state. Hub-supplied name/role are React text nodes, never HTML. */
+ *
+ *  Renders the signed-OUT state (the login link) as soon as there's anything to paint at all,
+ *  rather than holding blank until `/api/me` resolves. That link needs no JavaScript to exist or
+ *  to work — it's a plain `<a href="/admin/login">`, a real navigation — the ONLY thing that
+ *  genuinely depends on the client-side session check is knowing whether to swap it out for the
+ *  signed-in view instead. Confirmed in production this distinction matters: viewed through a
+ *  slow connection (mobile, tunneled through a mirror), that check can take 20+ seconds, and a
+ *  blank corner for 20 seconds reads as broken, not "loading" — there's no visual difference
+ *  between the two. A signed-in visitor may see this link for a moment before it flips to their
+ *  name; that brief flash-then-correct is the standard, well-tolerated trade-off nearly every
+ *  site with client-side auth makes, and it's a far smaller cost than "nothing, indefinitely, on
+ *  a slow connection" for the much more common signed-out visitor. Hub-supplied name/role are
+ *  React text nodes, never HTML. */
 function Identity({ showAdmin }: { showAdmin: boolean }): ReactElement | null {
   const { me } = useMe();
-  if (me === null) return null;
 
-  if (!me.authenticated) {
+  if (!me?.authenticated) {
     return (
       <a className="ph-btn ph-btn--primary" href="/admin/login">
         Login with AncientHub
