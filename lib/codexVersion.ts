@@ -97,6 +97,53 @@ export async function fetchLatestKhronotonVersion(): Promise<string | null> {
   }
 }
 
+/** The npm package the Pythia oracle client organ ships as. */
+export const PYTHIA_CLIENT_PACKAGE = "@ancientpantheon/pythia-client";
+
+/**
+ * The currently-installed `@ancientpantheon/pythia-client` version, read from the
+ * package's own `package.json` in `node_modules` — mirrors {@link readCodexUiVersion}.
+ * Pythia-client is now a Mnemosyne dependency (the third organ; connector-auth wiring
+ * is a separate, later follow-up), so there is a real installed version to read. Read
+ * directly from the node_modules path (the `exports` map does not expose
+ * `./package.json`). Returns `"unknown"` if unreadable.
+ */
+export function readPythiaClientVersion(): string {
+  try {
+    const pkgPath = join(
+      process.cwd(),
+      "node_modules",
+      "@ancientpantheon",
+      "pythia-client",
+      "package.json",
+    );
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { version?: string };
+    return typeof pkg.version === "string" ? pkg.version : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+/**
+ * The latest `@ancientpantheon/pythia-client` version PUBLISHED on the npm registry,
+ * read from the package's `dist-tags.latest`. Mirrors {@link fetchLatestCodexVersion}.
+ * Returns `null` on any failure (offline, registry down, package missing).
+ */
+export async function fetchLatestPythiaClientVersion(): Promise<string | null> {
+  try {
+    const res = await fetch(`https://registry.npmjs.org/${PYTHIA_CLIENT_PACKAGE}`, {
+      headers: { accept: "application/vnd.npm.install-v1+json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { "dist-tags"?: { latest?: string } };
+    const latest = body["dist-tags"]?.latest;
+    return typeof latest === "string" && latest.length > 0 ? latest : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * True when `available` is a strictly newer semver than `installed` (numeric
  * per-segment compare: 0.10.0 > 0.9.0). Non-numeric/pre-release segments coerce to

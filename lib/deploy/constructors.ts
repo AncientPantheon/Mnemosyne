@@ -2,9 +2,12 @@ import { fetchLatestMnemosyneVersion, readMnemosyneVersion } from "../appVersion
 import {
   fetchLatestCodexVersion,
   fetchLatestKhronotonVersion,
+  fetchLatestPythiaClientVersion,
   isNewerVersion,
+  PYTHIA_CLIENT_PACKAGE,
   readCodexUiVersion,
   readKhronotonUiVersion,
+  readPythiaClientVersion,
 } from "../codexVersion";
 
 /**
@@ -24,13 +27,14 @@ export interface AppStatus {
  * `installed` is what's compiled into / installed in the running build; `available`
  * is npm's latest (null if unreachable). `wired` is false for a constructor that
  * exists on npm but isn't a Mnemosyne dependency yet — it can never be "update
- * available" because there's nothing installed to update. Both Codex and Khronoton are
- * wired now; `wired` here is strictly "is a Mnemosyne dependency", distinct from
- * whether a constructor's runtime engine is switched on (Khronoton's autonomous
- * signing is a separate, Pythia-gated follow-up — the package ships regardless).
+ * available" because there's nothing installed to update. Codex, Khronoton, and
+ * Pythia are all wired now; `wired` here is strictly "is a Mnemosyne dependency",
+ * distinct from whether a constructor's own live capability is switched on
+ * (Khronoton's autonomous signing and Pythia's connector-auth are each a separate,
+ * later follow-up — the packages ship regardless).
  */
 export interface ConstructorStatus {
-  key: "codex" | "khronoton";
+  key: "codex" | "khronoton" | "pythia";
   label: string;
   npmPackage: string;
   installed: string;
@@ -65,10 +69,11 @@ export function deployMode(): "bundle" | "dev" {
 }
 
 /**
- * Read every constructor's installed-vs-available pair. Codex and Khronoton are both
- * wired (installed version read from node_modules; update flagged when npm is newer),
- * so either can drive a deploy. `wired` reflects dependency presence — Khronoton's
- * autonomous engine being switched on is a separate, Pythia-gated concern.
+ * Read every constructor's installed-vs-available pair. Codex, Khronoton, and Pythia
+ * are all wired (installed version read from node_modules; update flagged when npm is
+ * newer), so any of the three can drive a deploy. `wired` reflects dependency
+ * presence — Khronoton's autonomous engine and Pythia's connector-auth being switched
+ * on are each a separate, later concern.
  */
 export async function readConstructorsStatus(): Promise<ConstructorsStatus> {
   const [
@@ -78,6 +83,8 @@ export async function readConstructorsStatus(): Promise<ConstructorsStatus> {
     codexLatest,
     khronotonInstalled,
     khronotonLatest,
+    pythiaInstalled,
+    pythiaLatest,
   ] = await Promise.all([
     Promise.resolve(readMnemosyneVersion()),
     fetchLatestMnemosyneVersion(),
@@ -85,6 +92,8 @@ export async function readConstructorsStatus(): Promise<ConstructorsStatus> {
     fetchLatestCodexVersion(),
     Promise.resolve(readKhronotonUiVersion()),
     fetchLatestKhronotonVersion(),
+    Promise.resolve(readPythiaClientVersion()),
+    fetchLatestPythiaClientVersion(),
   ]);
 
   const appUpdate =
@@ -107,6 +116,11 @@ export async function readConstructorsStatus(): Promise<ConstructorsStatus> {
       ? isNewerVersion(khronotonLatest, khronotonInstalled)
       : false;
 
+  const pythiaUpdate =
+    pythiaLatest !== null && pythiaInstalled !== "unknown"
+      ? isNewerVersion(pythiaLatest, pythiaInstalled)
+      : false;
+
   const constructors: ConstructorStatus[] = [
     {
       key: "codex",
@@ -125,6 +139,15 @@ export async function readConstructorsStatus(): Promise<ConstructorsStatus> {
       available: khronotonLatest,
       wired: true,
       updateAvailable: khronotonUpdate,
+    },
+    {
+      key: "pythia",
+      label: "Pythia",
+      npmPackage: PYTHIA_CLIENT_PACKAGE,
+      installed: pythiaInstalled,
+      available: pythiaLatest,
+      wired: true,
+      updateAvailable: pythiaUpdate,
     },
   ];
 

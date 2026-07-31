@@ -103,9 +103,13 @@ const nextConfig: NextConfig = {
     "/api/admin/khronoton-version": [
       "./node_modules/@ancientpantheon/khronoton-core/package.json",
     ],
+    "/api/admin/pythia-client-version": [
+      "./node_modules/@ancientpantheon/pythia-client/package.json",
+    ],
     "/api/admin/deploy": [
       "./node_modules/@ancientpantheon/codex/package.json",
       "./node_modules/@ancientpantheon/khronoton-core/package.json",
+      "./node_modules/@ancientpantheon/pythia-client/package.json",
     ],
   },
   // Out-of-root sources that must be transpiled: the single bundled

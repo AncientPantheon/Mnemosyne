@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { appendFileSync, writeFileSync } from "node:fs";
 
-import { KHRONOTON_PACKAGE } from "../codexVersion";
+import { KHRONOTON_PACKAGE, PYTHIA_CLIENT_PACKAGE } from "../codexVersion";
 import { CODEX_PACKAGE } from "../updateCodex";
 import { deployLogPath, deployStatusPath, ensureSpoolDir } from "./spool";
 
@@ -13,11 +13,16 @@ import { deployLogPath, deployStatusPath, ensureSpoolDir } from "./spool";
  * identically. Fire-and-forget: the POST returns the id immediately and this keeps
  * appending to the log until npm exits.
  *
- * Both wired constructors are pulled: Codex (the aggregate) and Khronoton (the engine
- * package). Pulling Khronoton at `@latest` keeps the installed engine current even
- * before its autonomous-signing seams are switched on (that wire-in is Pythia-gated).
+ * All three wired constructors are pulled: Codex (the aggregate), Khronoton (the
+ * engine package), and the Pythia client (the connector organ). Pulling Khronoton at
+ * `@latest` keeps the installed engine current even before its autonomous-signing
+ * seams are switched on (that wire-in is Pythia-gated).
  */
-const PACKAGES = [`${CODEX_PACKAGE}@latest`, `${KHRONOTON_PACKAGE}@latest`];
+const PACKAGES = [
+  `${CODEX_PACKAGE}@latest`,
+  `${KHRONOTON_PACKAGE}@latest`,
+  `${PYTHIA_CLIENT_PACKAGE}@latest`,
+];
 
 function append(id: string, line: string): void {
   appendFileSync(deployLogPath(id), line.endsWith("\n") ? line : `${line}\n`);

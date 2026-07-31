@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ReactElement } from "rea
 
 /** One constructor row from `/api/admin/deploy` (GET). */
 interface ConstructorStatus {
-  key: "codex" | "khronoton";
+  key: "codex" | "khronoton" | "pythia";
   label: string;
   npmPackage: string;
   installed: string;
@@ -91,7 +91,12 @@ function ReadoutLine({ label, value }: { label: string; value: string }): ReactE
 
 /**
  * One installed→available version row (used for both the Mnemosyne app and each
- * constructor). `wired: false` shows "not wired" instead of an installed version;
+ * constructor). `wired: false` shows "not wired" instead of an installed version.
+ * A wired constructor whose installed-version read itself failed (`installed ===
+ * "unknown"` — a broken/misconfigured `node_modules` or a missing build-tracing
+ * entry, not the normal path) shows "unreadable" rather than the literal, misleading
+ * "vunknown" — `wired` means "is a dependency", not "the read succeeded", and the two
+ * must not be conflated in what the operator sees.
  * `installedTitle`/`availableTitle` tune the hover text per source (build vs npm/repo).
  */
 function VersionRow({
@@ -118,6 +123,10 @@ function VersionRow({
   // (available === null) keeps the arrow + "unreachable", so a dead registry can
   // never masquerade as a healthy, up-to-date package.
   const isCurrent = available !== null && !updateAvailable;
+  // `wired` is "is a dependency"; a failed installed-version read (the "unknown"
+  // sentinel `readXVersion()` returns on any read error) is a distinct, unhealthy
+  // state that must render as an obvious error, never as a real-looking `vunknown`.
+  const installedReadOk = installed !== "unknown";
   return (
     <li>
       <span className="mnemo-admin-chain">
@@ -125,10 +134,10 @@ function VersionRow({
       </span>
       <span className="mnemo-admin-badges">
         <span
-          className={`mnemo-admin-badge${wired ? " mnemo-admin-badge--live" : ""}`}
+          className={`mnemo-admin-badge${wired && installedReadOk ? " mnemo-admin-badge--live" : ""}`}
           title={installedTitle}
         >
-          {wired ? `v${installed}` : "not wired"}
+          {!wired ? "not wired" : installedReadOk ? `v${installed}` : "unreadable"}
         </span>
         {isCurrent ? (
           <span className="mnemo-admin-badge mnemo-admin-badge--ok" title={availableTitle}>

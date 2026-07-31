@@ -163,6 +163,26 @@ describe("admin — Update & Deploy: single Deploy button (REQ-09, REVIEW M5/M6)
     expect(panel()).not.toMatch(/KhronotonPreview/);
   });
 
+  it("widens the local ConstructorStatus key union to include pythia (third constructor row)", () => {
+    // The panel's own ConstructorStatus type is a client-local mirror of
+    // lib/deploy/constructors.ts's server-side union (client components can't import
+    // the fs-reading server module) — it must be kept in lockstep or the third row's
+    // key would fail to type-check against VersionRow's `key={c.key}` usage.
+    expect(panel()).toMatch(/key:\s*"codex"\s*\|\s*"khronoton"\s*\|\s*"pythia"/);
+  });
+
+  it("shows 'unreadable', not a literal 'vunknown', for a wired constructor whose version read failed", () => {
+    // wired:true means "is a dependency", not "the installed-version read succeeded" —
+    // readCodexUiVersion/readKhronotonUiVersion/readPythiaClientVersion all return the
+    // literal string "unknown" on any read failure, so a naive `wired ? v${installed}
+    // : "not wired"` would render the confusing, real-looking "vunknown" badge instead
+    // of an obvious error state. Applies to all three constructors via the one shared
+    // VersionRow component.
+    expect(panel()).toMatch(/installed\s*!==\s*"unknown"/);
+    expect(panel()).toMatch(/"unreadable"/);
+    expect(panel()).not.toMatch(/wired \? `v\$\{installed\}` : "not wired"/);
+  });
+
   it("notes Khronoton is installed AND its autonomous engine is live", () => {
     // The engine wire-in landed (handoff 05): the tick loop runs in the server and
     // signs with the sealed operator codex — the panel says so, plainly.

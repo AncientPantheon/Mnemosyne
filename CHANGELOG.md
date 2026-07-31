@@ -9,9 +9,32 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
-## [0.8.0] — 2026-07-21
+## [0.9.0] — 2026-07-31
 
 ### Added
+
+- **Pythia joins Codex and Khronoton as Mnemosyne's third constructor.** The Update &
+  Deploy panel now shows three constructor rows instead of two — `@ancientpantheon/
+  pythia-client` is a real dependency, its installed-vs-latest version is tracked the
+  same way Codex's and Khronoton's are, and a deploy now pulls all three at `@latest`.
+- **Full Pythia connector-auth wiring, code-complete and ready — not yet switched
+  on.** Mnemosyne can now prove ownership of a dedicated Standard + Smart Apollo pair
+  to Pythia entirely server-side (no human in the loop for signing) and receive
+  attributed, gated read/send/poll access instead of the anonymous default. A new
+  section in `/admin#pythia`, below the existing gateway-URL setting, shows the
+  connector's identity status and a one-time onboarding action — gated behind an
+  explicit "I understand this spends real STOA" confirmation, since it deploys two
+  Apollo accounts on-chain and links them. This action is **not fired automatically
+  by anything** (not on deploy, not on startup, not on a schedule) — an ancient admin
+  triggers it deliberately, once, when ready. Until then, and for every existing user
+  today, nothing changes: reads stay unattributed exactly as before.
+- **Known limitation, documented rather than guessed around:** the on-chain half of
+  onboarding (deploying and linking the Apollo pair) currently has no working signer
+  for Mnemosyne's own Apollo-curve keys — it fails safely, before spending anything,
+  with a clear error, rather than risk a wrong signature. Wiring a working signer for
+  this leg is the next piece of work before the onboarding action can actually be
+  used; see `docs/work/pythia-connector-auth/design.md` for the full investigation.
+
 
 - **Deploy panel now conforms to Pantheonic `automaton/05` — status readout + always-moving
   progress.** The governing rule: *at any instant while a deploy runs, something in the deploy box

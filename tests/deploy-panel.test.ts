@@ -243,6 +243,10 @@ describe("deploy §05 — the deployer heartbeat + no-cache admin (server half)"
     // A leaked interval would keep appending "still working" after the deploy ended.
     expect(dev).toMatch(/clearInterval/);
     expect((dev.match(/stopHeartbeat\(\);/g) ?? []).length).toBe(3);
+    // Pythia is the third wired constructor (design.md's mirror table) — dev-mode
+    // deploys must pull it alongside Codex and Khronoton or the installed engine
+    // silently goes stale even though the panel reports it as wired.
+    expect(dev).toMatch(/PYTHIA_CLIENT_PACKAGE/);
   });
 
   it("serves admin with Cache-Control: no-cache so the post-deploy reload revalidates (§5e)", () => {
