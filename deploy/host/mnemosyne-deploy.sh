@@ -97,6 +97,8 @@ log "→ npm install @ancientpantheon/codex@latest"
 npm install @ancientpantheon/codex@latest --no-audit --no-fund 2>&1 | tee -a "$LOG"
 log "→ npm install @ancientpantheon/khronoton-core@latest"
 npm install @ancientpantheon/khronoton-core@latest --no-audit --no-fund 2>&1 | tee -a "$LOG"
+log "→ npm install @ancientpantheon/pythia-client@latest"
+npm install @ancientpantheon/pythia-client@latest --no-audit --no-fund 2>&1 | tee -a "$LOG"
 
 # 2) Build the new image. BuildKit + --progress=plain streams every step
 #    line-by-line with per-step timing (no cursor-rewrite), so the admin terminal

@@ -234,6 +234,23 @@ describe("deploy §05 — the deployer heartbeat + no-cache admin (server half)"
       expect(sh).toContain(v);
   });
 
+  it("bumps all three wired constructors to @latest on every live deploy (§1)", () => {
+    // The host deployer does NOT read the request JSON's `constructors` field — it
+    // hardcodes one `npm install <pkg>@latest` line per wired constructor. Pythia
+    // joining as the third wired constructor (lib/deploy/constructors.ts) means this
+    // script needs its own third line too, or a live deploy would silently stop
+    // keeping pythia-client current even though the admin panel's dev-mode pull
+    // (lib/deploy/devDeploy.ts) already does.
+    const sh = read("deploy", "host", "mnemosyne-deploy.sh");
+    for (const pkg of [
+      "@ancientpantheon/codex",
+      "@ancientpantheon/khronoton-core",
+      "@ancientpantheon/pythia-client",
+    ]) {
+      expect(sh).toContain(`npm install ${pkg}@latest`);
+    }
+  });
+
   it("dev mode writes the same heartbeat contract, cleared on every exit path (§6)", () => {
     const dev = read("lib", "deploy", "devDeploy.ts");
     expect(dev).toMatch(/still working · elapsed/);
