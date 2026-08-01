@@ -9,6 +9,16 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.9.1] — 2026-08-01
+
+### Fixed
+
+- **Constructor row order in the Update & Deploy panel is now Pythia, Codex, Khronoton** — a new
+  Pantheon-wide rule (`automaton/05-deploy-panel-and-progress.md` §1e): the CONSTRUCTORS group's
+  order is fixed and identical across every automaton's panel, not left to each automaton's own
+  install/wiring order. Mnemosyne's panel previously showed Codex, Khronoton, Pythia (install
+  order); it now matches the canonical order.
+
 ## [0.9.0] — 2026-07-31
 
 ### Added

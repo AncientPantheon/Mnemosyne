@@ -121,7 +121,19 @@ export async function readConstructorsStatus(): Promise<ConstructorsStatus> {
       ? isNewerVersion(pythiaLatest, pythiaInstalled)
       : false;
 
+  // Row order is FIXED and canonical across every Pantheon automaton — Pythia, Codex,
+  // Khronoton — per automaton/05-deploy-panel-and-progress.md §1e. Not left to this
+  // (or any) automaton's own install/wiring order.
   const constructors: ConstructorStatus[] = [
+    {
+      key: "pythia",
+      label: "Pythia",
+      npmPackage: PYTHIA_CLIENT_PACKAGE,
+      installed: pythiaInstalled,
+      available: pythiaLatest,
+      wired: true,
+      updateAvailable: pythiaUpdate,
+    },
     {
       key: "codex",
       label: "Codex",
@@ -139,15 +151,6 @@ export async function readConstructorsStatus(): Promise<ConstructorsStatus> {
       available: khronotonLatest,
       wired: true,
       updateAvailable: khronotonUpdate,
-    },
-    {
-      key: "pythia",
-      label: "Pythia",
-      npmPackage: PYTHIA_CLIENT_PACKAGE,
-      installed: pythiaInstalled,
-      available: pythiaLatest,
-      wired: true,
-      updateAvailable: pythiaUpdate,
     },
   ];
 

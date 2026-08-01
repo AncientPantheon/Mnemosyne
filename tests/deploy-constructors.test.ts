@@ -57,4 +57,27 @@ describe("readConstructorsStatus — Pythia as the third constructor", () => {
     expect(pythia?.available).toBe(installed);
     expect(pythia?.updateAvailable).toBe(false);
   });
+
+  it("orders the CONSTRUCTORS row as Pythia, Codex, Khronoton — the fixed canonical order", async () => {
+    // Pantheonic automaton/05-deploy-panel-and-progress.md §1e: the CONSTRUCTORS
+    // group's row order is fixed and identical across every automaton, independent
+    // of wiring/install order — Pythia, Codex, Khronoton — not left to each
+    // automaton's own discretion.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(JSON.stringify({ "dist-tags": { latest: "9.9.9" } }), {
+          status: 200,
+        }),
+      ),
+    );
+
+    const status = await readConstructorsStatus();
+
+    expect(status.constructors.map((c) => c.key)).toEqual([
+      "pythia",
+      "codex",
+      "khronoton",
+    ]);
+  });
 });
