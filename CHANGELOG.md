@@ -9,6 +9,29 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.10.0] — 2026-08-01
+
+### Fixed
+
+- **Khronoton can now sign for chainweaver / eckowallet operator seeds, not just koala.** The
+  autonomous key resolver (`lib/khronoton/keyResolver.ts`) previously hand-rolled key derivation and
+  ran *every* HD-wallet seed through the koala lane — so a chainweaver or eckowallet operator seed
+  derived a different key, tripped the safety guard, and silently refused to sign. It now delegates
+  all derivation to Codex's own seedType-complete headless resolver (requires bumping
+  `@ancientpantheon/codex` to `0.8.0`), which handles every seed type correctly. koala seeds are
+  unaffected; ouro accounts stay covered by a thin fallback. As part of the same change, mixed-curve
+  codexes are handled safely: an Apollo-curve account can never leak into the Kadena signer set.
+
+### Aligned
+
+- **Mnemosyne is confirmed and guarded as a Pythia verifier.** `/apollo-verify` was already served
+  and correct; this adds a byte-exact regression guard so the ownership-proof message Mnemosyne signs
+  can't silently drift from what Pythia verifies (the format is now pinned by a test, independent of
+  the codex version the deploy pulls). No behavior change — the route already worked.
+- A full scan against the current Pantheonic architecture confirmed Mnemosyne conforms on design
+  tokens, widths, header, admin routing, master-key vault, and the deploy panel; the two items that
+  had drifted (the Khronoton key resolver above, and a mixed-curve signer-set filter) are now closed.
+
 ## [0.9.1] — 2026-08-01
 
 ### Fixed
