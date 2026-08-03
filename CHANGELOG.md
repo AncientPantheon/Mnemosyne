@@ -9,6 +9,18 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.11.1] — 2026-08-01
+
+### Fixed
+
+- **The Pythia connector now actually mints its ephemeral key once linked.** After pasting a
+  dual-link-key the panel sat at "pending / not yet minted" forever, because nothing ever drove the
+  connector's prove→verify round-trip (the v0.11.0 rework deliberately ran no background loop, and
+  the gated client that would have triggered it on-demand isn't consumed anywhere yet). Added a
+  connector heartbeat mirroring Pythia's own `SelfConnectorLoop`: a boot-time tick loop, an immediate
+  tick when a key is linked, and a tick on each status poll — so the pair converges to active (prove
+  → Pythia's resolver links → prove → secret) and the panel shows the live masked key + expiry.
+
 ## [0.11.0] — 2026-08-01
 
 ### Changed

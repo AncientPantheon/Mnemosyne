@@ -29,5 +29,12 @@ export async function register(): Promise<void> {
     }
     const { startKhronotonEngine } = await import("./lib/khronoton/register");
     await startKhronotonEngine();
+
+    // The Pythia-connector heartbeat — drives the DualLinkConnector's
+    // challenge/sign/verify round trip so the ephemeral x-pythia-key is minted
+    // and kept fresh (mirrors Pythia's own SelfConnectorLoop). A no-op until an
+    // operator pastes a dual-link-key in the admin panel.
+    const { startPythiaConnectorLoop } = await import("./lib/pythia/connectorLoop");
+    startPythiaConnectorLoop();
   }
 }

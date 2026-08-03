@@ -26,6 +26,7 @@ const {
   clearConnectorStateMock,
   readConnectorStateMock,
   getDualLinkConnectorMock,
+  tickPythiaConnectorOnceMock,
 } = vi.hoisted(() => ({
   splitDualLinkKeyMock: vi.fn(),
   maskSecretMock: vi.fn(),
@@ -34,6 +35,7 @@ const {
   clearConnectorStateMock: vi.fn(),
   readConnectorStateMock: vi.fn(),
   getDualLinkConnectorMock: vi.fn(),
+  tickPythiaConnectorOnceMock: vi.fn(async () => {}),
 }));
 
 vi.mock("@ancientpantheon/pythia-client", () => ({
@@ -55,6 +57,10 @@ vi.mock("../lib/pythia/connectorStatus", () => ({
 
 vi.mock("../lib/pythia/connectorClient", () => ({
   getDualLinkConnector: getDualLinkConnectorMock,
+}));
+
+vi.mock("../lib/pythia/connectorLoop", () => ({
+  tickPythiaConnectorOnce: tickPythiaConnectorOnceMock,
 }));
 
 import { POST, DELETE } from "../app/api/admin/pythia-connector/route";
@@ -184,6 +190,9 @@ describe("POST /api/admin/pythia-connector", () => {
     expect(stored.smartApollo).toBe(SMART);
     expect(typeof stored.linkedAt).toBe("string");
     expect(Number.isNaN(Date.parse(stored.linkedAt))).toBe(false);
+    // Linking kicks off proving immediately (so the ephemeral key starts being
+    // minted on the paste, not on the loop's next interval).
+    expect(tickPythiaConnectorOnceMock).toHaveBeenCalled();
   });
 });
 
@@ -240,6 +249,9 @@ describe("GET /api/admin/pythia-connector/status", () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toBe("no-store");
+    // The status poll drives a tick first, so the pair converges to active
+    // promptly while the operator watches the panel.
+    expect(tickPythiaConnectorOnceMock).toHaveBeenCalled();
     const body = await res.json();
     expect(body.linked).toBe(true);
     expect(body.standardApollo).toBe(STANDARD);

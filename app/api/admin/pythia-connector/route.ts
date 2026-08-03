@@ -3,6 +3,7 @@ import { type NextRequest } from "next/server";
 
 import { requireAncient } from "@/lib/auth/guard";
 import { loadCodexSnapshot, ouroAccountsOf } from "@/lib/pythia/codexSnapshot";
+import { tickPythiaConnectorOnce } from "@/lib/pythia/connectorLoop";
 import { clearConnectorState, writeConnectorState } from "@/lib/pythia/connectorStatus";
 
 export const dynamic = "force-dynamic";
@@ -81,6 +82,11 @@ export async function POST(request: NextRequest) {
     smartApollo,
     linkedAt: new Date().toISOString(),
   });
+
+  // Kick off proving immediately (fire-and-forget) so activation starts on the
+  // paste rather than waiting for the background loop's next tick — mirrors
+  // Pythia's `link()` closure driving an immediate tick on a fresh paste.
+  void tickPythiaConnectorOnce();
 
   return Response.json({ ok: true }, { headers: NO_STORE });
 }

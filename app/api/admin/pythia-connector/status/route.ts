@@ -3,6 +3,7 @@ import { type NextRequest } from "next/server";
 
 import { requireAncient } from "@/lib/auth/guard";
 import { getDualLinkConnector } from "@/lib/pythia/connectorClient";
+import { tickPythiaConnectorOnce } from "@/lib/pythia/connectorLoop";
 import { readConnectorState } from "@/lib/pythia/connectorStatus";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +38,13 @@ function publicHalf(half: DualLinkHalfStatus | undefined): PublicHalf | null {
 export async function GET(request: NextRequest) {
   const gate = await requireAncient(request);
   if (!gate.ok) return gate.response;
+
+  // Drive one tick before reading, so while the operator watches the panel
+  // (which polls this) the pair converges to active promptly (prove → resolve →
+  // prove) rather than waiting on the background loop's next interval. Once
+  // active this is cheap — the connector returns its cached secret with no
+  // round trip until near expiry. No-op when nothing is linked.
+  await tickPythiaConnectorOnce();
 
   const state = readConnectorState();
   const status = getDualLinkConnector()?.status() ?? null;
