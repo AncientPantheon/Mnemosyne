@@ -232,6 +232,14 @@ Autonomous run confirmed 2026-07-31.
   only, and to sign `input.apolloAccount` verbatim after confirming (not assuming) it equals the
   entry's own freshly re-derived address, so there is no seam left for the signed message to diverge
   from what was actually asked to be signed for.
+- **SUPERSEDED / CORRECTED (2026-08-01, see `../pythia-connector-rework/`):** the "On-chain
+  Apollo-curve signing gap" recorded below was a NON-PROBLEM born of a wrong premise — no Apollo key
+  ever signs a Pact transaction. Pythia's own self-consumer implementation (and Codex's
+  `ActivateApolloPythiaKey` tab) deploy the Apollo key on-chain by signing with an ORDINARY Kadena
+  payment key, passing the Apollo account as plain data. The `pythia-connector-rework` topic deleted
+  `onboardingChain.ts`/`onboardingJob.ts`/`apolloIdentity.ts` entirely and moved on-chain deploy to
+  Codex's tab. The stale analysis is retained below only as a record of the earlier (incorrect)
+  conclusion.
 - On-chain Apollo-curve signing gap (post-ship adversarial review, CONFIRMED CRITICAL/HIGH) —
   `onboardingChain.ts`'s on-chain leg (`deployApolloHalf`/`linkDualApiKey`) resolves signing
   keypairs via `createMnemosyneKeyResolver().getKeyPairByPublicKey(...)`

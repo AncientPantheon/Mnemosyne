@@ -1,44 +1,45 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomBytes } from "node:crypto";
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { encryptStringV2 } from "@stoachain/stoa-core/crypto";
 import { Apollo } from "@stoachain/stoa-core/dalos";
-import { buildApolloOwnershipMessage } from "@ancientpantheon/codex/ui";
+import { buildApolloOwnershipMessage } from "@ancientpantheon/codex/ouronet";
 
-import { MnemosyneApolloSigner, createMnemosyneApolloSigner } from "../lib/pythia/apolloSigner";
+import { createMnemosyneApolloSigner } from "../lib/pythia/apolloSigner";
 import { getOrCreateCodexPassword, saveBackup } from "../lib/mnemosyneCodexStore";
 
 /**
- * `MnemosyneApolloSigner` — the off-chain proof-of-possession seam Pythia's
- * connector-auth challenge/verify protocol needs (organs/06 §1c). Exercised
- * against a REAL sealed codex in a temp dir, mirroring
- * `tests/khronoton-key-resolver.test.ts`'s fixture-building approach exactly:
- * a machine password is minted, fixture secrets are encrypted under it with
- * `encryptStringV2` (the same envelope `smartDecrypt` reverses), and the
- * signer must decrypt precisely the requested entry and produce a signature
- * that verifies against the account's REAL Apollo public key — not just "was
- * called", but a genuine cryptographic round trip.
+ * `createMnemosyneApolloSigner` — the connector-auth off-chain
+ * proof-of-possession seam (Pythia's `/connectors/auth/*` challenge/verify
+ * protocol). Post-rework it is a THIN delegate to Codex's own
+ * `autoSignApolloChallenge` (`@ancientpantheon/codex/ouronet`), mirroring
+ * Pythia's `createCodexApolloSigner`: no hand-rolled `@stoachain` derivation.
  *
- * Two fixture entry shapes are covered, since `lib/pythia/apolloSigner.ts`
- * mirrors `keyResolver.ts`'s multi-source lookup:
- *   - an `ouroAccounts` entry (the shape `signApolloOwnership` is directly
- *     typed for: `address`/`isSmart` already present, secret is seed words).
- *   - a `pureKeypairs` entry shaped like `lib/pythia/apolloIdentity.ts`'s
- *     `ensureConnectorApolloPair` output (`publicKey` is the raw base-49
- *     Apollo public key, NOT a `₱./Π.` address; the encrypted secret is the
- *     raw base-49 private scalar, NOT seed words) — proving the signer
- *     correctly re-derives the prefixed address and decodes the secret in
- *     `integerBase49` mode rather than misreading it as seed-word text.
+ * The whole guarantee is exercised against a REAL sealed codex in a temp dir
+ * (same fixture idiom as `tests/khronoton-key-resolver.test.ts`): a machine
+ * password is minted, the fixture Apollo secret is encrypted under it with
+ * `encryptStringV2` (the envelope `autoSignApolloChallenge`'s `smartDecrypt`
+ * reverses), and the signer must run the REAL delegate to produce a signature
+ * that verifies against the account's REAL Apollo public key for the canonical
+ * ownership message — a genuine cryptographic round trip, not a mocked call.
+ *
+ * `autoSignApolloChallenge` locates the account in `snapshot.ouroAccounts` by
+ * `.address`, so both a Standard (`₱.`) and a Smart (`Π.`) `ouroAccounts`
+ * entry are covered — the two halves a dual-link pair signs for.
  */
 
-const OURO_WORDS = ["mnemosyne", "codex", "apollo", "ownership", "ouro", "account", "fixture", "words"];
-const OURO_FULL = Apollo.generateFromSeedWords(OURO_WORDS);
+const STANDARD_WORDS = ["mnemosyne", "codex", "apollo", "ownership", "standard", "half", "fixture", "words"];
+const STANDARD_FULL = Apollo.generateFromSeedWords(STANDARD_WORDS);
+const STANDARD_ADDRESS = STANDARD_FULL.standardAddress;
 
-const SMART_HALF = Apollo.generateFromSeedWords(["pythia", "connector", "smart", "half", "seed", "fixture"]);
-const SMART_ADDRESS = Apollo.publicKeyToAddress(SMART_HALF.keyPair.publ, true);
+const SMART_WORDS = ["pythia", "connector", "smart", "half", "seed", "fixture", "words", "here"];
+const SMART_FULL = Apollo.generateFromSeedWords(SMART_WORDS);
+const SMART_ADDRESS = SMART_FULL.smartAddress;
+
+const RP = "https://pythia.example";
 
 /** `CryptographicPrimitive.verify` is optional on the interface; `Apollo`'s
  * concrete instance always implements it. Narrows that for the assertions
@@ -60,26 +61,29 @@ beforeAll(async () => {
     kadenaSeeds: [],
     ouroAccounts: [
       {
-        id: "ouro-1",
-        publicKey: OURO_FULL.keyPair.publ,
-        secret: await encryptStringV2(OURO_WORDS.join(" "), password),
-        backup: await encryptStringV2(OURO_WORDS.join(" "), password),
-        address: OURO_FULL.standardAddress,
+        id: "ouro-standard",
+        publicKey: STANDARD_FULL.keyPair.publ,
+        secret: await encryptStringV2(STANDARD_WORDS.join(" "), password),
+        backup: await encryptStringV2(STANDARD_WORDS.join(" "), password),
+        address: STANDARD_ADDRESS,
         isSmart: false,
         version: "1",
         guard: null,
         stoaChainLedger: null,
       },
-    ],
-    pureKeypairs: [
       {
-        id: randomUUID(),
-        label: "pythia-connector-smart",
-        publicKey: SMART_HALF.keyPair.publ,
-        encryptedPrivateKey: await encryptStringV2(SMART_HALF.keyPair.priv, password),
-        createdAt: new Date().toISOString(),
+        id: "ouro-smart",
+        publicKey: SMART_FULL.keyPair.publ,
+        secret: await encryptStringV2(SMART_WORDS.join(" "), password),
+        backup: await encryptStringV2(SMART_WORDS.join(" "), password),
+        address: SMART_ADDRESS,
+        isSmart: true,
+        version: "1",
+        guard: null,
+        stoaChainLedger: null,
       },
     ],
+    pureKeypairs: [],
     addressBook: [],
     watchList: [],
     uiSettings: {},
@@ -96,81 +100,59 @@ afterAll(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-describe("pythia apollo signer — sealed operator codex off-chain proof-of-possession", () => {
-  it("signs a real, verifiable proof for an ouroAccounts-held Apollo account", async () => {
-    const signer = new MnemosyneApolloSigner();
+describe("pythia apollo signer — Codex autoSignApolloChallenge delegate", () => {
+  it("signs a real, verifiable proof for a Standard (₱.) Apollo account held in the codex", async () => {
+    const signer = createMnemosyneApolloSigner(STANDARD_ADDRESS);
     const { signature } = await signer.sign({
-      apolloAccount: OURO_FULL.standardAddress,
-      nonce: "nonce-ouro-1",
-      rp: "https://pythia.example",
+      apolloAccount: STANDARD_ADDRESS,
+      nonce: "nonce-standard",
+      rp: RP,
     });
 
-    const message = buildApolloOwnershipMessage(
-      OURO_FULL.standardAddress,
-      "nonce-ouro-1",
-      "https://pythia.example",
-    );
-    expect(apolloVerify(signature, message, OURO_FULL.keyPair.publ)).toBe(true);
+    const message = buildApolloOwnershipMessage(STANDARD_ADDRESS, "nonce-standard", RP);
+    expect(apolloVerify(signature, message, STANDARD_FULL.keyPair.publ)).toBe(true);
   });
 
-  it("signs a real, verifiable proof for a pureKeypairs-held connector identity half, keyed by its ₱./Π. address", async () => {
-    const signer = new MnemosyneApolloSigner();
+  it("signs a real, verifiable proof for a Smart (Π.) Apollo account, using the smart-half public key", async () => {
+    const signer = createMnemosyneApolloSigner(SMART_ADDRESS);
     const { signature } = await signer.sign({
       apolloAccount: SMART_ADDRESS,
-      nonce: "nonce-smart-1",
-      rp: "https://pythia.example",
+      nonce: "nonce-smart",
+      rp: RP,
     });
 
-    // The signed message must be built from the ADDRESS that was actually
-    // asked to be signed for (`input.apolloAccount`, verbatim) — this is what
-    // Pythia's real `/connectors/auth/*` endpoints require (162-char,
-    // `₱./Π.`-prefixed), not the raw base-49 public key stored in the codex.
-    const message = buildApolloOwnershipMessage(SMART_ADDRESS, "nonce-smart-1", "https://pythia.example");
-    expect(apolloVerify(signature, message, SMART_HALF.keyPair.publ)).toBe(true);
+    const message = buildApolloOwnershipMessage(SMART_ADDRESS, "nonce-smart", RP);
+    expect(apolloVerify(signature, message, SMART_FULL.keyPair.publ)).toBe(true);
   });
 
-  it("no longer matches a pureKeypairs entry by its RAW public key — only by its derived address", async () => {
-    // Regression guard for the confirmed bug: the raw base-49 public key is
-    // NOT a valid `apolloAccount` on Pythia's wire protocol (it rejects
-    // anything that isn't exactly a 162-char `₱./Π.`-prefixed address), so
-    // the signer must not silently accept it as a match either.
-    const signer = new MnemosyneApolloSigner();
+  it("is scoped to its factory account — refuses to sign for a different apolloAccount", async () => {
+    // The connector builds one signer per half (`createMnemosyneApolloSigner(halves.standardApollo)`
+    // etc.); a signer must never mint a proof for an account it wasn't scoped to,
+    // even if that other account is also held by the codex.
+    const signer = createMnemosyneApolloSigner(STANDARD_ADDRESS);
     await expect(
-      signer.sign({
-        apolloAccount: SMART_HALF.keyPair.publ,
-        nonce: "nonce-raw-pubkey",
-        rp: "https://pythia.example",
-      }),
-    ).rejects.toThrow(/not held by the Mnemosyne operator codex/);
+      signer.sign({ apolloAccount: SMART_ADDRESS, nonce: "n", rp: RP }),
+    ).rejects.toThrow(/scoped to/);
   });
 
-  it("the factory produces an equivalent working signer", async () => {
-    const signer = createMnemosyneApolloSigner();
-    const { signature } = await signer.sign({
-      apolloAccount: OURO_FULL.standardAddress,
-      nonce: "nonce-factory",
-      rp: "https://pythia.example",
-    });
-    expect(typeof signature).toBe("string");
-    expect(signature.length).toBeGreaterThan(0);
-  });
-
-  it("throws a clear error when no account in the codex matches the requested apolloAccount", async () => {
-    const signer = new MnemosyneApolloSigner();
+  it("propagates a clear error when the scoped account is not held by the codex", async () => {
+    // `autoSignApolloChallenge` throws a named error (never a silent no-op) when
+    // the account isn't in the snapshot — the delegate must surface it.
+    const signer = createMnemosyneApolloSigner("₱.does-not-exist");
     await expect(
-      signer.sign({ apolloAccount: "₱.does-not-exist", nonce: "n", rp: "https://pythia.example" }),
-    ).rejects.toThrow(/not held by the Mnemosyne operator codex/);
+      signer.sign({ apolloAccount: "₱.does-not-exist", nonce: "n", rp: RP }),
+    ).rejects.toThrow(/isn't in this Codex snapshot|does-not-exist/);
   });
 
-  it("throws a clear error when the codex is not initialized", async () => {
+  it("throws a clear error when the operator codex is not initialized", async () => {
     const emptyDir = mkdtempSync(join(tmpdir(), "mnemo-pythia-apollo-signer-empty-"));
     const priorDir = process.env.MNEMOSYNE_CODEX_DIR;
     process.env.MNEMOSYNE_CODEX_DIR = emptyDir;
     try {
-      const signer = new MnemosyneApolloSigner();
+      const signer = createMnemosyneApolloSigner(STANDARD_ADDRESS);
       await expect(
-        signer.sign({ apolloAccount: OURO_FULL.standardAddress, nonce: "n", rp: "https://pythia.example" }),
-      ).rejects.toThrow(/codex is not initialized/);
+        signer.sign({ apolloAccount: STANDARD_ADDRESS, nonce: "n", rp: RP }),
+      ).rejects.toThrow(/not initialized/);
     } finally {
       process.env.MNEMOSYNE_CODEX_DIR = priorDir;
       rmSync(emptyDir, { recursive: true, force: true });

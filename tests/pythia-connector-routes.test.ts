@@ -1,43 +1,71 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 
-import type { ConnectorStatus } from "../lib/pythia/connectorStatus";
-
 /**
- * `app/api/admin/pythia-connector/route.ts` (POST) and
- * `app/api/admin/pythia-connector/status/route.ts` (GET) — ancient-gated
- * onboarding trigger + status poll. `startOnboarding`/`readConnectorStatus`
- * are mocked so no real onboarding work (chain calls, codex writes) ever
- * fires from this test — only the route's own auth/body/status-branching
- * logic is under test here (T6's own behavior is covered by
- * `tests/pythia-onboarding-job.test.ts`).
+ * `app/api/admin/pythia-connector/route.ts` (POST + DELETE) and
+ * `app/api/admin/pythia-connector/status/route.ts` (GET) — the reworked,
+ * dual-link-key-driven connector admin surface (all on-chain onboarding
+ * removed). Everything the routes reach past the auth gate is mocked so no
+ * real SDK / codex / disk work fires: only the routes' own
+ * auth/validation/codex-held/persistence branching is under test.
+ *
+ *  - `splitDualLinkKey` — throws on a malformed key (→ 400), else returns the
+ *    two halves.
+ *  - `maskSecret` — the status route's secret masker.
+ *  - `loadCodexSnapshot` — the operator codex snapshot the POST route checks
+ *    both halves against.
+ *  - `writeConnectorState` / `clearConnectorState` / `readConnectorState` —
+ *    the persistence seam.
+ *  - `getDualLinkConnector` — the live connector whose `status()` the GET
+ *    route surfaces.
  */
-const { startOnboardingMock, readConnectorStatusMock } = vi.hoisted(() => ({
-  startOnboardingMock: vi.fn(),
-  readConnectorStatusMock: vi.fn(),
+const {
+  splitDualLinkKeyMock,
+  maskSecretMock,
+  loadCodexSnapshotMock,
+  writeConnectorStateMock,
+  clearConnectorStateMock,
+  readConnectorStateMock,
+  getDualLinkConnectorMock,
+} = vi.hoisted(() => ({
+  splitDualLinkKeyMock: vi.fn(),
+  maskSecretMock: vi.fn(),
+  loadCodexSnapshotMock: vi.fn(),
+  writeConnectorStateMock: vi.fn(),
+  clearConnectorStateMock: vi.fn(),
+  readConnectorStateMock: vi.fn(),
+  getDualLinkConnectorMock: vi.fn(),
 }));
 
-vi.mock("../lib/pythia/onboardingJob", () => ({
-  startOnboarding: startOnboardingMock,
+vi.mock("@ancientpantheon/pythia-client", () => ({
+  splitDualLinkKey: splitDualLinkKeyMock,
+  maskSecret: maskSecretMock,
+}));
+
+vi.mock("../lib/pythia/codexSnapshot", () => ({
+  loadCodexSnapshot: loadCodexSnapshotMock,
+  ouroAccountsOf: (snapshot: { ouroAccounts?: unknown }) =>
+    Array.isArray(snapshot.ouroAccounts) ? snapshot.ouroAccounts : [],
 }));
 
 vi.mock("../lib/pythia/connectorStatus", () => ({
-  readConnectorStatus: readConnectorStatusMock,
+  writeConnectorState: writeConnectorStateMock,
+  clearConnectorState: clearConnectorStateMock,
+  readConnectorState: readConnectorStateMock,
 }));
 
-import { POST } from "../app/api/admin/pythia-connector/route";
+vi.mock("../lib/pythia/connectorClient", () => ({
+  getDualLinkConnector: getDualLinkConnectorMock,
+}));
+
+import { POST, DELETE } from "../app/api/admin/pythia-connector/route";
 import { GET as GET_STATUS } from "../app/api/admin/pythia-connector/status/route";
 import { signSession } from "../lib/auth/session";
 
 const SECRET = "pythia-connector-routes-test-session-secret!!";
 
-const IDLE_STATUS: ConnectorStatus = {
-  stage: "idle",
-  standardApollo: null,
-  smartApollo: null,
-  startedAt: null,
-  updatedAt: null,
-  lastError: null,
-};
+const STANDARD = "₱.standard-account-half";
+const SMART = "Π.smart-account-half";
+const DUAL_LINK_KEY = `${STANDARD}|${SMART}`;
 
 function postReq(cookie: string | undefined, body?: unknown): Request {
   return new Request("http://localhost:3005/api/admin/pythia-connector", {
@@ -47,6 +75,13 @@ function postReq(cookie: string | undefined, body?: unknown): Request {
       ...(body !== undefined ? { "content-type": "application/json" } : {}),
     },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  });
+}
+
+function deleteReq(cookie?: string): Request {
+  return new Request("http://localhost:3005/api/admin/pythia-connector", {
+    method: "DELETE",
+    headers: { ...(cookie ? { cookie } : {}) },
   });
 }
 
@@ -66,6 +101,11 @@ async function modernCookie(): Promise<string> {
   return `mnemosyne_session=${token}`;
 }
 
+/** A codex snapshot whose `ouroAccounts` hold exactly the given addresses. */
+function snapshotHolding(...addresses: string[]) {
+  return { ouroAccounts: addresses.map((address) => ({ address })) };
+}
+
 beforeAll(() => {
   process.env.OIDC_CLIENT_ID = "mnemosyne-test";
   process.env.OIDC_CLIENT_SECRET = "test-secret";
@@ -78,59 +118,94 @@ afterAll(() => {
 });
 
 beforeEach(() => {
-  startOnboardingMock.mockReset();
-  readConnectorStatusMock.mockReset();
-  readConnectorStatusMock.mockReturnValue({ ...IDLE_STATUS });
+  splitDualLinkKeyMock.mockReset();
+  maskSecretMock.mockReset();
+  loadCodexSnapshotMock.mockReset();
+  writeConnectorStateMock.mockReset();
+  clearConnectorStateMock.mockReset();
+  readConnectorStateMock.mockReset();
+  getDualLinkConnectorMock.mockReset();
 });
 
 describe("POST /api/admin/pythia-connector", () => {
-  it("401s with no session", async () => {
-    const res = await POST(postReq(undefined, { acknowledgedSpend: true }));
+  it("401s with no session and never touches persistence", async () => {
+    const res = await POST(postReq(undefined, { dualLinkKey: DUAL_LINK_KEY }));
     expect(res.status).toBe(401);
-    expect(startOnboardingMock).not.toHaveBeenCalled();
+    expect(splitDualLinkKeyMock).not.toHaveBeenCalled();
+    expect(writeConnectorStateMock).not.toHaveBeenCalled();
   });
 
-  it("403s for a non-ancient session", async () => {
-    const res = await POST(postReq(await modernCookie(), { acknowledgedSpend: true }));
+  it("403s for a non-ancient session and never touches persistence", async () => {
+    const res = await POST(postReq(await modernCookie(), { dualLinkKey: DUAL_LINK_KEY }));
     expect(res.status).toBe(403);
-    expect(startOnboardingMock).not.toHaveBeenCalled();
+    expect(writeConnectorStateMock).not.toHaveBeenCalled();
   });
 
-  it("400s when acknowledgedSpend is not true", async () => {
-    const res = await POST(postReq(await ancientCookie(), { acknowledgedSpend: false }));
+  it("400s with the SDK's error message on a malformed dual-link-key", async () => {
+    splitDualLinkKeyMock.mockImplementation(() => {
+      throw new Error("dual-link-key must be exactly 325 chars");
+    });
+
+    const res = await POST(postReq(await ancientCookie(), { dualLinkKey: "too-short" }));
+
     expect(res.status).toBe(400);
-    expect(startOnboardingMock).not.toHaveBeenCalled();
+    const body = await res.json();
+    expect(body.error).toBe("dual-link-key must be exactly 325 chars");
+    expect(writeConnectorStateMock).not.toHaveBeenCalled();
   });
 
-  it("400s when acknowledgedSpend is missing entirely", async () => {
-    const res = await POST(postReq(await ancientCookie(), {}));
+  it("400s when a half is not held by the codex, without persisting", async () => {
+    splitDualLinkKeyMock.mockReturnValue({ standardApollo: STANDARD, smartApollo: SMART });
+    // Codex holds only the standard half; the smart half is missing.
+    loadCodexSnapshotMock.mockResolvedValue(snapshotHolding(STANDARD));
+
+    const res = await POST(postReq(await ancientCookie(), { dualLinkKey: DUAL_LINK_KEY }));
+
     expect(res.status).toBe(400);
-    expect(startOnboardingMock).not.toHaveBeenCalled();
+    const body = await res.json();
+    expect(body.error).toContain(SMART);
+    expect(body.error).toContain("Codex tab");
+    expect(writeConnectorStateMock).not.toHaveBeenCalled();
   });
 
-  it("202s and starts onboarding when acknowledged and status is idle", async () => {
-    readConnectorStatusMock.mockReturnValue({ ...IDLE_STATUS });
+  it("200s and stores the split halves when both are held by the codex", async () => {
+    splitDualLinkKeyMock.mockReturnValue({ standardApollo: STANDARD, smartApollo: SMART });
+    loadCodexSnapshotMock.mockResolvedValue(snapshotHolding(STANDARD, SMART));
 
-    const res = await POST(postReq(await ancientCookie(), { acknowledgedSpend: true }));
+    const res = await POST(postReq(await ancientCookie(), { dualLinkKey: DUAL_LINK_KEY }));
 
-    expect(res.status).toBe(202);
-    expect(startOnboardingMock).toHaveBeenCalledTimes(1);
+    expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);
-    expect(body.status).toEqual(IDLE_STATUS);
+    expect(writeConnectorStateMock).toHaveBeenCalledTimes(1);
+    const stored = writeConnectorStateMock.mock.calls[0][0];
+    expect(stored.dualLinkKey).toBe(DUAL_LINK_KEY);
+    expect(stored.standardApollo).toBe(STANDARD);
+    expect(stored.smartApollo).toBe(SMART);
+    expect(typeof stored.linkedAt).toBe("string");
+    expect(Number.isNaN(Date.parse(stored.linkedAt))).toBe(false);
+  });
+});
+
+describe("DELETE /api/admin/pythia-connector", () => {
+  it("401s with no session and never clears", async () => {
+    const res = await DELETE(deleteReq());
+    expect(res.status).toBe(401);
+    expect(clearConnectorStateMock).not.toHaveBeenCalled();
   });
 
-  it("409s without starting a new run when status is already mid-run", async () => {
-    const midRun: ConnectorStatus = { ...IDLE_STATUS, stage: "linking" };
-    readConnectorStatusMock.mockReturnValue(midRun);
+  it("403s for a non-ancient session and never clears", async () => {
+    const res = await DELETE(deleteReq(await modernCookie()));
+    expect(res.status).toBe(403);
+    expect(clearConnectorStateMock).not.toHaveBeenCalled();
+  });
 
-    const res = await POST(postReq(await ancientCookie(), { acknowledgedSpend: true }));
-
-    expect(res.status).toBe(409);
-    expect(startOnboardingMock).not.toHaveBeenCalled();
+  it("200s and clears the stored key for an ancient", async () => {
+    const res = await DELETE(deleteReq(await ancientCookie()));
+    expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.error).toBe("onboarding already in progress");
-    expect(body.status).toEqual(midRun);
+    expect(body.ok).toBe(true);
+    expect(clearConnectorStateMock).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -145,21 +220,62 @@ describe("GET /api/admin/pythia-connector/status", () => {
     expect(res.status).toBe(403);
   });
 
-  it("200s with the current status shape for an ancient", async () => {
-    const inProgress: ConnectorStatus = {
-      stage: "deploying-standard",
-      standardApollo: "pub-standard",
-      smartApollo: null,
-      startedAt: "2026-07-31T00:00:00.000Z",
-      updatedAt: "2026-07-31T00:00:01.000Z",
-      lastError: null,
+  it("200s with the live status shape and a MASKED secret when active", async () => {
+    readConnectorStateMock.mockReturnValue({
+      dualLinkKey: DUAL_LINK_KEY,
+      standardApollo: STANDARD,
+      smartApollo: SMART,
+      linkedAt: "2026-08-03T00:00:00.000Z",
+    });
+    const liveStatus = {
+      standard: { status: "active", secret: "raw-secret-value", expiresAt: 1_800_000 },
+      smart: { status: "pending" },
+      secret: "raw-secret-value",
+      expiresAt: 1_800_000,
     };
-    readConnectorStatusMock.mockReturnValue(inProgress);
+    getDualLinkConnectorMock.mockReturnValue({ status: () => liveStatus });
+    maskSecretMock.mockReturnValue("ra***ue");
+
+    const res = await GET_STATUS(getReq(await ancientCookie()));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    const body = await res.json();
+    expect(body.linked).toBe(true);
+    expect(body.standardApollo).toBe(STANDARD);
+    expect(body.smartApollo).toBe(SMART);
+    // The active half is passed through, but its RAW secret is stripped — only the
+    // status label + expiry cross the wire (the raw x-pythia-key must never leak in a
+    // per-half object beside the masked field).
+    expect(body.standard).toEqual({ status: "active", expiresAt: 1_800_000 });
+    expect(body.standard.secret).toBeUndefined();
+    expect(body.smart).toEqual({ status: "pending" });
+    expect(body.expiresAt).toBe(1_800_000);
+    // The ONLY secret material on the wire is the single top-level masked form.
+    expect(maskSecretMock).toHaveBeenCalledWith("raw-secret-value");
+    expect(body.maskedSecret).toBe("ra***ue");
+    // Belt-and-braces: the raw secret string appears nowhere in the serialized body.
+    expect(JSON.stringify(body)).not.toContain("raw-secret-value");
+  });
+
+  it("200s with all-null halves/secret and linked:false when nothing is linked", async () => {
+    readConnectorStateMock.mockReturnValue({
+      dualLinkKey: null,
+      standardApollo: null,
+      smartApollo: null,
+      linkedAt: null,
+    });
+    getDualLinkConnectorMock.mockReturnValue(null);
 
     const res = await GET_STATUS(getReq(await ancientCookie()));
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toEqual(inProgress);
+    expect(body.linked).toBe(false);
+    expect(body.standard).toBeNull();
+    expect(body.smart).toBeNull();
+    expect(body.maskedSecret).toBeNull();
+    expect(body.expiresAt).toBeNull();
+    expect(maskSecretMock).not.toHaveBeenCalled();
   });
 });

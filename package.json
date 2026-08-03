@@ -1,6 +1,6 @@
 {
   "name": "mnemosyne",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,7 +14,7 @@
   "dependencies": {
     "@ancientpantheon/codex": "^0.8.0",
     "@ancientpantheon/khronoton-core": "^0.4.2",
-    "@ancientpantheon/pythia-client": "^2.3.0",
+    "@ancientpantheon/pythia-client": "^2.7.17",
     "@ardrive/turbo-sdk": "^1.42.0",
     "@codemirror/autocomplete": "^6.18.0",
     "@codemirror/language": "^6.12.1",

@@ -2,40 +2,44 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 
-/** `GET /api/admin/pythia-connector/status` payload — mirrors `ConnectorStatus`. */
+/** One half of the dual-link pair as reported by the status route. The raw per-half
+ *  `secret` from `DualLinkConnector.status()` is STRIPPED server-side and never crosses
+ *  the wire — only the masked, top-level `maskedSecret` does. */
+type ConnectorHalfStatus =
+  | { status: "pending" }
+  | { status: "active"; expiresAt: number };
+
+/**
+ * `GET /api/admin/pythia-connector/status` payload. The route derives this from the
+ * stored dual-link-key + the live `DualLinkConnector.status()`; `maskedSecret` is
+ * already masked server-side (display verbatim — never unmask).
+ */
 interface ConnectorStatus {
-  stage:
-    | "idle"
-    | "ensuring-identity"
-    | "deploying-standard"
-    | "deploying-smart"
-    | "linking"
-    | "proving-standard"
-    | "proving-smart"
-    | "success"
-    | "failed";
+  linked: boolean;
   standardApollo: string | null;
   smartApollo: string | null;
-  startedAt: string | null;
-  updatedAt: string | null;
-  lastError: string | null;
+  standard: ConnectorHalfStatus | null;
+  smart: ConnectorHalfStatus | null;
+  maskedSecret: string | null;
+  expiresAt: number | null;
 }
 
 const CONNECTOR_STATUS_POLL_MS = 4000;
 
-const stageLabel = (stage: ConnectorStatus["stage"] | undefined): string => {
-  switch (stage) {
-    case undefined:
-      return "checking…";
-    case "idle":
-      return "not started";
-    case "success":
-      return "active";
-    case "failed":
-      return "failed";
-    default:
-      return `in progress — ${stage}`;
-  }
+const halfLabel = (half: ConnectorHalfStatus | null | undefined): string => {
+  if (half == null) return "checking…";
+  return half.status === "active" ? "active" : "pending";
+};
+
+/** Human "in Nm Ns" / "expired" countdown from a `DualLinkConnector` expiry epoch (ms). */
+const expiryCountdown = (expiresAt: number | null, now: number): string => {
+  if (expiresAt === null) return "—";
+  const remaining = expiresAt - now;
+  if (remaining <= 0) return "expired";
+  const totalSeconds = Math.floor(remaining / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}m ${seconds}s`;
 };
 
 /**
@@ -132,19 +136,24 @@ function PythiaConnectorSection(): ReactElement {
 }
 
 /**
- * Pythia connector identity: onboards Mnemosyne's dual-Apollo (Standard `₱` + Smart
- * `Π`) connector-auth identity — an irreversible, real-cost (STOA) on-chain action.
+ * Pythia connector identity: links Mnemosyne to its dual-Apollo (Standard + Smart)
+ * connector-auth pair by pasting a **dual-link-key** — the two Apollo account
+ * addresses joined by `|`. The pair itself is generated and activated on-chain
+ * ("Activate as Pythia Key") in the Codex tab; this panel only stores the resulting
+ * public key and reports live status.
+ *
  * On mount, GETs the ancient-gated `/api/admin/pythia-connector/status` for the
- * current stage (never any secret material). While a stage is in progress (not
- * idle/success/failed), polls the same endpoint on an interval so the operator sees
- * live progress without a manual refresh. The trigger is guarded by a required
- * acknowledgement checkbox and POSTs `{ acknowledgedSpend: true }`.
+ * derived status (linked/per-half/masked secret/expiry — the secret arrives already
+ * masked server-side, never unmasked here). While linked but not yet fully active,
+ * polls the same endpoint on an interval so the operator sees the ephemeral key mint
+ * without a manual refresh. `Link` POSTs `{ dualLinkKey }`; `Unlink` DELETEs.
  */
 function ConnectorIdentitySection(): ReactElement {
   const [status, setStatus] = useState<ConnectorStatus | null>(null);
-  const [acknowledged, setAcknowledged] = useState(false);
+  const [dualLinkKey, setDualLinkKey] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadStatus = useCallback(async () => {
@@ -154,7 +163,7 @@ function ConnectorIdentitySection(): ReactElement {
       });
       if (res.ok) setStatus((await res.json()) as ConnectorStatus);
     } catch {
-      /* leave status as-is — the stage row shows "checking…" until it resolves */
+      /* leave status as-is — the rows show "checking…" until it resolves */
     }
   }, []);
 
@@ -162,16 +171,21 @@ function ConnectorIdentitySection(): ReactElement {
     void loadStatus();
   }, [loadStatus]);
 
+  // Poll while linked but not yet both-active: the ephemeral x-pythia-key is minted
+  // by the codex-backed signers on the first gated request, so a freshly-linked pair
+  // sits "pending" until the connector proves each half. Stop once both halves are
+  // active (nothing left to watch) or when not linked at all.
   useEffect(() => {
-    const inProgress =
-      status !== null &&
-      status.stage !== "idle" &&
-      status.stage !== "success" &&
-      status.stage !== "failed";
+    const bothActive =
+      status?.standard?.status === "active" && status?.smart?.status === "active";
+    const shouldPoll = status?.linked === true && !bothActive;
 
-    if (inProgress && intervalRef.current === null) {
-      intervalRef.current = setInterval(() => void loadStatus(), CONNECTOR_STATUS_POLL_MS);
-    } else if (!inProgress && intervalRef.current !== null) {
+    if (shouldPoll && intervalRef.current === null) {
+      intervalRef.current = setInterval(() => {
+        setNow(Date.now());
+        void loadStatus();
+      }, CONNECTOR_STATUS_POLL_MS);
+    } else if (!shouldPoll && intervalRef.current !== null) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
@@ -184,106 +198,142 @@ function ConnectorIdentitySection(): ReactElement {
     };
   }, [status, loadStatus]);
 
-  const startOnboarding = useCallback(async () => {
+  const link = useCallback(async () => {
     setBusy(true);
     setError(null);
     try {
       const res = await fetch("/api/admin/pythia-connector", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ acknowledgedSpend: true }),
+        body: JSON.stringify({ dualLinkKey: dualLinkKey.trim() }),
       });
-      const body = (await res.json()) as { status?: ConnectorStatus; error?: string };
-      if (!res.ok) {
-        setError(body.error ?? `Onboarding failed to start (${res.status})`);
+      const body = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !body.ok) {
+        // The route surfaces the SDK's specific `splitDualLinkKey` message on a
+        // malformed key — show it verbatim so the operator can correct the paste.
+        setError(body.error ?? `Link failed (${res.status})`);
         return;
       }
-      if (body.status) setStatus(body.status);
+      setDualLinkKey("");
+      await loadStatus();
     } catch {
-      setError("Onboarding failed to start — network error.");
+      setError("Link failed — network error.");
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [dualLinkKey, loadStatus]);
 
-  // `busy` only spans the fire-and-forget initial POST (it resolves as soon as the
-  // background job is accepted with a 202) — the job itself can then run for minutes
-  // through stages like "deploying-standard"/"linking"/"proving-smart". The trigger
-  // must stay disabled for that whole window too, not just while `busy` is true, or a
-  // second click during a legitimate in-progress run hits the backend's 409 guard.
-  const activeOrRunning =
-    status !== null && status.stage !== "idle" && status.stage !== "failed";
+  const unlink = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/pythia-connector", { method: "DELETE" });
+      const body = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !body.ok) {
+        setError(body.error ?? `Unlink failed (${res.status})`);
+        return;
+      }
+      await loadStatus();
+    } catch {
+      setError("Unlink failed — network error.");
+    } finally {
+      setBusy(false);
+    }
+  }, [loadStatus]);
+
+  const linked = status?.linked === true;
 
   return (
     <section className="mnemo-admin-card">
       <h2 className="mnemo-admin-h2">Connector identity</h2>
       <p className="mnemo-admin-muted">
-        Onboards Mnemosyne&apos;s own dual-Apollo (Standard + Smart) connector-auth
-        identity with Pythia: deploys both Apollo accounts on-chain, links them, and
-        proves ownership. This spends real STOA and cannot be undone.
+        Generate Mnemosyne&apos;s Standard + Smart Apollo pair and click{" "}
+        <strong>Activate as Pythia Key</strong> in the{" "}
+        <a href="/admin#codex">Codex tab</a>
+        , then paste the resulting dual-link-key below. That key is two public Apollo
+        account addresses joined by <code>|</code> — never a secret.
       </p>
 
-      <ul className="mnemo-admin-chainlist">
-        <li>
-          <span className="mnemo-admin-chain">Stage</span>
-          <span
-            className={`mnemo-admin-badge${status?.stage === "success" ? " mnemo-admin-badge--live" : ""}`}
-          >
-            {stageLabel(status?.stage)}
-          </span>
-        </li>
-        {status?.standardApollo ? (
-          <li>
-            <span className="mnemo-admin-chain">Standard Apollo</span>
-            <span className="mnemo-admin-badge">{status.standardApollo}</span>
-          </li>
-        ) : null}
-        {status?.smartApollo ? (
-          <li>
-            <span className="mnemo-admin-chain">Smart Apollo</span>
-            <span className="mnemo-admin-badge">{status.smartApollo}</span>
-          </li>
-        ) : null}
-      </ul>
+      {linked ? (
+        <>
+          <ul className="mnemo-admin-chainlist">
+            <li>
+              <span className="mnemo-admin-chain">Standard Apollo</span>
+              <span className="mnemo-admin-badge">
+                {status?.standardApollo ?? "—"}
+              </span>
+            </li>
+            <li>
+              <span className="mnemo-admin-chain">Standard half</span>
+              <span
+                className={`mnemo-admin-badge${status?.standard?.status === "active" ? " mnemo-admin-badge--live" : ""}`}
+              >
+                {halfLabel(status?.standard)}
+              </span>
+            </li>
+            <li>
+              <span className="mnemo-admin-chain">Smart Apollo</span>
+              <span className="mnemo-admin-badge">
+                {status?.smartApollo ?? "—"}
+              </span>
+            </li>
+            <li>
+              <span className="mnemo-admin-chain">Smart half</span>
+              <span
+                className={`mnemo-admin-badge${status?.smart?.status === "active" ? " mnemo-admin-badge--live" : ""}`}
+              >
+                {halfLabel(status?.smart)}
+              </span>
+            </li>
+            <li>
+              <span className="mnemo-admin-chain">Active key</span>
+              <span className="mnemo-admin-badge">
+                {status?.maskedSecret ?? "not yet minted"}
+              </span>
+            </li>
+            <li>
+              <span className="mnemo-admin-chain">Expires in</span>
+              <span className="mnemo-admin-badge">
+                {expiryCountdown(status?.expiresAt ?? null, now)}
+              </span>
+            </li>
+          </ul>
 
-      <p className="mnemo-admin-muted">
-        <label>
+          <div className="mnemo-admin-row">
+            <button
+              type="button"
+              className="mnemo-admin-btn"
+              disabled={busy}
+              onClick={() => void unlink()}
+            >
+              {busy ? "Working…" : "Unlink"}
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="mnemo-admin-row">
           <input
-            type="checkbox"
-            checked={acknowledged}
+            className="mnemo-admin-input"
+            type="text"
+            placeholder="standard-apollo|smart-apollo"
+            value={dualLinkKey}
+            onChange={(e) => setDualLinkKey(e.target.value)}
             disabled={busy}
-            onChange={(e) => setAcknowledged(e.target.checked)}
-          />{" "}
-          I understand this deploys two Apollo accounts on-chain and spends real STOA
-          (irreversible).
-        </label>
-      </p>
-
-      <div className="mnemo-admin-row">
-        <button
-          type="button"
-          className="mnemo-admin-btn mnemo-admin-btn--primary"
-          disabled={busy || !acknowledged || activeOrRunning}
-          onClick={() => void startOnboarding()}
-        >
-          {busy
-            ? "Starting…"
-            : activeOrRunning
-              ? status?.stage === "success"
-                ? "Already onboarded"
-                : "In progress…"
-              : "Start onboarding"}
-        </button>
-      </div>
+          />
+          <button
+            type="button"
+            className="mnemo-admin-btn mnemo-admin-btn--primary"
+            disabled={busy || dualLinkKey.trim() === ""}
+            onClick={() => void link()}
+          >
+            {busy ? "Linking…" : "Link"}
+          </button>
+        </div>
+      )}
 
       {error ? (
         <p className="mnemo-admin-status" role="alert">
           {error}
-        </p>
-      ) : null}
-      {status?.lastError ? (
-        <p className="mnemo-admin-status" role="alert">
-          {status.lastError}
         </p>
       ) : null}
     </section>

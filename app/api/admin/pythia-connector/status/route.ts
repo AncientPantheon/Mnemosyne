@@ -1,24 +1,57 @@
+import { maskSecret, type DualLinkHalfStatus } from "@ancientpantheon/pythia-client";
 import { type NextRequest } from "next/server";
 
 import { requireAncient } from "@/lib/auth/guard";
-import { readConnectorStatus } from "@/lib/pythia/connectorStatus";
+import { getDualLinkConnector } from "@/lib/pythia/connectorClient";
+import { readConnectorState } from "@/lib/pythia/connectorStatus";
 
 export const dynamic = "force-dynamic";
 
 const NO_STORE = { "Cache-Control": "no-store" } as const;
 
 /**
- * Ancient-gated poll target for the Pythia connector-auth onboarding job's
- * status (`POST /api/admin/pythia-connector`,
- * `app/api/admin/pythia-connector/route.ts`, is what starts it). Simple
- * passthrough of `readConnectorStatus()` — no side effects, safe to poll
- * freely while a stage is in progress.
+ * Ancient-gated live status for the Pythia connector panel. Combines the
+ * persisted state (`readConnectorState` — the pasted key + its two public
+ * Apollo halves) with the live, in-memory `DualLinkConnector.status()`
+ * (`getDualLinkConnector`), so the panel can render per-half pending/active
+ * plus an expiry countdown. The ephemeral `x-pythia-key` secret is NEVER
+ * returned raw — only its `maskSecret`-ed form as the single top-level
+ * `maskedSecret`. `DualLinkHalfStatus`'s ACTIVE variant carries the raw secret,
+ * so each half is passed through {@link publicHalf}, which strips it — otherwise
+ * the live bearer credential would leak in `standard.secret`/`smart.secret`
+ * right beside the field we bothered to mask.
  *
  * `401` unauthenticated, `403` non-ancient.
  */
+type PublicHalf = { status: "pending" } | { status: "active"; expiresAt: number };
+
+/** Strip the raw per-half `secret` from a `DualLinkHalfStatus` — only the
+ *  status label + (when active) the expiry ever cross the wire. */
+function publicHalf(half: DualLinkHalfStatus | undefined): PublicHalf | null {
+  if (half == null) return null;
+  return half.status === "active"
+    ? { status: "active", expiresAt: half.expiresAt }
+    : { status: "pending" };
+}
+
 export async function GET(request: NextRequest) {
   const gate = await requireAncient(request);
   if (!gate.ok) return gate.response;
 
-  return Response.json(readConnectorStatus(), { headers: NO_STORE });
+  const state = readConnectorState();
+  const status = getDualLinkConnector()?.status() ?? null;
+  const maskedSecret = status?.secret != null ? maskSecret(status.secret) : null;
+
+  return Response.json(
+    {
+      linked: state.dualLinkKey != null,
+      standardApollo: state.standardApollo,
+      smartApollo: state.smartApollo,
+      standard: publicHalf(status?.standard),
+      smart: publicHalf(status?.smart),
+      maskedSecret,
+      expiresAt: status?.expiresAt ?? null,
+    },
+    { headers: NO_STORE },
+  );
 }

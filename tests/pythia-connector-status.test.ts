@@ -1,12 +1,13 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
 import {
-  readConnectorStatus,
-  writeConnectorStatus,
-  type ConnectorStatus,
+  readConnectorState,
+  writeConnectorState,
+  clearConnectorState,
+  type ConnectorState,
 } from "../lib/pythia/connectorStatus";
 
 const dirs: string[] = [];
@@ -20,41 +21,59 @@ afterEach(() => {
   while (dirs.length) rmSync(dirs.pop() as string, { recursive: true, force: true });
 });
 
-const DEFAULT_STATUS: ConnectorStatus = {
-  stage: "idle",
+const DEFAULT_STATE: ConnectorState = {
+  dualLinkKey: null,
   standardApollo: null,
   smartApollo: null,
-  startedAt: null,
-  updatedAt: null,
-  lastError: null,
+  linkedAt: null,
 };
 
-describe("connectorStatus store — non-secret onboarding status persistence", () => {
-  it("defaults to idle with all fields null when the status file does not exist yet", () => {
-    // A fresh deploy (or a deploy that has never run onboarding) has no status
-    // file; the store must default rather than crash the admin panel poll.
-    expect(readConnectorStatus(join(tempFile(), "nope", "missing.json"))).toEqual(
-      DEFAULT_STATUS,
+describe("connectorStatus store — pasted dual-link-key persistence", () => {
+  it("defaults to an all-null state when the store file does not exist yet", () => {
+    // A fresh deploy (or one where no dual-link-key has been pasted) has no store
+    // file; the read must default rather than crash the admin status poll.
+    expect(readConnectorState(join(tempFile(), "nope", "missing.json"))).toEqual(
+      DEFAULT_STATE,
     );
   });
 
-  it("round-trips a written status through disk (persists across restarts / poll requests)", () => {
+  it("round-trips a fully-populated state through disk (survives restarts / poll requests)", () => {
+    // The pasted key + its split halves + the link timestamp must persist so the
+    // connector can be rebuilt after a process restart.
     const path = tempFile();
-    const status: ConnectorStatus = {
-      stage: "linking",
-      standardApollo: "p:abc123",
-      smartApollo: "P:def456",
-      startedAt: "2026-07-31T00:00:00.000Z",
-      updatedAt: "2026-07-31T00:05:00.000Z",
-      lastError: null,
+    const state: ConnectorState = {
+      dualLinkKey: "p:standard-account|P:smart-account",
+      standardApollo: "p:standard-account",
+      smartApollo: "P:smart-account",
+      linkedAt: "2026-08-03T00:00:00.000Z",
     };
-    writeConnectorStatus(status, path);
-    expect(readConnectorStatus(path)).toEqual(status);
+    writeConnectorState(state, path);
+    expect(readConnectorState(path)).toEqual(state);
   });
 
-  it("falls back to defaults on a corrupt status file rather than throwing (must not brick the status poll)", () => {
+  it("falls back to defaults on a corrupt store file rather than throwing (must not brick the status poll)", () => {
+    // A hand-edited / truncated file must not crash the admin panel — it collapses
+    // to the not-linked default state.
     const path = tempFile();
     writeFileSync(path, "{ not json", "utf8");
-    expect(readConnectorStatus(path)).toEqual(DEFAULT_STATUS);
+    expect(readConnectorState(path)).toEqual(DEFAULT_STATE);
+  });
+
+  it("clears a stored key back to the all-null default state (operator un-link)", () => {
+    // Un-linking must return the store to not-linked so the connector goes back to
+    // an unattributed client on the next read.
+    const path = tempFile();
+    writeConnectorState(
+      {
+        dualLinkKey: "p:standard-account|P:smart-account",
+        standardApollo: "p:standard-account",
+        smartApollo: "P:smart-account",
+        linkedAt: "2026-08-03T00:00:00.000Z",
+      },
+      path,
+    );
+    clearConnectorState(path);
+    expect(existsSync(path)).toBe(false);
+    expect(readConnectorState(path)).toEqual(DEFAULT_STATE);
   });
 });

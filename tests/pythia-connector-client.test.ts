@@ -1,132 +1,205 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 /**
- * `lib/pythia/connectorClient.ts` — ongoing (post-onboarding) gated Pythia
- * access. What's under test is the WIRING contract: `getConnectorForHalf`
- * builds a `PythiaConnector` for the given Apollo half with Mnemosyne's own
- * signer/storage; `getGatedPythiaClient` degrades to a plain, unattributed
- * `PythiaClient` when onboarding hasn't succeeded (the "strictly additive,
- * never breaks existing behavior" acceptance criterion), and otherwise wires
- * a `pythiaKey` sourced from the Standard half's connector. Every dependency
- * that would otherwise hit disk/network is mocked, mirroring
- * `tests/pythia-onboarding-chain.test.ts`'s own approach.
+ * `lib/pythia/connectorClient.ts` — ongoing gated Pythia access, reworked
+ * around ONE `DualLinkConnector` (pythia-client 2.7.x) driven by the
+ * operator-pasted dual-link-key. What's under test is the WIRING contract:
+ *  - With no stored dual-link-key, `getGatedPythiaClient()` degrades to a
+ *    plain, unattributed `PythiaClient` (no `pythiaKey`) — the "strictly
+ *    additive, never throws, behaves exactly as before nothing was linked"
+ *    guarantee. Same when the gateway URL is unset.
+ *  - With a stored valid dual-link-key AND a configured gateway URL, it builds
+ *    a `DualLinkConnector` over the two split Apollo halves (each half's own
+ *    `createMnemosyneApolloSigner` signer) and wires the client's `pythiaKey`
+ *    from that connector's `keyProvider()`.
+ *  - The connector is memoized but rebuilt when the stored key OR the gateway
+ *    URL changes.
+ * Every dependency that would hit disk/network/codex is mocked. `vi.mock`
+ * factories are hoisted, so any function they close over is created via
+ * `vi.hoisted` (see `tests/pythia-onboarding-job.test.ts`'s idiom).
  */
 
-// `vi.mock` factories are hoisted above the rest of this file, so any mock
-// function they reference must be created via `vi.hoisted` (hoisted right
-// alongside them) rather than a plain top-level `const` — otherwise the
-// factory sees the outer binding before it's initialized.
-const { readAdminSettingsMock, readConnectorStatusMock, PythiaClientMock, PythiaConnectorMock, keyProviderFn } =
-  vi.hoisted(() => {
-    const keyProviderFn = vi.fn(() => "mock-key-provider-fn");
-    return {
-      readAdminSettingsMock: vi.fn(() => ({ pythiaUrl: "http://pythia.test" })),
-      readConnectorStatusMock: vi.fn(),
-      PythiaConnectorMock: vi.fn().mockImplementation((options: unknown) => ({
-        __options: options,
-        keyProvider: keyProviderFn,
-      })),
-      PythiaClientMock: vi.fn().mockImplementation((options: unknown) => ({ __options: options })),
-      keyProviderFn,
-    };
-  });
+const {
+  readAdminSettingsMock,
+  readConnectorStateMock,
+  createSignerMock,
+  splitDualLinkKeyMock,
+  PythiaClientMock,
+  DualLinkConnectorMock,
+  keyProviderFn,
+} = vi.hoisted(() => {
+  const keyProviderFn = vi.fn(() => "mock-key-provider-closure");
+  return {
+    readAdminSettingsMock: vi.fn(() => ({ pythiaUrl: "http://pythia.test" })),
+    readConnectorStateMock: vi.fn(),
+    // Tags the returned signer with the account it was scoped to, so a test can
+    // prove each half's signer was built from the corresponding split account.
+    createSignerMock: vi.fn((apolloAccount: string) => ({ __apolloAccount: apolloAccount })),
+    splitDualLinkKeyMock: vi.fn(),
+    DualLinkConnectorMock: vi.fn().mockImplementation((options: unknown) => ({
+      __options: options,
+      keyProvider: keyProviderFn,
+    })),
+    PythiaClientMock: vi.fn().mockImplementation((options: unknown) => ({ __options: options })),
+    keyProviderFn,
+  };
+});
 
 vi.mock("../lib/adminSettings", () => ({
   readAdminSettings: readAdminSettingsMock,
 }));
 
 vi.mock("../lib/pythia/connectorStatus", () => ({
-  readConnectorStatus: readConnectorStatusMock,
+  readConnectorState: readConnectorStateMock,
+}));
+
+vi.mock("../lib/pythia/apolloSigner", () => ({
+  createMnemosyneApolloSigner: createSignerMock,
 }));
 
 vi.mock("@ancientpantheon/pythia-client", () => ({
   PythiaClient: PythiaClientMock,
-  PythiaConnector: PythiaConnectorMock,
+  DualLinkConnector: DualLinkConnectorMock,
+  splitDualLinkKey: splitDualLinkKeyMock,
 }));
 
-import { getConnectorForHalf, getGatedPythiaClient } from "../lib/pythia/connectorClient";
+const DUAL_LINK_KEY = "STD_APOLLO_ACCOUNT|SMT_APOLLO_ACCOUNT";
+const HALVES = { standardApollo: "STD_APOLLO_ACCOUNT", smartApollo: "SMT_APOLLO_ACCOUNT" };
 
-const DEFAULT_STATUS = {
-  stage: "idle" as const,
+const EMPTY_STATE = {
+  dualLinkKey: null,
   standardApollo: null,
   smartApollo: null,
-  startedAt: null,
-  updatedAt: null,
-  lastError: null,
+  linkedAt: null,
 };
 
+const LINKED_STATE = {
+  dualLinkKey: DUAL_LINK_KEY,
+  standardApollo: HALVES.standardApollo,
+  smartApollo: HALVES.smartApollo,
+  linkedAt: "2026-08-03T00:00:00.000Z",
+};
+
+// The connector is memoized at module scope; reset the module between tests so
+// each starts with a clean memo, while the hoisted mocks (registered by
+// `vi.mock`) survive `resetModules` and stay the same spy instances.
 beforeEach(() => {
-  readAdminSettingsMock.mockClear();
-  readConnectorStatusMock.mockReset();
-  PythiaConnectorMock.mockClear();
+  vi.resetModules();
+  readAdminSettingsMock.mockReset();
+  readAdminSettingsMock.mockReturnValue({ pythiaUrl: "http://pythia.test" });
+  readConnectorStateMock.mockReset();
+  createSignerMock.mockClear();
+  splitDualLinkKeyMock.mockReset();
+  splitDualLinkKeyMock.mockReturnValue(HALVES);
+  DualLinkConnectorMock.mockClear();
   PythiaClientMock.mockClear();
   keyProviderFn.mockClear();
 });
 
-describe("getConnectorForHalf", () => {
-  it("builds a PythiaConnector wired with the given Apollo half, the admin-configured baseUrl, and Mnemosyne's own signer/storage", () => {
-    getConnectorForHalf("apollo-pub-standard");
+async function loadModule() {
+  return import("../lib/pythia/connectorClient");
+}
 
-    expect(PythiaConnectorMock).toHaveBeenCalledTimes(1);
-    const options = PythiaConnectorMock.mock.calls[0][0] as Record<string, unknown>;
+describe("getGatedPythiaClient", () => {
+  it("returns an unattributed PythiaClient (no pythiaKey) when no dual-link-key is stored", async () => {
+    readConnectorStateMock.mockReturnValue({ ...EMPTY_STATE });
+    const { getGatedPythiaClient } = await loadModule();
+
+    expect(() => getGatedPythiaClient()).not.toThrow();
+    expect(DualLinkConnectorMock).not.toHaveBeenCalled();
+    expect(PythiaClientMock).toHaveBeenCalledTimes(1);
+    const options = PythiaClientMock.mock.calls[0][0] as Record<string, unknown>;
     expect(options.baseUrl).toBe("http://pythia.test");
-    expect(options.apolloAccount).toBe("apollo-pub-standard");
-    // Not asserting the concrete classes here (that's T3/T2's own coverage) —
-    // just that SOMETHING was wired for each, so a caller can't silently get
-    // an unauthenticated/unsealed connector.
-    expect(options.signer).toBeDefined();
-    expect(options.storage).toBeDefined();
+    expect(options.pythiaKey).toBeUndefined();
+  });
+
+  it("returns an unattributed client when the gateway URL is empty even though a key is stored", async () => {
+    readAdminSettingsMock.mockReturnValue({ pythiaUrl: "" });
+    readConnectorStateMock.mockReturnValue({ ...LINKED_STATE });
+    const { getGatedPythiaClient } = await loadModule();
+
+    getGatedPythiaClient();
+    expect(DualLinkConnectorMock).not.toHaveBeenCalled();
+    expect(PythiaClientMock).toHaveBeenCalledTimes(1);
+    const options = PythiaClientMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(options.baseUrl).toBe("");
+    expect(options.pythiaKey).toBeUndefined();
+  });
+
+  it("builds a DualLinkConnector-backed gated client from the two split halves when a key + URL are present", async () => {
+    readConnectorStateMock.mockReturnValue({ ...LINKED_STATE });
+    const { getGatedPythiaClient } = await loadModule();
+
+    getGatedPythiaClient();
+
+    // The composite key was split, and each half fed its own scoped signer.
+    expect(splitDualLinkKeyMock).toHaveBeenCalledWith(DUAL_LINK_KEY);
+    expect(createSignerMock).toHaveBeenCalledWith(HALVES.standardApollo);
+    expect(createSignerMock).toHaveBeenCalledWith(HALVES.smartApollo);
+
+    expect(DualLinkConnectorMock).toHaveBeenCalledTimes(1);
+    const connectorOpts = DualLinkConnectorMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(connectorOpts.dualLinkKey).toBe(DUAL_LINK_KEY);
+    expect(connectorOpts.baseUrl).toBe("http://pythia.test");
+    expect((connectorOpts.standardSigner as Record<string, unknown>).__apolloAccount).toBe(
+      HALVES.standardApollo,
+    );
+    expect((connectorOpts.smartSigner as Record<string, unknown>).__apolloAccount).toBe(
+      HALVES.smartApollo,
+    );
+    // Mnemosyne dials the real gateway — it must NOT inject an in-process fetch.
+    expect(connectorOpts.fetchImpl).toBeUndefined();
+
+    // The client is wired with the connector's own keyProvider() closure.
+    expect(keyProviderFn).toHaveBeenCalledTimes(1);
+    const clientOpts = PythiaClientMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(clientOpts.baseUrl).toBe("http://pythia.test");
+    expect(clientOpts.pythiaKey).toBe("mock-key-provider-closure");
   });
 });
 
-describe("getGatedPythiaClient", () => {
-  it("falls back to an unattributed PythiaClient (no pythiaKey) when onboarding hasn't reached success", () => {
-    readConnectorStatusMock.mockReturnValue({ ...DEFAULT_STATUS, stage: "idle" });
+describe("getDualLinkConnector memoization", () => {
+  it("reuses one connector across calls when the stored key and URL are unchanged", async () => {
+    readConnectorStateMock.mockReturnValue({ ...LINKED_STATE });
+    const { getDualLinkConnector } = await loadModule();
 
-    expect(() => getGatedPythiaClient()).not.toThrow();
-    expect(PythiaConnectorMock).not.toHaveBeenCalled();
-    expect(PythiaClientMock).toHaveBeenCalledTimes(1);
-    const options = PythiaClientMock.mock.calls[0][0] as Record<string, unknown>;
-    expect(options.baseUrl).toBe("http://pythia.test");
-    expect(options.pythiaKey).toBeUndefined();
+    const first = getDualLinkConnector();
+    const second = getDualLinkConnector();
+
+    expect(first).toBe(second);
+    expect(DualLinkConnectorMock).toHaveBeenCalledTimes(1);
   });
 
-  it("also falls back to an unattributed client for every non-success stage, e.g. mid-run", () => {
-    readConnectorStatusMock.mockReturnValue({ ...DEFAULT_STATUS, stage: "linking" });
+  it("returns null (and builds nothing) when no dual-link-key is stored", async () => {
+    readConnectorStateMock.mockReturnValue({ ...EMPTY_STATE });
+    const { getDualLinkConnector } = await loadModule();
 
-    getGatedPythiaClient();
-    expect(PythiaConnectorMock).not.toHaveBeenCalled();
-    expect((PythiaClientMock.mock.calls[0][0] as Record<string, unknown>).pythiaKey).toBeUndefined();
+    expect(getDualLinkConnector()).toBeNull();
+    expect(DualLinkConnectorMock).not.toHaveBeenCalled();
   });
 
-  it("falls back to an unattributed client even at stage success if standardApollo is falsy (a structurally-shouldn't-happen-but-defended-against state)", () => {
-    readConnectorStatusMock.mockReturnValue({ ...DEFAULT_STATUS, stage: "success", standardApollo: null });
+  it("rebuilds the connector when the stored dual-link-key changes", async () => {
+    readConnectorStateMock
+      .mockReturnValueOnce({ ...LINKED_STATE })
+      .mockReturnValueOnce({ ...LINKED_STATE, dualLinkKey: "OTHER_STD|OTHER_SMT" });
+    const { getDualLinkConnector } = await loadModule();
 
-    expect(() => getGatedPythiaClient()).not.toThrow();
-    expect(PythiaConnectorMock).not.toHaveBeenCalled();
-    expect(PythiaClientMock).toHaveBeenCalledTimes(1);
-    const options = PythiaClientMock.mock.calls[0][0] as Record<string, unknown>;
-    expect(options.baseUrl).toBe("http://pythia.test");
-    expect(options.pythiaKey).toBeUndefined();
+    getDualLinkConnector();
+    getDualLinkConnector();
+
+    expect(DualLinkConnectorMock).toHaveBeenCalledTimes(2);
   });
 
-  it("builds a connector-backed gated client sourced from the Standard half once onboarding has succeeded", () => {
-    readConnectorStatusMock.mockReturnValue({
-      ...DEFAULT_STATUS,
-      stage: "success",
-      standardApollo: "apollo-pub-standard",
-      smartApollo: "apollo-pub-smart",
-    });
+  it("rebuilds the connector when the gateway URL changes", async () => {
+    readConnectorStateMock.mockReturnValue({ ...LINKED_STATE });
+    readAdminSettingsMock
+      .mockReturnValueOnce({ pythiaUrl: "http://pythia.test" })
+      .mockReturnValueOnce({ pythiaUrl: "http://pythia.other" });
+    const { getDualLinkConnector } = await loadModule();
 
-    getGatedPythiaClient();
+    getDualLinkConnector();
+    getDualLinkConnector();
 
-    expect(PythiaConnectorMock).toHaveBeenCalledTimes(1);
-    expect((PythiaConnectorMock.mock.calls[0][0] as Record<string, unknown>).apolloAccount).toBe(
-      "apollo-pub-standard",
-    );
-    expect(keyProviderFn).toHaveBeenCalledTimes(1);
-    const options = PythiaClientMock.mock.calls[0][0] as Record<string, unknown>;
-    expect(options.baseUrl).toBe("http://pythia.test");
-    expect(options.pythiaKey).toBe("mock-key-provider-fn");
+    expect(DualLinkConnectorMock).toHaveBeenCalledTimes(2);
   });
 });

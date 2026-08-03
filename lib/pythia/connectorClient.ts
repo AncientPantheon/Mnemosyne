@@ -1,48 +1,77 @@
-import { PythiaClient, PythiaConnector } from "@ancientpantheon/pythia-client";
+import { DualLinkConnector, PythiaClient, splitDualLinkKey } from "@ancientpantheon/pythia-client";
 
 import { readAdminSettings } from "../adminSettings";
 import { createMnemosyneApolloSigner } from "./apolloSigner";
-import { MnemosyneConnectorSecretStore } from "./connectorSecretStore";
-import { readConnectorStatus } from "./connectorStatus";
+import { readConnectorState } from "./connectorStatus";
 
 /**
- * Ongoing (post-onboarding) gated Pythia access — organs/06 §2c/§4. Two
- * entry points:
- *  - `getConnectorForHalf(apolloAccount)` builds a `PythiaConnector` for ONE
- *    Apollo half (Standard or Smart), wired with Mnemosyne's own
- *    `ApolloSigner` (T3, `apolloSigner.ts`) and sealed `SecretStorage` (T2,
- *    `connectorSecretStore.ts`). Used both by the onboarding job's proving
- *    stages (`lib/pythia/onboardingJob.ts`) and by `getGatedPythiaClient`
- *    below for ongoing use.
- *  - `getGatedPythiaClient()` is what the rest of Mnemosyne should call for
- *    any Pythia access that wants gated attribution when available. It is
- *    strictly additive and never throws: with no successful onboarding yet
- *    (`stage !== "success"`), it degrades to a plain, unattributed
- *    `PythiaClient` — the same keyless/ungated mode Mnemosyne already used
- *    before this connector existed. Once `stage === "success"`, it wires
- *    `pythiaKey` from the Standard half's connector's own `keyProvider()`
- *    (the SDK's own "resolved fresh per request, no manual refresh loop"
- *    idiom — see `PythiaConnector.keyProvider()`'s own doc comment). Either
- *    half works once linked (doc §2c); Standard is the reasoned default
- *    since it's the self-service half deployed/proved first in the
- *    onboarding sequence (see `onboardingJob.ts`).
+ * Ongoing gated Pythia access, reworked around ONE `DualLinkConnector`
+ * (`@ancientpantheon/pythia-client` 2.7.x) driven by the operator-pasted
+ * dual-link-key — mirroring Pythia's own self-consumer (`apps/pythia`'s
+ * `SelfConnectorLoop`), adapted for a real EXTERNAL consumer. Two entry points:
+ *
+ *  - `getDualLinkConnector()` lazily builds (and memoizes) a single
+ *    `DualLinkConnector` over the two Apollo halves split from the stored
+ *    dual-link-key (`readConnectorState`, T3). Each half is signed by
+ *    Mnemosyne's own codex-backed `createMnemosyneApolloSigner` (T2). Unlike
+ *    Pythia — which injects an in-process `fetchImpl` because it IS the read
+ *    engine — Mnemosyne dials the REAL gateway, so it wires NO `fetchImpl`
+ *    (the SDK's default global `fetch`) and NO `SecretStorage` (the connector
+ *    holds the ephemeral `x-pythia-key` in memory, re-minting via the signers
+ *    near expiry). It is NOT `.start()`ed: Mnemosyne is a pull consumer and
+ *    resolves the key request-time via `keyProvider()`, not a background loop.
+ *
+ *  - `getGatedPythiaClient()` is what the rest of Mnemosyne calls for any
+ *    Pythia access that wants gated attribution when available. It is strictly
+ *    additive and never throws: with nothing linked (no stored key) OR no
+ *    configured gateway URL, it degrades to a plain, unattributed
+ *    `PythiaClient` — behaving EXACTLY as Mnemosyne did before this connector
+ *    existed. Once a key is linked and a URL is set, it wires `pythiaKey` from
+ *    the connector's own `keyProvider()` (the SDK's "resolved fresh per
+ *    request, no manual refresh loop" idiom).
  */
-export function getConnectorForHalf(apolloAccount: string): PythiaConnector {
-  return new PythiaConnector({
-    baseUrl: readAdminSettings().pythiaUrl,
-    apolloAccount,
-    signer: createMnemosyneApolloSigner(),
-    storage: new MnemosyneConnectorSecretStore(),
+
+interface MemoizedConnector {
+  /** The dual-link-key the memoized connector was built from. */
+  dualLinkKey: string;
+  /** The gateway base URL the memoized connector was built from. */
+  baseUrl: string;
+  connector: DualLinkConnector;
+}
+
+let memoized: MemoizedConnector | null = null;
+
+/**
+ * The single `DualLinkConnector` for the currently-stored dual-link-key, or
+ * `null` when nothing is linked. Memoized so repeated calls reuse one instance,
+ * but rebuilt whenever the stored `dualLinkKey` OR the configured `pythiaUrl`
+ * changes since the memoized build.
+ */
+export function getDualLinkConnector(): DualLinkConnector | null {
+  const { dualLinkKey } = readConnectorState();
+  if (!dualLinkKey) return null;
+
+  const baseUrl = readAdminSettings().pythiaUrl;
+  if (memoized && memoized.dualLinkKey === dualLinkKey && memoized.baseUrl === baseUrl) {
+    return memoized.connector;
+  }
+
+  const halves = splitDualLinkKey(dualLinkKey);
+  const connector = new DualLinkConnector({
+    dualLinkKey,
+    baseUrl,
+    standardSigner: createMnemosyneApolloSigner(halves.standardApollo),
+    smartSigner: createMnemosyneApolloSigner(halves.smartApollo),
   });
+  memoized = { dualLinkKey, baseUrl, connector };
+  return connector;
 }
 
 export function getGatedPythiaClient(): PythiaClient {
-  const status = readConnectorStatus();
-  if (status.stage !== "success" || !status.standardApollo) {
-    return new PythiaClient({ baseUrl: readAdminSettings().pythiaUrl });
+  const baseUrl = readAdminSettings().pythiaUrl;
+  const connector = baseUrl ? getDualLinkConnector() : null;
+  if (!connector) {
+    return new PythiaClient({ baseUrl });
   }
-  return new PythiaClient({
-    baseUrl: readAdminSettings().pythiaUrl,
-    pythiaKey: getConnectorForHalf(status.standardApollo).keyProvider(),
-  });
+  return new PythiaClient({ baseUrl, pythiaKey: connector.keyProvider() });
 }

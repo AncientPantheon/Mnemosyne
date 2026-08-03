@@ -4,10 +4,11 @@ import { loadBackup } from "../mnemosyneCodexStore";
 
 /**
  * Shared "unseal codex backup → null-check → parse as `CodexSnapshot`" seam
- * for the two Pythia connector modules that both need read-only access to
- * the sealed operator codex (`lib/pythia/apolloIdentity.ts`,
- * `lib/pythia/apolloSigner.ts`). Extracted so those two files don't each
- * carry their own near-identical copy of this trio. `lib/khronoton/
+ * for the Pythia connector modules that need read-only access to the sealed
+ * operator codex (`lib/pythia/apolloSigner.ts`, and the connector admin route
+ * that checks a pasted dual-link-key against the codex's `ouroAccounts`).
+ * Extracted so those callers don't each carry their own near-identical copy
+ * of this trio. `lib/khronoton/
  * keyResolver.ts` has an equivalent private copy of its own — pre-existing
  * code outside this feature's scope, deliberately left untouched.
  *

@@ -9,6 +9,28 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.11.0] — 2026-08-01
+
+### Changed
+
+- **Reworked the Pythia connector to mirror Pythia's own automaton pattern.** The previous connector
+  wiring hand-rolled Apollo signing, local key generation, and on-chain deploy/link — built before
+  Pythia shipped her own self-consumer implementation, and diverging from it. This replaces all of
+  that with the real pattern, a large simplification (−500 lines):
+  - Apollo challenge signing now delegates to Codex's `autoSignApolloChallenge` (no hand-rolled
+    derivation).
+  - Identity generation and the on-chain "Activate as Pythia Key" deploy happen in Codex's own admin
+    tab (already available in Mnemosyne's Codex surface) — signed by an ordinary payment key, with the
+    Apollo account passed as data. Mnemosyne no longer builds or signs any Pact transaction for this.
+  - The connector is now driven by pasting the resulting **dual-link-key** in the Pythia admin panel;
+    it uses one `DualLinkConnector` (`@ancientpantheon/pythia-client` bumped to 2.7.x) with request-time
+    key refresh, showing the live linked status with a masked secret and expiry countdown.
+  - **Correction:** the earlier "Apollo keys can't sign Pact transactions" gap was a non-problem — no
+    Apollo key ever signs a Pact transaction. That premise, and the dead-coded onboarding it produced,
+    are removed.
+  - No behavior change until an operator links a pair: with nothing linked, chain reads stay
+    unattributed exactly as before.
+
 ## [0.10.0] — 2026-08-01
 
 ### Fixed
