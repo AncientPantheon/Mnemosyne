@@ -9,6 +9,17 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.11.2] — 2026-08-04
+
+### Fixed
+
+- **The Pythia connector panel now matches the Pantheonic connector-panel spec** (`organs/06` §2e).
+  The two Apollo halves are framed account cards with the 162-char address ellipsis-truncated on its
+  own line (it previously overflowed its box), each with an active/pending state chip; and the
+  ephemeral key is shown as ONE consolidated card — the masked `pk_eph_…` key, a depleting timer bar,
+  and an `expires in Xh Ym Zs` countdown that ticks every second (previously a bare `Xm Ys` number
+  with no bar). The panel also keeps polling while linked so a key rotation refreshes the display.
+
 ## [0.11.1] — 2026-08-01
 
 ### Fixed

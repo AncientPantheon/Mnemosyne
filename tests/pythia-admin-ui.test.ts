@@ -57,6 +57,31 @@ describe("admin — Pythia connector identity (dual-link-key paste + live status
     expect(panel()).toMatch(/expiresAt/);
   });
 
+  it("lays each half out as a framed account card with a state chip (Pantheonic panel spec)", () => {
+    // The half addresses live in bordered account cards (label + chip on top, the
+    // address on its own truncated line), not a flat label/value row where the
+    // 162-char address bled out of its box.
+    expect(panel()).toMatch(/mnemo-acct-card/);
+    expect(panel()).toMatch(/mnemo-chip--active/);
+    expect(panel()).toMatch(/mnemo-chip--pending/);
+  });
+
+  it("shows the single consolidated key with a depleting timer bar + 'expires in' countdown", () => {
+    // ONE masked key for the whole pair, a bar whose fill width shrinks over the
+    // secret's lifetime, and the text countdown — matching Pythia's Self Connector.
+    expect(panel()).toMatch(/mnemo-ttl-bar-fill/);
+    expect(panel()).toMatch(/width:\s*`?\$\{barPct\}%/);
+    expect(panel()).toMatch(/expires in/);
+    // The countdown is Xh Ym Zs (hours shown), not a raw minutes total.
+    expect(panel()).toMatch(/\$\{h\}h /);
+  });
+
+  it("the account-address CSS truncates with an ellipsis so a 162-char address can't overflow its box", () => {
+    const css = read("app", "admin", "admin.css");
+    expect(css).toMatch(/\.mnemo-acct-card-addr[^}]*text-overflow:\s*ellipsis/s);
+    expect(css).toMatch(/\.mnemo-ttl-bar-fill/);
+  });
+
   it("offers an Unlink affordance that clears the stored key via DELETE", () => {
     // Un-linking DELETEs the stored dual-link-key; without it a wrong paste is stuck.
     expect(panel()).toMatch(/Unlink/);

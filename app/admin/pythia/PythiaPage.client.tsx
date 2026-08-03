@@ -26,20 +26,36 @@ interface ConnectorStatus {
 
 const CONNECTOR_STATUS_POLL_MS = 4000;
 
-const halfLabel = (half: ConnectorHalfStatus | null | undefined): string => {
-  if (half == null) return "checking…";
-  return half.status === "active" ? "active" : "pending";
+/** One half's diagnostic state — a distinct chip per the Pantheonic connector
+ *  panel spec (organs/06 §"Consumer panel"): `active` (green) / `pending`
+ *  (cyan) / `checking` while status is still loading. */
+type HalfState = "checking" | "pending" | "active";
+
+const halfState = (half: ConnectorHalfStatus | null | undefined): HalfState =>
+  half == null ? "checking" : half.status === "active" ? "active" : "pending";
+
+const HALF_CHIP: Record<HalfState, string> = {
+  checking: "mnemo-chip mnemo-chip--pending",
+  pending: "mnemo-chip mnemo-chip--pending",
+  active: "mnemo-chip mnemo-chip--active",
+};
+const HALF_LABEL: Record<HalfState, string> = {
+  checking: "checking…",
+  pending: "pending",
+  active: "active",
 };
 
-/** Human "in Nm Ns" / "expired" countdown from a `DualLinkConnector` expiry epoch (ms). */
+/** `Xh Ym Zs` (dropping the hours when < 1h) / `expired` — the depleting text
+ *  countdown beside the timer bar. `expires in` prefix lives in the markup. */
 const expiryCountdown = (expiresAt: number | null, now: number): string => {
   if (expiresAt === null) return "—";
   const remaining = expiresAt - now;
   if (remaining <= 0) return "expired";
-  const totalSeconds = Math.floor(remaining / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}m ${seconds}s`;
+  const s = Math.floor(remaining / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return h > 0 ? `${h}h ${m}m ${sec}s` : `${m}m ${sec}s`;
 };
 
 /**
@@ -171,32 +187,53 @@ function ConnectorIdentitySection(): ReactElement {
     void loadStatus();
   }, [loadStatus]);
 
-  // Poll while linked but not yet both-active: the ephemeral x-pythia-key is minted
-  // by the codex-backed signers on the first gated request, so a freshly-linked pair
-  // sits "pending" until the connector proves each half. Stop once both halves are
-  // active (nothing left to watch) or when not linked at all.
+  // Poll the status route the whole time a pair is linked. Each poll drives a
+  // connector tick server-side, which (a) converges a freshly-pasted pair from
+  // pending → active (prove → Pythia's resolver links → prove → secret) and
+  // (b) picks up each ~expiry secret ROTATION, so the masked key + bar refresh
+  // rather than freezing on a stale value. Stopped only when not linked.
   useEffect(() => {
-    const bothActive =
-      status?.standard?.status === "active" && status?.smart?.status === "active";
-    const shouldPoll = status?.linked === true && !bothActive;
-
+    const shouldPoll = status?.linked === true;
     if (shouldPoll && intervalRef.current === null) {
-      intervalRef.current = setInterval(() => {
-        setNow(Date.now());
-        void loadStatus();
-      }, CONNECTOR_STATUS_POLL_MS);
+      intervalRef.current = setInterval(() => void loadStatus(), CONNECTOR_STATUS_POLL_MS);
     } else if (!shouldPoll && intervalRef.current !== null) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-
     return () => {
       if (intervalRef.current !== null) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
     };
-  }, [status, loadStatus]);
+  }, [status?.linked, loadStatus]);
+
+  // A 1s tick drives the countdown text + the depleting bar smoothly, decoupled
+  // from the 4s data poll.
+  useEffect(() => {
+    if (status?.linked !== true) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [status?.linked]);
+
+  // The timer bar needs a TOTAL lifetime, but the status route only exposes
+  // `expiresAt` (the server owns the TTL and never sends it). Track the MAX
+  // remaining ever observed for the CURRENT masked secret: a fresh mint's first
+  // observation ≈ full TTL, so the bar starts full and depletes; a rotation
+  // (new masked secret) resets it. Robust to any server TTL, no server change.
+  const barTotalRef = useRef<{ secret: string; totalMs: number } | null>(null);
+  useEffect(() => {
+    if (!status?.maskedSecret || status.expiresAt == null) {
+      barTotalRef.current = null;
+      return;
+    }
+    const remaining = Math.max(0, status.expiresAt - Date.now());
+    const cur = barTotalRef.current;
+    barTotalRef.current =
+      cur && cur.secret === status.maskedSecret
+        ? { secret: status.maskedSecret, totalMs: Math.max(cur.totalMs, remaining) }
+        : { secret: status.maskedSecret, totalMs: remaining };
+  }, [status?.maskedSecret, status?.expiresAt]);
 
   const link = useCallback(async () => {
     setBusy(true);
@@ -243,6 +280,12 @@ function ConnectorIdentitySection(): ReactElement {
 
   const linked = status?.linked === true;
 
+  // Depleting bar fill: remaining / max-observed-total for the current secret.
+  const remainingMs =
+    status?.expiresAt != null ? Math.max(0, status.expiresAt - now) : 0;
+  const totalMs = barTotalRef.current?.totalMs ?? 0;
+  const barPct = totalMs > 0 ? Math.max(0, Math.min(100, (remainingMs / totalMs) * 100)) : 0;
+
   return (
     <section className="mnemo-admin-card">
       <h2 className="mnemo-admin-h2">Connector identity</h2>
@@ -256,48 +299,57 @@ function ConnectorIdentitySection(): ReactElement {
 
       {linked ? (
         <>
-          <ul className="mnemo-admin-chainlist">
-            <li>
-              <span className="mnemo-admin-chain">Standard Apollo</span>
-              <span className="mnemo-admin-badge">
-                {status?.standardApollo ?? "—"}
+          {/* One framed "zone" per Apollo half — label + state chip on their own
+              top line, the 162-char address ellipsis-truncated on its own line so
+              it never bleeds out of the box (mirrors Pythia's Self Connector). */}
+          <div className="mnemo-acct-card">
+            <div className="mnemo-acct-card-top">
+              <span className="mnemo-acct-card-label">Standard</span>
+              <span className={HALF_CHIP[halfState(status?.standard)]}>
+                {HALF_LABEL[halfState(status?.standard)]}
               </span>
-            </li>
-            <li>
-              <span className="mnemo-admin-chain">Standard half</span>
-              <span
-                className={`mnemo-admin-badge${status?.standard?.status === "active" ? " mnemo-admin-badge--live" : ""}`}
-              >
-                {halfLabel(status?.standard)}
+            </div>
+            <div className="mnemo-acct-card-addr" title={status?.standardApollo ?? undefined}>
+              {status?.standardApollo ?? "—"}
+            </div>
+          </div>
+
+          <div className="mnemo-acct-card">
+            <div className="mnemo-acct-card-top">
+              <span className="mnemo-acct-card-label">Smart</span>
+              <span className={HALF_CHIP[halfState(status?.smart)]}>
+                {HALF_LABEL[halfState(status?.smart)]}
               </span>
-            </li>
-            <li>
-              <span className="mnemo-admin-chain">Smart Apollo</span>
-              <span className="mnemo-admin-badge">
-                {status?.smartApollo ?? "—"}
+            </div>
+            <div className="mnemo-acct-card-addr" title={status?.smartApollo ?? undefined}>
+              {status?.smartApollo ?? "—"}
+            </div>
+          </div>
+
+          {/* ONE consolidated ephemeral-key card — the single masked x-pythia-key
+              the whole pair uses, a depleting timer bar, and the text countdown.
+              Shown only once a secret has been minted; a still-proving pair shows
+              the note below instead. */}
+          {status?.maskedSecret ? (
+            <div className="mnemo-ttl-card">
+              <code className="mnemo-ttl-key">{status.maskedSecret}</code>
+              <div className="mnemo-ttl-bar">
+                <div
+                  className="mnemo-ttl-bar-fill"
+                  style={{ width: `${barPct}%` }}
+                  aria-hidden="true"
+                />
+              </div>
+              <span className="mnemo-ttl-expiry">
+                expires in {expiryCountdown(status.expiresAt, now)}
               </span>
-            </li>
-            <li>
-              <span className="mnemo-admin-chain">Smart half</span>
-              <span
-                className={`mnemo-admin-badge${status?.smart?.status === "active" ? " mnemo-admin-badge--live" : ""}`}
-              >
-                {halfLabel(status?.smart)}
-              </span>
-            </li>
-            <li>
-              <span className="mnemo-admin-chain">Active key</span>
-              <span className="mnemo-admin-badge">
-                {status?.maskedSecret ?? "not yet minted"}
-              </span>
-            </li>
-            <li>
-              <span className="mnemo-admin-chain">Expires in</span>
-              <span className="mnemo-admin-badge">
-                {expiryCountdown(status?.expiresAt ?? null, now)}
-              </span>
-            </li>
-          </ul>
+            </div>
+          ) : (
+            <p className="mnemo-admin-muted">
+              Proving ownership with Pythia — the ephemeral key is minted once both
+              halves are verified and the link is active on-chain.
+            </p>
+          )}
 
           <div className="mnemo-admin-row">
             <button

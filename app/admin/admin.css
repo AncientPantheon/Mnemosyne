@@ -185,6 +185,100 @@
   gap: 0.4rem;
 }
 
+/* ── Pythia connector identity — the framed-card panel (Pantheonic connector-panel
+   spec, organs/06). One .mnemo-acct-card per Apollo half; ONE .mnemo-ttl-card for
+   the single consolidated ephemeral key + depleting timer bar. ───────────────── */
+
+/* One Apollo half: label + state chip on their own top line (chip never collides
+   with the address), the 162-char address ellipsis-truncated on its own line
+   below — the fix for the address bleeding out of its box. */
+.mnemo-acct-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.mnemo-acct-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.mnemo-acct-card-label {
+  font-weight: 600;
+  color: var(--ink);
+}
+.mnemo-acct-card-addr {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 0.8rem;
+  color: var(--ink-mute);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* State chip — three variants: active (green), pending/checking (cyan). */
+.mnemo-chip {
+  flex: none;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  background: #3d353066;
+  color: var(--ink-soft);
+}
+.mnemo-chip--pending {
+  color: #58c9e8;
+  border-color: rgba(88, 201, 232, 0.35);
+  background: rgba(88, 201, 232, 0.1);
+}
+.mnemo-chip--active {
+  color: #7ce6a8;
+  border-color: rgba(52, 209, 122, 0.35);
+  background: rgba(52, 209, 122, 0.1);
+}
+
+/* The single consolidated ephemeral-key card: masked key, depleting bar, countdown. */
+.mnemo-ttl-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.mnemo-ttl-key {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 0.85rem;
+  color: var(--accent);
+}
+/* Depleting timer bar — a slim track with a gold fill whose width shrinks
+   100% → 0% over the secret's lifetime (transitioned so each 1s step glides). */
+.mnemo-ttl-bar {
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #060912;
+  border: 1px solid var(--line);
+}
+.mnemo-ttl-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 1s linear;
+}
+.mnemo-ttl-expiry {
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
 .mnemo-admin-arrow {
   color: var(--ink-soft);
   font-size: 0.8rem;
