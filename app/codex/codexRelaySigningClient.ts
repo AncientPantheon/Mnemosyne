@@ -147,10 +147,14 @@ async function nodeSubmit(
   return toSubmitResult(body);
 }
 
-// ── the mode-branching client (shared shell; Pythia lane differs per mount) ───
+/** Default simulate node when /api/config is briefly unreachable (matches the
+ *  AdminSettings default so the pre-fire /local always has a target). */
+const DEFAULT_SIM_NODE = "https://node2.stoachain.com";
+
+// ── the mode-branching client (shared shell; only the send lane differs) ──────
 
 interface PythiaLane {
-  dirtyRead(cfg: BrowserTransportConfig, cmd: unknown): Promise<unknown>;
+  /** How this mount SENDS in `pythia` mode (relay for operator, direct for consumer). */
   submit(cfg: BrowserTransportConfig, signed: SignedCommand): Promise<{ requestKey: string; raw: unknown }>;
 }
 
@@ -161,13 +165,19 @@ function makeSigningClient(
 ): CodexPactSigningClient {
   return {
     async dirtyRead(cmd) {
+      // The pre-fire SIMULATE is a node-direct `/local` of the FULL command in
+      // BOTH modes — it must carry the tx's declared signers so a `keys-all`
+      // keyset guard passes. This is unmetered plumbing per `organs/06` §6 (Pythia's
+      // OWN automaton likewise simulates node-direct via `meterChainRuntime`, which
+      // passes `dirtyRead` through and meters only `submit`). Routing it through
+      // Pythia's signer-stripping `/read` would fail every guarded deploy.
       const cfg = await resolveConfig();
-      return cfg.mode === "direct-node"
-        ? nodeDirtyRead(fetchImpl, cfg.nodeUrl, cmd)
-        : pythia.dirtyRead(cfg, cmd);
+      return nodeDirtyRead(fetchImpl, cfg.nodeUrl || DEFAULT_SIM_NODE, cmd);
     },
     async submit(signed) {
       const cfg = await resolveConfig();
+      // The SEND is what the meter counts: through Pythia by default, straight to
+      // the node only under the admin Network Fallback.
       return cfg.mode === "direct-node"
         ? nodeSubmit(fetchImpl, cfg.nodeUrl, signed)
         : pythia.submit(cfg, signed);
@@ -193,11 +203,6 @@ export function createCodexRelaySigningClient(
     });
 
   return makeSigningClient(fetchImpl, resolveConfig, {
-    async dirtyRead(_cfg, cmd) {
-      const res = await post(extractExec(cmd));
-      if (!res.ok) throw new Error(`Codex simulation failed via Pythia (HTTP ${res.status})`);
-      return res.json();
-    },
     async submit(_cfg, signed) {
       const res = await post({ cmds: [signed] });
       const body = await jsonOrNull(res);
@@ -231,15 +236,6 @@ export function createCodexDirectPythiaSigningClient(
   }
 
   return makeSigningClient(fetchImpl, resolveConfig, {
-    async dirtyRead(cfg, cmd) {
-      const res = await fetchImpl(`${pythiaBase(cfg)}/stoachain/read`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(extractExec(cmd)),
-      });
-      if (!res.ok) throw new Error(`Codex simulation failed via Pythia (HTTP ${res.status})`);
-      return res.json();
-    },
     async submit(cfg, signed) {
       const res = await fetchImpl(`${pythiaBase(cfg)}/stoachain/send`, {
         method: "POST",

@@ -40,23 +40,24 @@ describe("routeChainRuntimeThroughPythia", () => {
     expect(rt.gasStationAccount).toBe("gas");
   });
 
-  it("dirtyRead routes code+data through Pythia /read (never the node client)", async () => {
-    const gateway = { read: vi.fn(async () => ({ result: { status: "success" }, gas: 512 })), send: vi.fn(), poll: vi.fn() };
-    const base = fakeBase();
-    const rt = routeChainRuntimeThroughPythia(base, { getGateway: () => gateway });
+  const PYTHIA_MODE = () => ({ mode: "pythia" as const, nodeUrl: "https://n", pythiaUrl: "https://p" });
 
-    const client = rt.createClient("ignored-url");
-    const out = await client.dirtyRead(SIGNED);
+  it("pre-fire dirtyRead PASSES THROUGH to the node client (Pythia can't simulate a signed tx); gateway.read untouched", async () => {
+    const gateway = { read: vi.fn(), send: vi.fn(), poll: vi.fn() };
+    const base = fakeBase(); // its node client's dirtyRead returns gas:999
+    const rt = routeChainRuntimeThroughPythia(base, { getGateway: () => gateway, resolveTransport: PYTHIA_MODE });
 
-    expect(gateway.read).toHaveBeenCalledWith({ code: "(free.mod.fire)", data: { a: 1 } });
-    expect(out).toEqual({ result: { status: "success" }, gas: 512 });
-    // The node-dialing client the base would have built is never invoked.
-    expect((base.createClient as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+    const out = await rt.createClient("node-url").dirtyRead(SIGNED);
+
+    // The simulate goes to the node (full command, signer-aware), NOT Pythia /read.
+    expect(out).toEqual({ result: { status: "success" }, gas: 999 });
+    expect(gateway.read).not.toHaveBeenCalled();
+    expect(base.createClient).toHaveBeenCalledWith("node-url");
   });
 
   it("submit broadcasts through Pythia /send and returns the request key", async () => {
     const gateway = { read: vi.fn(), send: vi.fn(async () => ({ requestKeys: ["rk-fire"] })), poll: vi.fn() };
-    const rt = routeChainRuntimeThroughPythia(fakeBase(), { getGateway: () => gateway });
+    const rt = routeChainRuntimeThroughPythia(fakeBase(), { getGateway: () => gateway, resolveTransport: PYTHIA_MODE });
 
     const out = await rt.createClient("x").submit(SIGNED);
 
@@ -66,7 +67,7 @@ describe("routeChainRuntimeThroughPythia", () => {
 
   it("submit throws if Pythia returns no request key (never silently succeeds)", async () => {
     const gateway = { read: vi.fn(), send: vi.fn(async () => ({ requestKeys: [] })), poll: vi.fn() };
-    const rt = routeChainRuntimeThroughPythia(fakeBase(), { getGateway: () => gateway });
+    const rt = routeChainRuntimeThroughPythia(fakeBase(), { getGateway: () => gateway, resolveTransport: PYTHIA_MODE });
     await expect(rt.createClient("x").submit(SIGNED)).rejects.toThrow(/no requestKey/i);
   });
 
@@ -78,6 +79,7 @@ describe("routeChainRuntimeThroughPythia", () => {
     const gateway = { read: vi.fn(), send: vi.fn(), poll };
     const rt = routeChainRuntimeThroughPythia(fakeBase(), {
       getGateway: () => gateway,
+      resolveTransport: PYTHIA_MODE,
       sleep: immediateSleep,
     });
 
@@ -98,6 +100,7 @@ describe("routeChainRuntimeThroughPythia", () => {
     };
     const rt = routeChainRuntimeThroughPythia(fakeBase(), {
       getGateway: () => gateway,
+      resolveTransport: PYTHIA_MODE,
       sleep: immediateSleep,
       maxListenMs: 5,
       now: () => (t += 10),

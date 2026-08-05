@@ -6,7 +6,6 @@ import type {
 } from "@ancientpantheon/khronoton-core/server";
 
 import { getGatedPythiaClient } from "@/lib/pythia/connectorClient";
-import { extractExec } from "@/lib/pythia/pactExec";
 import {
   resolveServerTransport,
   pactBaseUrl,
@@ -95,15 +94,16 @@ export function routeChainRuntimeThroughPythia(
       if (transport.mode === "direct-node") {
         return base.createClient(pactBaseUrl(transport.nodeUrl));
       }
-      // Default: route the client through Pythia (metered).
-      void url;
+      // Default (pythia mode): meter the SEND through Pythia, but pass the
+      // pre-fire SIMULATE (dirtyRead) straight through to the node — exactly as
+      // Pythia's own `meterChainRuntime` does. The simulate needs the command's
+      // declared signers (a `keys-all` guard fails without them), and Pythia's
+      // `/read` strips signers; it is unmetered plumbing (`organs/06` §6) either way.
       const gateway = getGateway();
+      const nodeClient = base.createClient(url);
       return {
-        async dirtyRead(tx: unknown): Promise<DirtyReadResult> {
-          const { code, data } = extractExec(tx);
-          const res = await gateway.read({ code, ...(data ? { data } : {}) });
-          // Pythia relays the node `/local` body verbatim: `{ result, gas }`.
-          return res as DirtyReadResult;
+        dirtyRead(tx: unknown): Promise<DirtyReadResult> {
+          return nodeClient.dirtyRead(tx);
         },
 
         async submit(tx: unknown): Promise<{ requestKey: string }> {

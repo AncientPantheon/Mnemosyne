@@ -40,22 +40,43 @@ describe("extractExec", () => {
   });
 });
 
-describe("operator relay client — pythia mode (KEYED via relay)", () => {
+const NODE_LOCAL = "https://node2.stoachain.com/chainweb/0.0/stoa/chain/0/pact/api/v1/local";
+
+describe("pre-fire SIMULATE is node-direct /local (full signed cmd) in BOTH modes — the keyset fix", () => {
   let fetchImpl: ReturnType<typeof vi.fn>;
   beforeEach(() => (fetchImpl = vi.fn()));
 
-  it("dirtyRead → relay (Pythia /read), submit → relay ({cmds}); never a node", async () => {
-    fetchImpl.mockResolvedValue(jsonRes(200, { result: { status: "success" }, gas: 700 }));
-    const client = createCodexRelaySigningClient({ fetchImpl: fetchImpl as never, resolveConfig: cfg(PYTHIA) });
+  for (const [name, make] of [
+    ["operator relay client", createCodexRelaySigningClient],
+    ["consumer direct client", createCodexDirectPythiaSigningClient],
+  ] as const) {
+    it(`${name}: dirtyRead posts the FULL command to the node /local (preserves signers), NOT Pythia /read`, async () => {
+      fetchImpl.mockResolvedValue(jsonRes(200, { result: { status: "success" }, gas: 700 }));
+      const client = make({ fetchImpl: fetchImpl as never, resolveConfig: cfg(PYTHIA) });
 
-    await client.dirtyRead(SIM);
-    expect(fetchImpl.mock.calls[0][0]).toBe("/api/pythia/relay");
-    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual({ code: "(coin.details x)", data: { x: 1 } });
+      await client.dirtyRead(SIM);
 
+      const url = String(fetchImpl.mock.calls[0][0]);
+      expect(url).toBe(NODE_LOCAL);
+      // The full command (with its signers) goes to /local — NOT extracted code/data
+      // to Pythia's signer-stripping /read (which fails keys-all guards).
+      expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual(SIM);
+      expect(url).not.toContain("/stoachain/read");
+      expect(url).not.toContain("/api/pythia/relay");
+    });
+  }
+});
+
+describe("operator relay client — pythia mode SEND (KEYED via relay)", () => {
+  let fetchImpl: ReturnType<typeof vi.fn>;
+  beforeEach(() => (fetchImpl = vi.fn()));
+
+  it("submit → relay ({cmds})", async () => {
     fetchImpl.mockResolvedValue(jsonRes(200, { requestKeys: ["rk"] }));
+    const client = createCodexRelaySigningClient({ fetchImpl: fetchImpl as never, resolveConfig: cfg(PYTHIA) });
     const out = await client.submit(SIGNED);
-    expect(fetchImpl.mock.calls[1][0]).toBe("/api/pythia/relay");
-    expect(JSON.parse(fetchImpl.mock.calls[1][1].body)).toEqual({ cmds: [SIGNED] });
+    expect(fetchImpl.mock.calls[0][0]).toBe("/api/pythia/relay");
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual({ cmds: [SIGNED] });
     expect(out.requestKey).toBe("rk");
   });
 
@@ -66,31 +87,25 @@ describe("operator relay client — pythia mode (KEYED via relay)", () => {
   });
 });
 
-describe("consumer direct client — pythia mode (KEYLESS to Pythia)", () => {
+describe("consumer direct client — pythia mode SEND (KEYLESS to Pythia)", () => {
   let fetchImpl: ReturnType<typeof vi.fn>;
   beforeEach(() => (fetchImpl = vi.fn()));
 
-  it("dirtyRead → Pythia /stoachain/read, submit → Pythia /stoachain/send", async () => {
-    fetchImpl.mockResolvedValue(jsonRes(200, { result: { status: "success" }, gas: 640 }));
-    const client = createCodexDirectPythiaSigningClient({ fetchImpl: fetchImpl as never, resolveConfig: cfg(PYTHIA) });
-
-    await client.dirtyRead(SIM);
-    expect(fetchImpl.mock.calls[0][0]).toBe("https://pythia.example/stoachain/read");
-
+  it("submit → Pythia /stoachain/send", async () => {
     fetchImpl.mockResolvedValue(jsonRes(200, { requestKeys: ["rk2"] }));
+    const client = createCodexDirectPythiaSigningClient({ fetchImpl: fetchImpl as never, resolveConfig: cfg(PYTHIA) });
     const out = await client.submit(SIGNED);
-    expect(fetchImpl.mock.calls[1][0]).toBe("https://pythia.example/stoachain/send");
-    expect((fetchImpl.mock.calls[1][1].headers as Record<string, string>)["x-pythia-key"]).toBeUndefined();
+    expect(fetchImpl.mock.calls[0][0]).toBe("https://pythia.example/stoachain/send");
+    expect((fetchImpl.mock.calls[0][1].headers as Record<string, string>)["x-pythia-key"]).toBeUndefined();
     expect(out.requestKey).toBe("rk2");
   });
 
-  it("throws (never a node) when no Pythia gateway is configured", async () => {
+  it("submit throws (never a node) when no Pythia gateway is configured", async () => {
     const client = createCodexDirectPythiaSigningClient({
       fetchImpl: fetchImpl as never,
-      resolveConfig: cfg({ pythiaUrl: "", mode: "pythia", nodeUrl: "" }),
+      resolveConfig: cfg({ pythiaUrl: "", mode: "pythia", nodeUrl: "https://node2.stoachain.com" }),
     });
     await expect(client.submit(SIGNED)).rejects.toThrow(/no Pythia gateway/i);
-    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });
 

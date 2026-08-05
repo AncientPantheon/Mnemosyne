@@ -24,12 +24,15 @@ describe("direct-node exists only behind the admin Network Fallback", () => {
     expect(src).toMatch(/createStoaChainConnection/);
   });
 
-  it("the codex signing clients default to Pythia and only hit a node when direct-node mode is active", () => {
+  it("the codex signing clients SEND through Pythia by default; the pre-fire simulate is node-direct /local", () => {
     const src = read("app", "codex", "codexRelaySigningClient.ts");
-    expect(src).toMatch(/stoachain\/read/);
+    // The metered SEND goes through Pythia (default) — node only under the fallback.
     expect(src).toMatch(/stoachain\/send/);
-    // The node pact path is reached only via the mode branch.
     expect(src).toMatch(/mode === "direct-node"/);
+    // The pre-fire dirty-read is a node-direct /local (full command, signer-aware) —
+    // unmetered plumbing per organs/06 §6; it must NOT go through Pythia's /read.
+    expect(src).toMatch(/api\/v1\/local/);
+    expect(src).not.toMatch(/stoachain\/read/);
   });
 
   it("the Khronoton runtime routes through Pythia and branches to a node only on the fallback mode", () => {

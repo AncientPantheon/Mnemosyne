@@ -9,6 +9,21 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.12.1] — 2026-08-04
+
+### Fixed
+
+- **Apollo-half deploys (and any keyset-guarded tx) failed with `Keyset failure (keys-all)`.** Regression
+  from v0.11.4: the codex signing strategy's pre-fire **simulation** (`dirtyRead`) was routed through
+  Pythia's `/stoachain/read`, which builds an UNSIGNED, signer-less `/local` (`signers: []`). A
+  `keys-all` deploy guard needs the tx's declared signers present in the simulated command, so the
+  pre-flight failed **before the tx was ever submitted** — the send path (Pythia `/send`, which relays
+  the signed command verbatim) was fine. Fixed by making the pre-fire simulate a **node-direct `/local`
+  of the FULL command** in both codex mounts AND the Khronoton runtime — unmetered plumbing per
+  `organs/06` §6, exactly how Pythia's own `meterChainRuntime` passes `dirtyRead` through to the node and
+  meters only `submit`. Sends and served data-reads still route through Pythia (metered). (Optional
+  follow-up: a Pythia `/read` that relays a full command would let even the simulate flow through her.)
+
 ## [0.12.0] — 2026-08-04
 
 ### Added — Network Fallback (break-glass admin control)
