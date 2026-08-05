@@ -9,6 +9,32 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.11.4] — 2026-08-04
+
+### Changed — Pythia is the ONLY on-chain path (no direct node except admin-gated)
+
+Enforced the load-bearing rule (`organs/06` §6): **every** on-chain interaction — reads, gas
+simulations, sends, and the autonomous Khronoton fires — routes through Pythia. A direct-to-node
+connection is now permitted **only** via admin-gated settings.
+
+- **Codex `dirtyRead` (gas simulation) now routes through Pythia** (`/stoachain/read`, a keyless Pact
+  `local`), on both the operator (keyed relay) and consumer (keyless browser-direct) mounts — it no
+  longer hits a chainweb node `/local`. (Pythia's `/read` is unsigned/keyless, so its gas omits
+  signer-cap overhead; `calculateAutoGasLimit`'s margin covers it.)
+- **Autonomous Khronoton fires now route through Pythia.** A new `routeChainRuntimeThroughPythia`
+  wraps the chain runtime so its `submit`/`dirtyRead`/`listen` forward to Pythia (server-side keyed →
+  attributed `mnemosyne`), mirroring Pythia's own `meterChainRuntime`. The injected node URL is
+  ignored. *Limitation:* Pythia's `/poll` reports mined-status only (not the on-chain result), so a
+  mined fire is treated as success; closing this needs Pythia's `/poll` to return the command result.
+- **No per-user direct-node fallback.** The codex network model no longer builds a per-browser
+  StoaChain node connection — StoaChain resolves through the global Pythia connection or not at all.
+- **Admin-gated escape hatch:** `MNEMOSYNE_KHRONOTON_DIRECT_NODE=1` (server env) is the only way to
+  put Khronoton back on a direct node.
+- Consequence: Pythia is now a hard dependency — if it's unreachable, on-chain activity surfaces a
+  clear error instead of silently falling back to a node.
+
+The `/api/pythia/relay` endpoint is generalized to carry `read`/`send`/`poll` (was send-only).
+
 ## [0.11.3] — 2026-08-04
 
 ### Fixed

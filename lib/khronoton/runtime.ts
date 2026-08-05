@@ -1,6 +1,8 @@
 import { createStoachainRuntime } from "@ancientpantheon/khronoton-core/blockchain/stoachain";
 import type { ChainRuntime } from "@ancientpantheon/khronoton-core/server";
 
+import { routeChainRuntimeThroughPythia } from "./pythiaRoutedRuntime";
+
 /**
  * The ChainRuntime seam — khronoton's `/blockchain/stoachain` adapter wrapping
  * the `@stoachain/*` SDK (client, universal signer, gas, network constants), so
@@ -16,9 +18,20 @@ import type { ChainRuntime } from "@ancientpantheon/khronoton-core/server";
  */
 const g = globalThis as unknown as { __mnemosyneKhronotonRuntime?: Promise<ChainRuntime> };
 
+/**
+ * Admin-gated direct-node escape hatch. Mnemosyne routes ALL on-chain traffic —
+ * including its autonomous Khronoton fires — through Pythia by default (no node).
+ * A direct-to-node runtime is used ONLY when an admin explicitly opts in via
+ * `MNEMOSYNE_KHRONOTON_DIRECT_NODE=1` (server env — not user-reachable), the
+ * sanctioned "direct node only in admin-gated settings" override.
+ */
+function directNodeOptOut(): boolean {
+  return process.env.MNEMOSYNE_KHRONOTON_DIRECT_NODE === "1";
+}
+
 export function getChainRuntime(): Promise<ChainRuntime> {
   if (g.__mnemosyneKhronotonRuntime) return g.__mnemosyneKhronotonRuntime;
-  g.__mnemosyneKhronotonRuntime = createStoachainRuntime({
+  const base = createStoachainRuntime({
     ...(process.env.KHRONOTON_NODE_BASE_URL
       ? { nodeBaseUrl: process.env.KHRONOTON_NODE_BASE_URL }
       : {}),
@@ -32,5 +45,10 @@ export function getChainRuntime(): Promise<ChainRuntime> {
       ? { gasStationAccount: process.env.KHRONOTON_GAS_STATION }
       : {}),
   });
+  // Default: route the runtime's chain client (dirtyRead/submit/listen) through
+  // Pythia. Opt out only via the admin-gated env flag above.
+  g.__mnemosyneKhronotonRuntime = directNodeOptOut()
+    ? base
+    : base.then((rt) => routeChainRuntimeThroughPythia(rt));
   return g.__mnemosyneKhronotonRuntime;
 }

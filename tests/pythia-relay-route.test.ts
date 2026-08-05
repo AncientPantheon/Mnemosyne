@@ -11,9 +11,11 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vites
  * auth/validation/relay/no-tx-sender branching is under test — no real gateway
  * or key work fires.
  */
-const { getGatedPythiaClientMock, sendMock } = vi.hoisted(() => ({
+const { getGatedPythiaClientMock, sendMock, readMock, pollMock } = vi.hoisted(() => ({
   getGatedPythiaClientMock: vi.fn(),
   sendMock: vi.fn(),
+  readMock: vi.fn(),
+  pollMock: vi.fn(),
 }));
 
 vi.mock("../lib/pythia/connectorClient", () => ({
@@ -61,7 +63,9 @@ afterAll(() => {
 beforeEach(() => {
   getGatedPythiaClientMock.mockReset();
   sendMock.mockReset();
-  getGatedPythiaClientMock.mockReturnValue({ send: sendMock });
+  readMock.mockReset();
+  pollMock.mockReset();
+  getGatedPythiaClientMock.mockReturnValue({ send: sendMock, read: readMock, poll: pollMock });
 });
 
 describe("POST /api/pythia/relay", () => {
@@ -95,6 +99,19 @@ describe("POST /api/pythia/relay", () => {
     expect(sendMock.mock.calls[0][0]).toEqual({ cmds: [SIGNED_CMD] });
     const body = await res.json();
     expect(body.requestKeys).toEqual(["rk-abc"]);
+  });
+
+  it("relays a dirty READ (code+data) through the gated Pythia client (Pythia /read, not a node)", async () => {
+    readMock.mockResolvedValue({ result: { status: "success" }, gas: 512 });
+
+    const res = await POST(postReq(await ancientCookie(), { code: "(coin.details x)", data: { x: 1 } }));
+
+    expect(res.status).toBe(200);
+    expect(readMock).toHaveBeenCalledTimes(1);
+    expect(readMock.mock.calls[0][0]).toEqual({ code: "(coin.details x)", data: { x: 1 } });
+    expect(sendMock).not.toHaveBeenCalled();
+    const body = await res.json();
+    expect(body.gas).toBe(512);
   });
 
   it("maps Pythia's 503 pythia_no_tx_sender to a clear error and NEVER falls back to a node", async () => {

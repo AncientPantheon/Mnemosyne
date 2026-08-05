@@ -8,65 +8,85 @@ export const dynamic = "force-dynamic";
 const NO_STORE = { "Cache-Control": "no-store" } as const;
 
 /**
- * Ancient-gated SEND relay — the write half of Pythia's on-chain meter for the
- * loaded Codex (`organs/06` §6; `HANDOFF-mnemosyne-route-sends-through-pythia.md`).
+ * Ancient-gated Pythia relay — the OPERATOR codex's window onto Pythia's gateway
+ * for the traffic the browser can't key itself (`organs/06` §6/§6a;
+ * `HANDOFF-mnemosyne-route-sends-through-pythia.md`).
  *
- * The loaded Codex signs locally in the browser, but the connector's
- * `x-pythia-key` is a SERVER secret (minted by the server-side connector loop).
- * So a keyed send cannot originate in the browser: the browser codex signing
- * client (`lib/pythia/codexRelaySigningClient.ts`) POSTs its SIGNED `cmds` here,
- * and this route relays them through the SERVER `getGatedPythiaClient()` — which
- * carries the connector's key — to Pythia's `POST /stoachain/send`. Two effects,
- * per the handoff:
- *   - routing through `/stoachain/send` makes the transaction COUNT in the meter;
- *   - the key ATTRIBUTES it to `mnemosyne` (unkeyed sends fall to `"direct"`).
- * Mnemosyne keeps signing locally; Pythia signs nothing — she relays + meters.
+ * Mnemosyne routes ALL on-chain traffic through Pythia — never a node. The
+ * loaded Codex signs locally in the browser, but the connector's `x-pythia-key`
+ * is a SERVER secret (minted by the server-side connector loop) and Pythia's
+ * gateway CORS forbids that header from a browser, so keyed reads/sends MUST go
+ * server-side. This relay forwards through `getGatedPythiaClient()` (which
+ * carries the key) to Pythia:
+ *   - `read`  → `POST /stoachain/read`  (a keyless Pact `local`; gas simulation)
+ *   - `send`  → `POST /stoachain/send`  (the SIGNED broadcast — what the meter counts)
+ *   - `poll`  → `POST /stoachain/poll`  (tx status)
+ * and returns Pythia's (node-verbatim) response.
  *
- * Admin-gated so this is never an OPEN Pythia-keyed relay: only the operator
- * (ancient) surface — `/admin/codex`, where Apollo halves are registered — can
- * spend Mnemosyne's attribution. `401` unauthenticated, `403` non-ancient.
+ * The op is inferred from the body: `cmds` → send, `code` → read, `requestKeys`
+ * → poll. Admin-gated so this is never an OPEN Pythia-keyed relay under
+ * Mnemosyne's attribution. `401` unauthenticated, `403` non-ancient.
  *
  * Pythia's `503 { code:"pythia_no_tx_sender" }` (no Upload-Pool node configured
- * to relay writes — an operator action on the PYTHIA admin side) is surfaced
- * clearly rather than silently failing or falling back to a direct node.
+ * to relay writes) is surfaced clearly — never a silent direct-to-node fallback.
  */
 export async function POST(request: NextRequest) {
   const gate = await requireAncient(request);
   if (!gate.ok) return gate.response;
 
-  let body: { cmds?: unknown };
+  let body: { cmds?: unknown; code?: unknown; data?: unknown; requestKeys?: unknown };
   try {
-    body = (await request.json()) as { cmds?: unknown };
+    body = (await request.json()) as typeof body;
   } catch {
-    return Response.json(
-      { error: "a JSON body with a non-empty `cmds` array is required" },
-      { status: 400, headers: NO_STORE },
-    );
+    return badRequest("a JSON body is required");
   }
 
-  const cmds = body.cmds;
-  if (!Array.isArray(cmds) || cmds.length === 0) {
-    return Response.json(
-      { error: "`cmds` must be a non-empty array of caller-signed commands" },
-      { status: 400, headers: NO_STORE },
-    );
-  }
+  const client = getGatedPythiaClient();
 
-  let result: unknown;
   try {
-    // The gated client relays the SIGNED cmds VERBATIM and, when a key is linked,
-    // attaches the connector's `x-pythia-key`. chainId defaults to 0 (StoaChain).
-    result = await getGatedPythiaClient().send({ cmds });
+    // ── send: a SIGNED broadcast ──────────────────────────────────────────
+    if (Array.isArray(body.cmds)) {
+      if (body.cmds.length === 0) return badRequest("`cmds` must be non-empty");
+      const result = await client.send({ cmds: body.cmds });
+      const noTx = noTxSender(result);
+      if (noTx) return noTx;
+      return Response.json(result, { headers: NO_STORE });
+    }
+
+    // ── read: a keyless dirty read (Pact `local`) for gas / simulation ─────
+    if (typeof body.code === "string") {
+      const result = await client.read({
+        code: body.code,
+        ...(body.data !== undefined ? { data: body.data as object } : {}),
+      });
+      return Response.json(result, { headers: NO_STORE });
+    }
+
+    // ── poll: tx status by request key ────────────────────────────────────
+    if (Array.isArray(body.requestKeys)) {
+      if (body.requestKeys.length === 0) return badRequest("`requestKeys` must be non-empty");
+      const result = await client.poll({ requestKeys: body.requestKeys as string[] });
+      return Response.json(result, { headers: NO_STORE });
+    }
+
+    return badRequest("body must carry `cmds` (send), `code` (read), or `requestKeys` (poll)");
   } catch (err) {
     // A thrown PythiaClientError (pool exhausted / upstream / validation) or a
-    // transport failure — surface it as a bad-gateway rather than crashing, and
-    // NEVER fall back to a direct node.
+    // transport failure — surface it, and NEVER fall back to a direct node.
     const message = err instanceof Error ? err.message : "Pythia relay failed";
     return Response.json({ error: message }, { status: 502, headers: NO_STORE });
   }
+}
 
-  // `pythia_no_tx_sender` is not one of the client's thrown-envelope codes, so it
-  // comes back as a verbatim body — detect it and surface a clear 503.
+function badRequest(error: string): Response {
+  return Response.json({ error }, { status: 400, headers: NO_STORE });
+}
+
+/**
+ * `pythia_no_tx_sender` is not one of the client's thrown-envelope codes, so it
+ * comes back as a verbatim body — detect it and surface a clear 503.
+ */
+function noTxSender(result: unknown): Response | null {
   if (
     result !== null &&
     typeof result === "object" &&
@@ -82,7 +102,5 @@ export async function POST(request: NextRequest) {
       { status: 503, headers: NO_STORE },
     );
   }
-
-  // Success: return the node's `/send` response (e.g. `{ requestKeys }`) verbatim.
-  return Response.json(result, { headers: NO_STORE });
+  return null;
 }

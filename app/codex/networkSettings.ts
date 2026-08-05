@@ -20,10 +20,7 @@ import {
   createPythiaConnection,
   type NetworkSettingsModel,
 } from "@ancientpantheon/codex";
-import {
-  createStoaChainConnection,
-  STOACHAIN_DEFAULT_NODE_URL,
-} from "@ancientpantheon/codex/ouronet";
+import { STOACHAIN_DEFAULT_NODE_URL } from "@ancientpantheon/codex/ouronet";
 import { effectivePythiaUrl } from "@/lib/pythiaUrl";
 export { fetchOperatorPythiaUrl } from "@/lib/pythiaUrl";
 
@@ -120,12 +117,13 @@ export function resolveNetworkModel(
       ? createPythiaConnection({ baseUrl: pythiaUrl, chainId: STOACHAIN_CHAIN_ID })
       : undefined,
     local: {
-      [STOACHAIN_CHAIN_ID]: settings.stoaChainNodeUrl.trim()
-        ? createStoaChainConnection({
-            kind: "direct",
-            nodeUrl: settings.stoaChainNodeUrl,
-          }).connection
-        : undefined,
+      // NO per-user direct-node connection. Mnemosyne routes ALL on-chain traffic
+      // through Pythia; a direct node is permitted ONLY via admin-gated settings,
+      // never a per-browser field (`organs/06` §6). So StoaChain resolves through
+      // the GLOBAL Pythia connection or not at all — it never falls back to a node
+      // a non-admin typed. (The signing path is likewise Pythia-routed via the
+      // injected `signingClient`; see codexRelaySigningClient.ts.)
+      [STOACHAIN_CHAIN_ID]: undefined,
       // Arweave connection factory is not publicly exported (see import note) +
       // the Arweave path is unverified — leave the local override undefined so the
       // row shows as an editable, not-connected endpoint.
