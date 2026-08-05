@@ -40,7 +40,8 @@ describe("extractExec", () => {
   });
 });
 
-const NODE_LOCAL = "https://node2.stoachain.com/chainweb/0.0/stoa/chain/0/pact/api/v1/local";
+const NODE_LOCAL =
+  "https://node2.stoachain.com/chainweb/0.0/stoa/chain/0/pact/api/v1/local?preflight=false&signatureVerification=false";
 
 describe("pre-fire SIMULATE is node-direct /local (full signed cmd) in BOTH modes — the keyset fix", () => {
   let fetchImpl: ReturnType<typeof vi.fn>;
@@ -123,9 +124,10 @@ describe("BREAK-GLASS direct-node mode — BOTH clients hit the Stoa node (unmet
       fetchImpl.mockResolvedValue(jsonRes(200, { result: { status: "success" }, gas: 800 }));
       await client.dirtyRead(SIM);
       const readUrl = String(fetchImpl.mock.calls[0][0]);
-      expect(readUrl).toBe("https://node2.stoachain.com/chainweb/0.0/stoa/chain/0/pact/api/v1/local");
-      // Full signed command goes to /local (accurate gas), not extracted code/data.
-      expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual(SIM);
+      // /local with signatureVerification=false so the unsigned sim's declared
+      // signers grant caps (else a keys-all guard fails).
+      expect(readUrl).toBe(NODE_LOCAL);
+      expect(readUrl).toContain("signatureVerification=false");
       expect(readUrl).not.toContain("/stoachain/read");
       expect(readUrl).not.toContain("/api/pythia/relay");
 

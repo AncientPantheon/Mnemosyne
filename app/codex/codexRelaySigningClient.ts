@@ -117,17 +117,38 @@ function noTxSenderThrow(status: number, body: unknown): void {
   }
 }
 
-// ── break-glass: straight to the Stoa node (UNMETERED) ───────────────────────
+// ── the pre-fire simulate: a node /local dirty-read ──────────────────────────
+
+/** Mirror `@kadena/chainweb-node-client`'s `convertIUnsignedTransactionToNoSig`:
+ *  a pre-fire sim is UNSIGNED, so give each declared signer an empty-string sig so
+ *  the envelope is well-formed for a `signatureVerification=false` /local. */
+function toNoSigCommand(cmd: unknown): unknown {
+  const c = cmd as { sigs?: unknown };
+  if (!c || !Array.isArray(c.sigs)) return cmd;
+  return {
+    ...(c as object),
+    sigs: c.sigs.map((s) =>
+      s && typeof (s as { sig?: unknown }).sig === "string" ? s : { ...(s as object), sig: "" },
+    ),
+  };
+}
 
 async function nodeDirtyRead(fetchImpl: FetchLike, nodeUrl: string, cmd: unknown): Promise<unknown> {
-  if (!nodeUrl) throw new Error("Network Fallback is on direct-node but no node URL is configured.");
-  // The FULL signed command goes to /local (accurate gas — no code/data extraction).
-  const res = await fetchImpl(`${nodePactBase(nodeUrl)}/api/v1/local`, {
+  if (!nodeUrl) throw new Error("No node URL is configured for the pre-fire simulation.");
+  // CRITICAL: a pre-fire simulate is UNSIGNED (it only DECLARES its signers). The
+  // node must be told `signatureVerification=false` so it grants caps to the
+  // declared signers — otherwise it signature-verifies an unsigned command and a
+  // `keys-all` guard fails ("Keyset failure (keys-all)"). `preflight=false` returns
+  // the plain `{ result, gas }` the signing strategy consumes. This mirrors the
+  // kadena client's `dirtyRead` exactly (which is why OuronetUI, using that client,
+  // signs the same codex fine while a raw POST here did not).
+  const url = `${nodePactBase(nodeUrl)}/api/v1/local?preflight=false&signatureVerification=false`;
+  const res = await fetchImpl(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(cmd),
+    body: JSON.stringify(toNoSigCommand(cmd)),
   });
-  if (!res.ok) throw new Error(`Direct-node simulation failed (HTTP ${res.status})`);
+  if (!res.ok) throw new Error(`Node /local simulation failed (HTTP ${res.status})`);
   return res.json();
 }
 

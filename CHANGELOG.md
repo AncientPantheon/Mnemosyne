@@ -9,6 +9,19 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.12.2] — 2026-08-04
+
+### Fixed
+
+- **The REAL cause of the `Keyset failure (keys-all)` on Apollo deploys.** The pre-fire simulation is an
+  UNSIGNED command that only *declares* its signers. A Kadena `/local` signature-verifies by default, so
+  the node treated the declared signers as un-signed and the `keys-all` ownership guard failed. The
+  kadena client's `dirtyRead` avoids this by calling `/local?preflight=false&signatureVerification=false`
+  (and emptying the sigs) — which is exactly why the same codex activated fine in OuronetUI (real client)
+  but not here (a hand-rolled POST added in v0.12.1 that omitted the flags). Fixed `nodeDirtyRead` to
+  mirror the client: `signatureVerification=false` + `preflight=false` + no-sig envelope. Not the codex
+  package, not the transaction constructor, not the keys — a Mnemosyne bug in the simulate transport.
+
 ## [0.12.1] — 2026-08-04
 
 ### Fixed
