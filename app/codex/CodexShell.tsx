@@ -38,10 +38,11 @@ import {
   loadNetworkSettings,
   saveNetworkSettings,
   resolveNetworkModel,
-  fetchOperatorPythiaUrl,
+  fetchOperatorTransport,
   STOACHAIN_CHAIN_ID,
   ARWEAVE_CHAIN_ID,
   type NetworkSettings,
+  type OperatorTransport,
 } from "./networkSettings";
 
 export interface CodexShellProps {
@@ -82,14 +83,19 @@ export function CodexShell({
   const [networkModel, setNetworkModel] = useState<NetworkSettingsModel | null>(
     null,
   );
-  // The operator-injected GLOBAL Pythia (set by an ancient in /admin, served from
-  // /api/config) — takes precedence over the empty per-user field.
-  const [operatorPythiaUrl, setOperatorPythiaUrl] = useState("");
+  // The operator transport (served from /api/config): the GLOBAL Pythia plus the
+  // admin Network-Fallback mode + node target. Takes precedence over the per-user
+  // field, and the READ lane branches on `mode` just like the send/sim lanes.
+  const [operatorTransport, setOperatorTransport] = useState<OperatorTransport>({
+    pythiaUrl: "",
+    mode: "pythia",
+    nodeUrl: "",
+  });
 
   useEffect(() => {
     let live = true;
-    void fetchOperatorPythiaUrl().then((url) => {
-      if (live) setOperatorPythiaUrl(url);
+    void fetchOperatorTransport().then((t) => {
+      if (live) setOperatorTransport(t);
     });
     return () => {
       live = false;
@@ -110,13 +116,17 @@ export function CodexShell({
 
   useEffect(() => {
     let live = true;
-    void resolveNetworkModel(network, operatorPythiaUrl).then((model) => {
+    void resolveNetworkModel(network, {
+      operatorPythiaUrl: operatorTransport.pythiaUrl,
+      mode: operatorTransport.mode,
+      fallbackNodeUrl: operatorTransport.nodeUrl,
+    }).then((model) => {
       if (live) setNetworkModel(model);
     });
     return () => {
       live = false;
     };
-  }, [network, operatorPythiaUrl]);
+  }, [network, operatorTransport]);
 
   const setChainUrl = useCallback((chainId: string, url: string) => {
     setNetwork((prev) => {

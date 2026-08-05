@@ -56,3 +56,31 @@ export async function fetchOperatorPythiaUrl(): Promise<string> {
     return "";
   }
 }
+
+/** The full operator transport the codex READ lane needs: the Pythia gateway plus
+ *  the Network-Fallback mode + node target (`/api/config`, URLs only). Guarded to
+ *  a safe Pythia default on any failure. */
+export interface OperatorTransport {
+  pythiaUrl: string;
+  mode: "pythia" | "direct-node";
+  nodeUrl: string;
+}
+
+export async function fetchOperatorTransport(): Promise<OperatorTransport> {
+  try {
+    const res = await fetch("/api/config", { cache: "no-store" });
+    if (!res.ok) return { pythiaUrl: "", mode: "pythia", nodeUrl: "" };
+    const b = (await res.json()) as {
+      pythiaUrl?: unknown;
+      transportFallback?: unknown;
+      nodeUrl?: unknown;
+    };
+    return {
+      pythiaUrl: typeof b.pythiaUrl === "string" ? b.pythiaUrl : "",
+      mode: b.transportFallback === "direct-node" ? "direct-node" : "pythia",
+      nodeUrl: typeof b.nodeUrl === "string" ? b.nodeUrl : "",
+    };
+  } catch {
+    return { pythiaUrl: "", mode: "pythia", nodeUrl: "" };
+  }
+}

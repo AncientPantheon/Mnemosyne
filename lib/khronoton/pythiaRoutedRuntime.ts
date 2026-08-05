@@ -7,6 +7,11 @@ import type {
 
 import { getGatedPythiaClient } from "@/lib/pythia/connectorClient";
 import { extractExec } from "@/lib/pythia/pactExec";
+import {
+  resolveServerTransport,
+  pactBaseUrl,
+  type ResolvedTransport,
+} from "@/lib/transport/serverTransport";
 
 /**
  * Route a Khronoton `ChainRuntime` through PYTHIA instead of a direct node.
@@ -45,6 +50,9 @@ export interface PythiaChainGateway {
 export interface PythiaRoutedRuntimeOptions {
   /** Supply the gateway (tests). Defaults to the server keyed gated client. */
   getGateway?: () => PythiaChainGateway;
+  /** Resolve the live transport mode (tests). Defaults to admin-settings-backed
+   *  `resolveServerTransport` — so the admin Network Fallback governs fires too. */
+  resolveTransport?: () => ResolvedTransport;
   /** Delay between `/poll` attempts while awaiting finality. Default 3s. */
   pollIntervalMs?: number;
   /** Hard ceiling on the listen poll-loop so it can never run away if the outer
@@ -70,6 +78,7 @@ export function routeChainRuntimeThroughPythia(
   opts: PythiaRoutedRuntimeOptions = {},
 ): ChainRuntime {
   const getGateway = opts.getGateway ?? (() => getGatedPythiaClient() as unknown as PythiaChainGateway);
+  const resolveTransport = opts.resolveTransport ?? (() => resolveServerTransport());
   const pollIntervalMs = opts.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
   const maxListenMs = opts.maxListenMs ?? DEFAULT_MAX_LISTEN_MS;
   const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
@@ -77,7 +86,17 @@ export function routeChainRuntimeThroughPythia(
 
   return {
     ...base,
-    createClient(_url: string): ChainClient {
+    createClient(url: string): ChainClient {
+      // Break-glass: while the admin Network Fallback is on `direct-node`, this
+      // fire (and its dirty-read + confirmation) talks straight to the configured
+      // Stoa node — UNMETERED — via the base runtime's real node client. Resolved
+      // per-fire so an admin flip takes effect on the next fire.
+      const transport = resolveTransport();
+      if (transport.mode === "direct-node") {
+        return base.createClient(pactBaseUrl(transport.nodeUrl));
+      }
+      // Default: route the client through Pythia (metered).
+      void url;
       const gateway = getGateway();
       return {
         async dirtyRead(tx: unknown): Promise<DirtyReadResult> {

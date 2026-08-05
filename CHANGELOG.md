@@ -9,6 +9,26 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.12.0] — 2026-08-04
+
+### Added — Network Fallback (break-glass admin control)
+
+The admin-gated escape hatch from `HANDOFF-mnemosyne-network-fallback.md`: an ancient can flip **all**
+chain traffic from Pythia (default, metered) to a **direct Stoa node** (unmetered) when Pythia is
+unreachable — replacing the earlier `MNEMOSYNE_KHRONOTON_DIRECT_NODE` env stub with a real UI control.
+
+- **Admin panel** (`/admin#network` → Network section): a Pythia ⇆ Direct-Node toggle, node presets
+  (node2/node1) + custom URL, a server-side "Test Connection", and a loud amber **"traffic bypasses
+  Pythia and is UNMETERED"** warning while direct is active. Admin-gated.
+- **State:** `AdminSettings` gains `transportFallback` (`pythia` default) + `nodeUrl`, persisted
+  server-side; `/api/config` exposes them so the browser lanes branch on the same mode as the server.
+  Set via the ancient-gated `POST /api/admin/network-fallback` (+ `/test`).
+- **BOTH lanes branch (the load-bearing invariant):** codex **reads**
+  (`resolveNetworkModel`), consumer + operator **sim/send** (`codexRelaySigningClient`), and the
+  autonomous **Khronoton** fires (`routeChainRuntimeThroughPythia`) all switch to the node on
+  `direct-node` and back to Pythia on `pythia` — resolved live, no restart.
+- `MNEMOSYNE_KHRONOTON_DIRECT_NODE=1` remains as an additional server-only force-direct override.
+
 ## [0.11.4] — 2026-08-04
 
 ### Changed — Pythia is the ONLY on-chain path (no direct node except admin-gated)

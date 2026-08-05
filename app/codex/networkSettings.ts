@@ -20,9 +20,13 @@ import {
   createPythiaConnection,
   type NetworkSettingsModel,
 } from "@ancientpantheon/codex";
-import { STOACHAIN_DEFAULT_NODE_URL } from "@ancientpantheon/codex/ouronet";
+import {
+  createStoaChainConnection,
+  STOACHAIN_DEFAULT_NODE_URL,
+} from "@ancientpantheon/codex/ouronet";
 import { effectivePythiaUrl } from "@/lib/pythiaUrl";
-export { fetchOperatorPythiaUrl } from "@/lib/pythiaUrl";
+export { fetchOperatorPythiaUrl, fetchOperatorTransport } from "@/lib/pythiaUrl";
+export type { OperatorTransport } from "@/lib/pythiaUrl";
 
 /** The StoaChain connection chain id (matches createStoaChainConnection). */
 export const STOACHAIN_CHAIN_ID = "stoachain" as const;
@@ -106,10 +110,45 @@ export function saveNetworkSettings(settings: NetworkSettings): void {
  * the GLOBAL connection (StoaChain-only coverage today, read dynamically from
  * health()); Arweave falls back to its LOCAL gateway.
  */
+/** The transport the READ lane branches on — mirrors the server's
+ *  `resolveServerTransport`, sourced from `/api/config`. */
+export interface ReadTransport {
+  operatorPythiaUrl?: string;
+  /** `direct-node` = the admin Network Fallback is ON (break-glass). */
+  mode?: "pythia" | "direct-node";
+  /** The admin-configured direct-node base URL (used only in `direct-node`). */
+  fallbackNodeUrl?: string;
+}
+
 export function resolveNetworkModel(
   settings: NetworkSettings,
-  operatorPythiaUrl = "",
+  transport: ReadTransport = {},
 ): Promise<NetworkSettingsModel> {
+  const { operatorPythiaUrl = "", mode = "pythia", fallbackNodeUrl = "" } = transport;
+
+  // BREAK-GLASS: while the admin Network Fallback is on `direct-node`, the READ
+  // lane talks straight to the configured Stoa node (UNMETERED) — matching the
+  // send/sim lanes. This is the ONLY way a direct-node connection is built, and
+  // it is admin-gated (`HANDOFF-mnemosyne-network-fallback.md`).
+  if (mode === "direct-node" && fallbackNodeUrl.trim()) {
+    const resolver = createConnectionResolver({
+      supportedChains: [STOACHAIN_CHAIN_ID, ARWEAVE_CHAIN_ID],
+      global: undefined,
+      local: {
+        [STOACHAIN_CHAIN_ID]: createStoaChainConnection({
+          kind: "direct",
+          nodeUrl: fallbackNodeUrl,
+        }).connection,
+        [ARWEAVE_CHAIN_ID]: undefined,
+      },
+      locked: false,
+    });
+    return resolver.resolve();
+  }
+
+  // DEFAULT: all reads through the GLOBAL Pythia connection. NO per-user
+  // direct-node fallback — StoaChain resolves through Pythia or not at all
+  // (`organs/06` §6).
   const pythiaUrl = effectivePythiaUrl(operatorPythiaUrl, settings.pythiaUrl);
   const resolver = createConnectionResolver({
     supportedChains: [STOACHAIN_CHAIN_ID, ARWEAVE_CHAIN_ID],
@@ -117,16 +156,7 @@ export function resolveNetworkModel(
       ? createPythiaConnection({ baseUrl: pythiaUrl, chainId: STOACHAIN_CHAIN_ID })
       : undefined,
     local: {
-      // NO per-user direct-node connection. Mnemosyne routes ALL on-chain traffic
-      // through Pythia; a direct node is permitted ONLY via admin-gated settings,
-      // never a per-browser field (`organs/06` §6). So StoaChain resolves through
-      // the GLOBAL Pythia connection or not at all — it never falls back to a node
-      // a non-admin typed. (The signing path is likewise Pythia-routed via the
-      // injected `signingClient`; see codexRelaySigningClient.ts.)
       [STOACHAIN_CHAIN_ID]: undefined,
-      // Arweave connection factory is not publicly exported (see import note) +
-      // the Arweave path is unverified — leave the local override undefined so the
-      // row shows as an editable, not-connected endpoint.
       [ARWEAVE_CHAIN_ID]: undefined,
     },
     locked: false,

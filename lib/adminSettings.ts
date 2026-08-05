@@ -8,12 +8,30 @@ import { dirname, join } from "node:path";
  * missing or corrupt file returns defaults rather than crashing the app, and a
  * write failure is swallowed (the value is still live in memory for the request).
  */
+/** Transport mode: `pythia` = all chain traffic through Pythia (default, metered);
+ *  `direct-node` = the admin-gated break-glass path straight to a Stoa node
+ *  (UNMETERED). See `HANDOFF-mnemosyne-network-fallback.md`. */
+export type TransportFallback = "pythia" | "direct-node";
+
+/** The default direct-node target (embedded StoaChain node), used the instant an
+ *  ancient flips the fallback on. A URL, never a secret. */
+export const DEFAULT_FALLBACK_NODE_URL = "https://node2.stoachain.com";
+
 export interface AdminSettings {
   /** The operator-injected Pythia gateway base URL. Empty = no global connector. */
   pythiaUrl: string;
+  /** Break-glass transport toggle. `pythia` (default) routes all chain traffic
+   *  through Pythia; `direct-node` bypasses her (UNMETERED, admin-gated). */
+  transportFallback: TransportFallback;
+  /** The direct-node base URL used while `transportFallback === "direct-node"`. */
+  nodeUrl: string;
 }
 
-const DEFAULTS: AdminSettings = { pythiaUrl: "" };
+const DEFAULTS: AdminSettings = {
+  pythiaUrl: "",
+  transportFallback: "pythia",
+  nodeUrl: DEFAULT_FALLBACK_NODE_URL,
+};
 
 /** The on-disk location of the settings file (gitignored `data/`). */
 export const ADMIN_SETTINGS_PATH = join(
@@ -36,6 +54,12 @@ export function readAdminSettings(
     return {
       pythiaUrl:
         typeof parsed.pythiaUrl === "string" ? parsed.pythiaUrl : DEFAULTS.pythiaUrl,
+      transportFallback:
+        parsed.transportFallback === "direct-node" ? "direct-node" : DEFAULTS.transportFallback,
+      nodeUrl:
+        typeof parsed.nodeUrl === "string" && parsed.nodeUrl.trim().length > 0
+          ? parsed.nodeUrl
+          : DEFAULTS.nodeUrl,
     };
   } catch {
     return { ...DEFAULTS };

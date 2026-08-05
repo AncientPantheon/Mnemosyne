@@ -10,9 +10,12 @@ const NO_STORE = { "Cache-Control": "no-store" } as const;
 /**
  * The PUBLIC connector config (URLs only, no secrets). Returns the ancient-set
  * Pythia gateway so each Mnemosyne user's Codex resolves its `global` connection
- * through the operator's Pythia. Empty `pythiaUrl` ⇒ no global (both chains local).
+ * through the operator's Pythia, PLUS the transport-fallback mode + node target so
+ * the browser lanes (codex reads/sims/sends) branch on the SAME mode the server
+ * uses. `transportFallback` defaults to `pythia`. All fields are URLs/flags, never
+ * secrets. `HANDOFF-mnemosyne-network-fallback.md`.
  */
 export function GET() {
-  const { pythiaUrl } = readAdminSettings();
-  return Response.json({ pythiaUrl }, { headers: NO_STORE });
+  const { pythiaUrl, transportFallback, nodeUrl } = readAdminSettings();
+  return Response.json({ pythiaUrl, transportFallback, nodeUrl }, { headers: NO_STORE });
 }

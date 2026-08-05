@@ -597,3 +597,25 @@
     border-bottom-color: var(--accent);
   }
 }
+
+/* ── Network Fallback (break-glass) — amber "unmetered" warning + danger toggle ── */
+.mnemo-fallback-warn {
+  margin: 0.75rem 0;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #e0a53a;
+  border-left: 4px solid #e0a53a;
+  border-radius: 6px;
+  background: rgba(224, 165, 58, 0.12);
+  color: #f0c070;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+.mnemo-fallback-warn strong {
+  color: #ffcf7a;
+  letter-spacing: 0.03em;
+}
+.mnemo-fallback-btn--danger {
+  border-color: #e0a53a;
+  background: rgba(224, 165, 58, 0.18);
+  color: #ffcf7a;
+}

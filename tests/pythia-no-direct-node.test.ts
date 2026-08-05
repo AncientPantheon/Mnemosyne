@@ -3,38 +3,45 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 /**
- * Compliance guard for the load-bearing rule (`organs/06` §6): Mnemosyne routes
- * ALL on-chain traffic — reads, simulations, sends, AND autonomous Khronoton
- * fires — through Pythia. A direct-to-node connection is permitted ONLY via
- * admin-gated settings, never a per-user field or a silent fallback.
+ * Compliance guard for the rule (`organs/06` §6 + `HANDOFF-mnemosyne-network-fallback.md`):
+ * Mnemosyne routes ALL on-chain traffic — reads, simulations, sends, and the
+ * autonomous Khronoton fires — through Pythia BY DEFAULT. A direct-to-node path
+ * exists ONLY behind the admin-gated Network Fallback (`transportFallback:
+ * "direct-node"`), never as a silent/default/per-user fallback.
  *
- * These are source-contract assertions (the network/runtime wiring can't be
- * exercised without a browser mount / live chain), pinning the invariant so a
- * future edit that reintroduces a non-admin direct-node path fails here.
+ * Source-contract assertions pin the invariant so a future edit that reintroduces
+ * an UNGATED direct-node path fails here.
  */
 const read = (...p: string[]) => readFileSync(join(process.cwd(), ...p), "utf8");
 
-describe("no non-admin direct-node path remains", () => {
-  it("the codex network model builds NO per-user StoaChain node connection", () => {
+describe("direct-node exists only behind the admin Network Fallback", () => {
+  it("the codex network model builds a node connection ONLY in the direct-node branch (default = Pythia/none)", () => {
     const src = read("app", "codex", "networkSettings.ts");
-    // The direct-node local connection factory is gone; StoaChain resolves through
-    // the global Pythia connection or not at all.
-    expect(src).not.toMatch(/createStoaChainConnection\(/);
+    // The default branch has no local StoaChain node connection.
     expect(src).toMatch(/\[STOACHAIN_CHAIN_ID\]:\s*undefined/);
+    // A direct node connection is built only when the admin fallback mode is on.
+    expect(src).toMatch(/mode === "direct-node"/);
+    expect(src).toMatch(/createStoaChainConnection/);
   });
 
-  it("the codex signing clients route reads AND sends through Pythia, never a node /local or /send", () => {
+  it("the codex signing clients default to Pythia and only hit a node when direct-node mode is active", () => {
     const src = read("app", "codex", "codexRelaySigningClient.ts");
-    // No chainweb node pact endpoints are constructed anywhere in the signing path.
-    expect(src).not.toMatch(/pact\/api\/v1\/(local|send|poll)/);
     expect(src).toMatch(/stoachain\/read/);
     expect(src).toMatch(/stoachain\/send/);
+    // The node pact path is reached only via the mode branch.
+    expect(src).toMatch(/mode === "direct-node"/);
   });
 
-  it("the Khronoton runtime routes through Pythia unless the admin-gated env opt-out is set", () => {
-    const src = read("lib", "khronoton", "runtime.ts");
-    expect(src).toMatch(/routeChainRuntimeThroughPythia/);
-    // The ONLY way to get a direct-node runtime is the admin-gated env flag.
-    expect(src).toMatch(/MNEMOSYNE_KHRONOTON_DIRECT_NODE/);
+  it("the Khronoton runtime routes through Pythia and branches to a node only on the fallback mode", () => {
+    const runtime = read("lib", "khronoton", "runtime.ts");
+    expect(runtime).toMatch(/routeChainRuntimeThroughPythia/);
+    const wrapper = read("lib", "khronoton", "pythiaRoutedRuntime.ts");
+    expect(wrapper).toMatch(/mode === "direct-node"/);
+    expect(wrapper).toMatch(/resolveServerTransport|resolveTransport/);
+  });
+
+  it("the direct-node toggle is admin-gated (requireAncient on the write route)", () => {
+    const route = read("app", "api", "admin", "network-fallback", "route.ts");
+    expect(route).toMatch(/requireAncient/);
   });
 });

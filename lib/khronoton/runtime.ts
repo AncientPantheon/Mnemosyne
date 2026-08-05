@@ -18,17 +18,6 @@ import { routeChainRuntimeThroughPythia } from "./pythiaRoutedRuntime";
  */
 const g = globalThis as unknown as { __mnemosyneKhronotonRuntime?: Promise<ChainRuntime> };
 
-/**
- * Admin-gated direct-node escape hatch. Mnemosyne routes ALL on-chain traffic —
- * including its autonomous Khronoton fires — through Pythia by default (no node).
- * A direct-to-node runtime is used ONLY when an admin explicitly opts in via
- * `MNEMOSYNE_KHRONOTON_DIRECT_NODE=1` (server env — not user-reachable), the
- * sanctioned "direct node only in admin-gated settings" override.
- */
-function directNodeOptOut(): boolean {
-  return process.env.MNEMOSYNE_KHRONOTON_DIRECT_NODE === "1";
-}
-
 export function getChainRuntime(): Promise<ChainRuntime> {
   if (g.__mnemosyneKhronotonRuntime) return g.__mnemosyneKhronotonRuntime;
   const base = createStoachainRuntime({
@@ -45,10 +34,10 @@ export function getChainRuntime(): Promise<ChainRuntime> {
       ? { gasStationAccount: process.env.KHRONOTON_GAS_STATION }
       : {}),
   });
-  // Default: route the runtime's chain client (dirtyRead/submit/listen) through
-  // Pythia. Opt out only via the admin-gated env flag above.
-  g.__mnemosyneKhronotonRuntime = directNodeOptOut()
-    ? base
-    : base.then((rt) => routeChainRuntimeThroughPythia(rt));
+  // ALWAYS wrap: the wrapper resolves the live transport mode PER FIRE, routing
+  // through Pythia by default and switching to the admin-configured direct node
+  // only while the Network Fallback (or the MNEMOSYNE_KHRONOTON_DIRECT_NODE env
+  // override) is active. `HANDOFF-mnemosyne-network-fallback.md`.
+  g.__mnemosyneKhronotonRuntime = base.then((rt) => routeChainRuntimeThroughPythia(rt));
   return g.__mnemosyneKhronotonRuntime;
 }

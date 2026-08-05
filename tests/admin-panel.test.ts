@@ -355,9 +355,11 @@ describe("operator Pythia injection into the codex mount (REQ-10 wiring)", () =>
 
   it("the codex shell fetches the operator /api/config value at mount and feeds it to the model", () => {
     // The network wiring lives in the shared CodexShell (both /codex + /admin/codex).
+    // It now fetches the FULL operator transport (Pythia URL + Network-Fallback
+    // mode + node) so the read lane branches on the same mode as the send lanes.
     const shell = read("app", "codex", "CodexShell.tsx");
-    expect(shell).toMatch(/fetchOperatorPythiaUrl/);
-    expect(shell).toMatch(/operatorPythiaUrl/);
+    expect(shell).toMatch(/fetchOperatorTransport/);
+    expect(shell).toMatch(/operatorTransport/);
   });
 
   it("fetchOperatorPythiaUrl reads the public /api/config endpoint", () => {

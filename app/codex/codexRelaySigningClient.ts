@@ -1,47 +1,35 @@
 "use client";
 
 // ============================================================================
-// codexRelaySigningClient — browser signing clients that route the loaded
-// Codex's on-chain traffic through PYTHIA, never a node.
+// codexRelaySigningClient — browser signing clients for the loaded Codex.
 //
-// Mnemosyne has ONE on-chain connection: Pythia. EVERYTHING flows through her —
-// reads, gas simulations, and sends — for both the operator codex and any user's
-// own uploaded codex. There is no direct-node path here (a direct node exists
-// ONLY when an admin sets one in admin-gated settings).
+// Mnemosyne routes ALL on-chain traffic through PYTHIA by default. An ancient can
+// flip the admin **Network Fallback** to `direct-node` (break-glass, UNMETERED),
+// and BOTH lanes here — `dirtyRead` (simulate) and `submit` (broadcast) — honor
+// that mode, resolved live from `/api/config`
+// (`HANDOFF-mnemosyne-network-fallback.md`; a fallback that switches only one lane
+// is the classic bug).
 //
-// `<CodexProvider signingClient={…}>` (codex-ouronet) feeds one of these to the
-// signing strategy as its `clientOverride`; the strategy calls exactly two
-// methods on it — `dirtyRead(cmd)` (simulate / gas) and `submit(signed)`
-// (broadcast, returns `{ requestKey }`). BOTH are routed through Pythia:
-//   - dirtyRead → Pythia `/stoachain/read` (a keyless Pact `local`).
-//   - submit    → Pythia `/stoachain/send` (the SIGNED broadcast the meter counts).
+//   mode "pythia" (default):
+//     • consumer `/codex`  → KEYLESS browser-direct to Pythia's public gateway.
+//     • operator `/admin`  → KEYED via Mnemosyne's ancient-gated /api/pythia/relay.
+//   mode "direct-node" (break-glass):
+//     • BOTH → straight to the configured Stoa node's /pact/api/v1/{local,send}
+//       (UNMETERED). Simulation uses the FULL signed command (accurate gas).
 //
-// Two mounts, two postures (both go through Pythia; the key only changes
-// ATTRIBUTION — Pythia's gateway CORS forbids the `x-pythia-key` header from a
-// browser, so keyed traffic must go server-side):
-//   • OPERATOR codex (`/admin/codex`, ancient-gated) → KEYED, via Mnemosyne's
-//     `POST /api/pythia/relay` (server attaches the connector key). Attributed
-//     to `mnemosyne`.  → createCodexRelaySigningClient()
-//   • CONSUMER codex (public `/codex`, any visitor's own codex) → KEYLESS,
-//     browser-direct to Pythia's public gateway. Still fully metered
-//     (attributed `"direct"`); Mnemosyne's operator key is never exposed to
-//     anonymous visitors.  → createCodexDirectPythiaSigningClient()
-//
-// Gas note: Pythia's `/read` is an UNSIGNED keyless `local`, so its gas estimate
-// omits signer-cap overhead; `CodexSigningStrategy.calculateAutoGasLimit` adds
-// margin over it. Routing through Pythia takes precedence over a marginally
-// tighter direct-node estimate.
-//
-// `organs/06` §6/§6a · `HANDOFF-mnemosyne-route-sends-through-pythia.md`.
+// `<CodexProvider signingClient={…}>` feeds one of these to the signing strategy
+// as its `clientOverride`; the strategy calls only `dirtyRead(cmd)` + `submit(signed)`.
 // ============================================================================
 
 import { extractExec } from "@/lib/pythia/pactExec";
 
-/** Re-exported for the codex signing-client tests (source of truth: pactExec). */
 export { extractExec };
 
 /** Pythia's KEYED relay endpoint on Mnemosyne (ancient-gated). */
 const RELAY_PATH = "/api/pythia/relay";
+/** StoaChain network + chain (the break-glass node pact path). */
+const STOA_NETWORK = "stoa";
+const STOA_CHAIN_ID = "0";
 
 /** A caller-signed chainweb command (`{ cmd, hash, sigs }`). */
 export interface SignedCommand {
@@ -56,20 +44,49 @@ export interface CodexPactSigningClient {
   submit(signed: SignedCommand): Promise<{ requestKey: string; raw: unknown }>;
 }
 
-type FetchLike = typeof fetch;
-
-export interface RelaySigningClientOptions {
-  /** Injected fetch (tests). Defaults to the browser global. */
-  fetchImpl?: FetchLike;
+/** The live transport config the browser lanes branch on (from `/api/config`). */
+export interface BrowserTransportConfig {
+  pythiaUrl: string;
+  mode: "pythia" | "direct-node";
+  nodeUrl: string;
 }
 
-export interface DirectPythiaSigningClientOptions extends RelaySigningClientOptions {
-  /** Resolve the Pythia gateway base URL. Defaults to a cached GET `/api/config`
-   *  (the operator-global Pythia the whole app already uses for reads). */
-  resolvePythiaUrl?: () => Promise<string>;
+type FetchLike = typeof fetch;
+
+export interface SigningClientOptions {
+  /** Injected fetch (tests). Defaults to the browser global. */
+  fetchImpl?: FetchLike;
+  /** Resolve the live transport config (tests). Defaults to GET `/api/config`,
+   *  fetched fresh per operation so an admin fallback flip takes effect promptly. */
+  resolveConfig?: () => Promise<BrowserTransportConfig>;
 }
 
 // ── shared helpers ──────────────────────────────────────────────────────────
+
+function makeDefaultConfigResolver(fetchImpl: FetchLike): () => Promise<BrowserTransportConfig> {
+  return async () => {
+    try {
+      const res = await fetchImpl("/api/config", { cache: "no-store" });
+      if (!res.ok) return { pythiaUrl: "", mode: "pythia", nodeUrl: "" };
+      const b = (await res.json()) as {
+        pythiaUrl?: unknown;
+        transportFallback?: unknown;
+        nodeUrl?: unknown;
+      };
+      return {
+        pythiaUrl: typeof b.pythiaUrl === "string" ? b.pythiaUrl : "",
+        mode: b.transportFallback === "direct-node" ? "direct-node" : "pythia",
+        nodeUrl: typeof b.nodeUrl === "string" ? b.nodeUrl : "",
+      };
+    } catch {
+      return { pythiaUrl: "", mode: "pythia", nodeUrl: "" };
+    }
+  };
+}
+
+function nodePactBase(nodeUrl: string): string {
+  return `${nodeUrl.replace(/\/+$/, "")}/chainweb/0.0/${STOA_NETWORK}/chain/${STOA_CHAIN_ID}/pact`;
+}
 
 /** The node `/send` response is `{ requestKeys:[…] }`; the strategy wants a
  *  top-level `requestKey`. */
@@ -83,7 +100,6 @@ function toSubmitResult(body: unknown): { requestKey: string; raw: unknown } {
   return { requestKey, raw: body };
 }
 
-/** Parse a fetch Response body as JSON (tolerating a non-JSON error page). */
 async function jsonOrNull(res: Response): Promise<unknown> {
   try {
     return await res.json();
@@ -93,8 +109,7 @@ async function jsonOrNull(res: Response): Promise<unknown> {
 }
 
 function noTxSenderThrow(status: number, body: unknown): void {
-  const code = (body as { code?: unknown } | null)?.code;
-  if (status === 503 && code === "pythia_no_tx_sender") {
+  if (status === 503 && (body as { code?: unknown } | null)?.code === "pythia_no_tx_sender") {
     throw new Error(
       "Pythia has no tx relay node configured — the transaction was not sent. " +
         "Ask the operator to configure a Pythia tx-sender (Upload-Pool) node.",
@@ -102,17 +117,71 @@ function noTxSenderThrow(status: number, body: unknown): void {
   }
 }
 
+// ── break-glass: straight to the Stoa node (UNMETERED) ───────────────────────
+
+async function nodeDirtyRead(fetchImpl: FetchLike, nodeUrl: string, cmd: unknown): Promise<unknown> {
+  if (!nodeUrl) throw new Error("Network Fallback is on direct-node but no node URL is configured.");
+  // The FULL signed command goes to /local (accurate gas — no code/data extraction).
+  const res = await fetchImpl(`${nodePactBase(nodeUrl)}/api/v1/local`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(cmd),
+  });
+  if (!res.ok) throw new Error(`Direct-node simulation failed (HTTP ${res.status})`);
+  return res.json();
+}
+
+async function nodeSubmit(
+  fetchImpl: FetchLike,
+  nodeUrl: string,
+  signed: SignedCommand,
+): Promise<{ requestKey: string; raw: unknown }> {
+  if (!nodeUrl) throw new Error("Network Fallback is on direct-node but no node URL is configured.");
+  const res = await fetchImpl(`${nodePactBase(nodeUrl)}/api/v1/send`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ cmds: [signed] }),
+  });
+  const body = await jsonOrNull(res);
+  if (!res.ok) throw new Error(`Direct-node send failed (HTTP ${res.status})`);
+  return toSubmitResult(body);
+}
+
+// ── the mode-branching client (shared shell; Pythia lane differs per mount) ───
+
+interface PythiaLane {
+  dirtyRead(cfg: BrowserTransportConfig, cmd: unknown): Promise<unknown>;
+  submit(cfg: BrowserTransportConfig, signed: SignedCommand): Promise<{ requestKey: string; raw: unknown }>;
+}
+
+function makeSigningClient(
+  fetchImpl: FetchLike,
+  resolveConfig: () => Promise<BrowserTransportConfig>,
+  pythia: PythiaLane,
+): CodexPactSigningClient {
+  return {
+    async dirtyRead(cmd) {
+      const cfg = await resolveConfig();
+      return cfg.mode === "direct-node"
+        ? nodeDirtyRead(fetchImpl, cfg.nodeUrl, cmd)
+        : pythia.dirtyRead(cfg, cmd);
+    },
+    async submit(signed) {
+      const cfg = await resolveConfig();
+      return cfg.mode === "direct-node"
+        ? nodeSubmit(fetchImpl, cfg.nodeUrl, signed)
+        : pythia.submit(cfg, signed);
+    },
+  };
+}
+
 // ── operator (admin) codex: KEYED via the Mnemosyne relay ────────────────────
 
-/**
- * Operator-codex signing client. Reads AND writes are relayed through
- * Mnemosyne's ancient-gated `POST /api/pythia/relay` (keyed with the connector's
- * server-held `x-pythia-key`) → Pythia. Attributed to `mnemosyne`.
- */
 export function createCodexRelaySigningClient(
-  opts: RelaySigningClientOptions & { relayPath?: string } = {},
+  opts: SigningClientOptions & { relayPath?: string } = {},
 ): CodexPactSigningClient {
   const fetchImpl = opts.fetchImpl ?? ((input, init) => fetch(input, init));
+  const resolveConfig = opts.resolveConfig ?? makeDefaultConfigResolver(fetchImpl);
   const relayPath = opts.relayPath ?? RELAY_PATH;
 
   const post = (payload: unknown) =>
@@ -123,14 +192,13 @@ export function createCodexRelaySigningClient(
       body: JSON.stringify(payload),
     });
 
-  return {
-    async dirtyRead(cmd) {
+  return makeSigningClient(fetchImpl, resolveConfig, {
+    async dirtyRead(_cfg, cmd) {
       const res = await post(extractExec(cmd));
       if (!res.ok) throw new Error(`Codex simulation failed via Pythia (HTTP ${res.status})`);
       return res.json();
     },
-
-    async submit(signed) {
+    async submit(_cfg, signed) {
       const res = await post({ cmds: [signed] });
       const body = await jsonOrNull(res);
       noTxSenderThrow(res.status, body);
@@ -140,54 +208,31 @@ export function createCodexRelaySigningClient(
       }
       return toSubmitResult(body);
     },
-  };
+  });
 }
 
 // ── consumer (public) codex: KEYLESS browser-direct to Pythia ────────────────
 
-/** Default operator-Pythia resolver — a cached GET `/api/config` (URLs only). */
-function makeDefaultPythiaUrlResolver(fetchImpl: FetchLike): () => Promise<string> {
-  let cached: string | null = null;
-  return async () => {
-    if (cached !== null) return cached;
-    try {
-      const res = await fetchImpl("/api/config", { cache: "no-store" });
-      cached = res.ok ? (((await res.json()) as { pythiaUrl?: unknown }).pythiaUrl as string) || "" : "";
-    } catch {
-      cached = "";
-    }
-    return cached ?? "";
-  };
-}
-
-/**
- * Consumer-codex signing client. Reads AND writes go straight to Pythia's public
- * keyless gateway from the browser — so a user's own-codex transaction is fully
- * routed through Pythia (reads + simulation + send), counting in the meter
- * (attributed `"direct"`), without routing through (or exposing) Mnemosyne's
- * operator key.
- */
 export function createCodexDirectPythiaSigningClient(
-  opts: DirectPythiaSigningClientOptions = {},
+  opts: SigningClientOptions = {},
 ): CodexPactSigningClient {
   const fetchImpl = opts.fetchImpl ?? ((input, init) => fetch(input, init));
-  const resolvePythiaUrl = opts.resolvePythiaUrl ?? makeDefaultPythiaUrlResolver(fetchImpl);
+  const resolveConfig = opts.resolveConfig ?? makeDefaultConfigResolver(fetchImpl);
 
-  async function base(): Promise<string> {
-    const url = (await resolvePythiaUrl()).replace(/\/+$/, "");
+  function pythiaBase(cfg: BrowserTransportConfig): string {
+    const url = cfg.pythiaUrl.replace(/\/+$/, "");
     if (!url) {
       throw new Error(
         "No Pythia gateway is configured, so the operation cannot be routed through Pythia. " +
-          "The operator must set the Pythia connector URL.",
+          "The operator must set the Pythia connector URL (or enable the Network Fallback).",
       );
     }
     return url;
   }
 
-  return {
-    async dirtyRead(cmd) {
-      const url = await base();
-      const res = await fetchImpl(`${url}/stoachain/read`, {
+  return makeSigningClient(fetchImpl, resolveConfig, {
+    async dirtyRead(cfg, cmd) {
+      const res = await fetchImpl(`${pythiaBase(cfg)}/stoachain/read`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(extractExec(cmd)),
@@ -195,10 +240,8 @@ export function createCodexDirectPythiaSigningClient(
       if (!res.ok) throw new Error(`Codex simulation failed via Pythia (HTTP ${res.status})`);
       return res.json();
     },
-
-    async submit(signed) {
-      const url = await base();
-      const res = await fetchImpl(`${url}/stoachain/send`, {
+    async submit(cfg, signed) {
+      const res = await fetchImpl(`${pythiaBase(cfg)}/stoachain/send`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ cmds: [signed] }),
@@ -211,5 +254,5 @@ export function createCodexDirectPythiaSigningClient(
       }
       return toSubmitResult(body);
     },
-  };
+  });
 }

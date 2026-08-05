@@ -51,7 +51,7 @@ describe("GET /api/config — the PUBLIC operator-injected connector config", ()
     const res = await configGET();
     expect(res.headers.get("cache-control")).toBe("no-store");
     const body = await res.json();
-    expect(body).toEqual({ pythiaUrl: "" });
+    expect(body).toMatchObject({ pythiaUrl: "" });
   });
 });
 
