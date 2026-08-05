@@ -43,6 +43,7 @@ import {
 } from "@ancientpantheon/codex/hooks";
 import { MnemosyneServerCodexAdapter } from "@/lib/codex-dropin/MnemosyneServerCodexAdapter";
 import { CodexShell } from "../../codex/CodexShell";
+import { createCodexRelaySigningClient } from "../../codex/codexRelaySigningClient";
 import { CodexPortabilityControls } from "./CodexPortabilityControls";
 import "../../codex/app.css";
 
@@ -169,12 +170,25 @@ export default function MnemosyneCodex(): ReactElement {
     adapter.current = new MnemosyneServerCodexAdapter("main");
   }
 
+  // Route this operator codex's on-chain WRITES through Pythia's meter (keyed,
+  // ancient-gated relay) instead of the codex signing strategy's default
+  // direct-to-node submit — so registering Apollo halves (and any tx) COUNTS in
+  // Pythia's ledger and is attributed to `mnemosyne`. Reads already route via the
+  // operator-global Pythia connection; this closes the write gap
+  // (organs/06 §6 · HANDOFF-mnemosyne-route-sends-through-pythia.md). Stable for
+  // the mount lifetime.
+  const signingClient = useRef<ReturnType<typeof createCodexRelaySigningClient> | null>(null);
+  if (signingClient.current === null) {
+    signingClient.current = createCodexRelaySigningClient();
+  }
+
   return (
     <CodexProvider
       adapter={adapter.current}
       deviceVariant="main"
       passwordCacheMinutes={SESSION_TTL_MINUTES}
       initialUiSettings={{ passwordCacheMinutes: SESSION_TTL_MINUTES }}
+      signingClient={signingClient.current}
     >
       <AutoUnlockOnReady />
       <PasswordAutoResolver />

@@ -9,6 +9,32 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.11.3] — 2026-08-04
+
+### Fixed
+
+- **The loaded Codex's on-chain WRITES now route through Pythia's meter** (`organs/06` §6/§6a /
+  `HANDOFF-mnemosyne-route-sends-through-pythia.md`). Reads already routed through the operator-global
+  Pythia connection (counting as petitions), but the codex signing strategy submitted transactions
+  **direct-to-node**, so a user activating an Apollo half (or any tx) from a loaded codex never reached
+  Pythia's ledger. Fixed by injecting a **`signingClient`** into `<CodexProvider>` on BOTH codex mounts,
+  with postures matched to who fires:
+  - **Public `/codex` (any user's own uploaded codex):** the signed broadcast goes **keyless
+    browser-direct to Pythia's public `POST /stoachain/send`**. The transaction **counts** in the meter
+    (attributed `"direct"`); Mnemosyne's operator key is never exposed to anonymous visitors.
+  - **Operator `/admin/codex`:** the signed broadcast is relayed through a new **ancient-gated**
+    `POST /api/pythia/relay` → the server-side gated `PythiaClient` → Pythia, **keyed** with the
+    connector's server-held `x-pythia-key`, so it both counts and is **attributed to `mnemosyne`**
+    (Pythia's gateway CORS forbids the key header from a browser, so keyed must go server-side).
+
+  Simulation (`dirtyRead`) stays a direct-node `/local` for accurate gas (and now surfaces a non-2xx
+  node error instead of silently defaulting the gas). Pythia's `503 pythia_no_tx_sender` is surfaced
+  clearly with no direct-to-node fallback.
+
+  *Not covered:* Khronoton scheduled fires still submit direct-to-node — that submit lives inside
+  `khronoton-core` and needs the consumer-side `meterChainRuntime` seam (`organs/06` §6a). Tracked as a
+  follow-up.
+
 ## [0.11.2] — 2026-08-04
 
 ### Fixed

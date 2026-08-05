@@ -43,6 +43,7 @@ import {
   useCodexBackup,
 } from "@ancientpantheon/codex/hooks";
 import { MemoryCodexAdapter } from "@ancientpantheon/codex/ouronet";
+import { createCodexDirectPythiaSigningClient } from "./codexRelaySigningClient";
 
 import { CodexShell } from "./CodexShell";
 
@@ -160,6 +161,17 @@ function EncryptedSession({
 export function CodexApp({ codexVersion = "unknown" }: { codexVersion?: string } = {}): ReactElement {
   const [loaded, setLoaded] = useState<LoadedState>({ kind: "idle" });
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Route a consumer's own-codex on-chain WRITES through Pythia's meter so a
+  // user activating an Apollo half (or any tx) COUNTS as a transaction, instead
+  // of the codex signing strategy submitting direct-to-node. This is the PUBLIC
+  // surface (any visitor's uploaded codex), so it broadcasts KEYLESS straight to
+  // Pythia's public `/stoachain/send` (attributed "direct") — never through
+  // Mnemosyne's operator key. (organs/06 §6/§6a.) Stable for the mount lifetime.
+  const signingClient = useRef<ReturnType<typeof createCodexDirectPythiaSigningClient> | null>(null);
+  if (signingClient.current === null) {
+    signingClient.current = createCodexDirectPythiaSigningClient();
+  }
   // Whether the "Back to Mnemosyne" overlay is showing. While true the codex tree
   // is only HIDDEN (display:none) — never unmounted — so a loaded codex is kept
   // in memory and the user can return to it (item 2). No secrets are persisted.
@@ -244,7 +256,11 @@ export function CodexApp({ codexVersion = "unknown" }: { codexVersion?: string }
           onBackToMnemosyne={() => setShowMnemosyne(true)}
           onLogout={goHome}
         />
-        <CodexProvider adapter={loaded.adapter} deviceVariant="dev">
+        <CodexProvider
+          adapter={loaded.adapter}
+          deviceVariant="dev"
+          signingClient={signingClient.current}
+        >
           <EncryptedSession backupText={loaded.backupText} onReset={reset} />
         </CodexProvider>
       </>
