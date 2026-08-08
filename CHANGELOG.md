@@ -9,6 +9,19 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.12.3] — 2026-08-04
+
+### Fixed
+
+- **`/codex` load menu sometimes needed a manual refresh to appear.** The menu is rendered by a
+  browser-only chunk loaded via `dynamic(import, { ssr: false })` (the codex crypto libs can't
+  server-render). A `next/dynamic` lazy import has no built-in recovery, so if that chunk fails to load
+  — overwhelmingly a **stale chunk right after a deploy** (an open tab references hashes the new build
+  removed → the request 404s) — the mount hangs on "Loading Codex…" until a manual refresh. Added
+  self-healing: on a chunk-load failure the wrapper reloads once (session-latched against loops, cleared
+  on success) to fetch fresh HTML + current chunk hashes. Mnemosyne self-deploys from the admin panel,
+  so this recurs on every update.
+
 ## [0.12.2] — 2026-08-04
 
 ### Fixed

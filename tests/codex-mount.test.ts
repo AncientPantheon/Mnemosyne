@@ -34,10 +34,14 @@ describe("SSR-safety boundary (REVIEW H2)", () => {
     expect(wrapper).toMatch(/^["']use client["'];?/m);
   });
 
-  it("mounts CodexApp via dynamic(import, { ssr: false }) — the guard that stops the codex tree from executing during SSR", () => {
+  it("mounts CodexApp via dynamic(lazy import, { ssr: false }) — the guard that stops the codex tree from executing during SSR", () => {
     const wrapper = read("CodexMount.client.tsx");
     // Lazy loader (not a static import) so importing the wrapper never pulls CodexApp.
-    expect(wrapper).toMatch(/dynamic\(\s*\(\)\s*=>\s*import\(\s*["']\.\/CodexApp["']\s*\)/);
+    // The loader is wrapped for self-healing chunk-load recovery, but it is still a
+    // lazy `import("./CodexApp")` handed to `dynamic(...)` — never a static top import.
+    expect(wrapper).toMatch(/dynamic\(/);
+    expect(wrapper).toMatch(/import\(\s*["']\.\/CodexApp["']\s*\)/);
+    expect(wrapper).not.toMatch(/^import .*CodexApp.* from ["']\.\/CodexApp["']/m);
     // ssr:false is the load-bearing flag; without it the codex tree SSRs and crashes.
     expect(wrapper).toMatch(/ssr:\s*false/);
   });
