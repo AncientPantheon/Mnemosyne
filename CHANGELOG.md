@@ -9,6 +9,15 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.13.1] — 2026-08-08
+
+### Docs
+
+- Corrected the two `connectorClient.ts` doc comments that still described the pre-self-heal wiring
+  (`keyProvider()`) to reflect the `asKeySource()` refreshable key source + the 401 self-heal
+  (`HANDOFF-mnemosyne-selfheal` follow-up). No behavior change — the functional self-heal shipped in
+  v0.13.0.
+
 ## [0.13.0] — 2026-08-04
 
 ### Added — ephemeral-key self-heal (mandatory, `organs/06` §7)

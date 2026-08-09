@@ -18,8 +18,9 @@ import { readConnectorState } from "./connectorStatus";
  *    engine — Mnemosyne dials the REAL gateway, so it wires NO `fetchImpl`
  *    (the SDK's default global `fetch`) and NO `SecretStorage` (the connector
  *    holds the ephemeral `x-pythia-key` in memory, re-minting via the signers
- *    near expiry). It is NOT `.start()`ed: Mnemosyne is a pull consumer and
- *    resolves the key request-time via `keyProvider()`, not a background loop.
+ *    near expiry OR on a 401 self-heal). It is NOT `.start()`ed: Mnemosyne is a
+ *    pull consumer and resolves the key request-time via the connector's
+ *    refreshable key source, not a background loop.
  *
  *  - `getGatedPythiaClient()` is what the rest of Mnemosyne calls for any
  *    Pythia access that wants gated attribution when available. It is strictly
@@ -27,8 +28,10 @@ import { readConnectorState } from "./connectorStatus";
  *    configured gateway URL, it degrades to a plain, unattributed
  *    `PythiaClient` — behaving EXACTLY as Mnemosyne did before this connector
  *    existed. Once a key is linked and a URL is set, it wires `pythiaKey` from
- *    the connector's own `keyProvider()` (the SDK's "resolved fresh per
- *    request, no manual refresh loop" idiom).
+ *    the connector's `asKeySource()` — the REFRESHABLE `{ get, invalidate }`
+ *    source (NOT a bare `keyProvider()`), so PythiaClient's transport can
+ *    self-heal a dead ephemeral key on a `401` (invalidate → re-mint → retry
+ *    once). `organs/06` §7c.
  */
 
 interface MemoizedConnector {
