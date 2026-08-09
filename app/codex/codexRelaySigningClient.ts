@@ -260,10 +260,17 @@ export function createCodexRelaySigningClient(
       }
       return toSubmitResult(body);
     },
-    async read(_cfg, code, data) {
-      const res = await post({ code, ...(data ? { data } : {}) });
-      if (!res.ok) throw new Error(`Codex read via Pythia relay failed (HTTP ${res.status})`);
-      return res.json();
+    async read(cfg, code, data) {
+      // KEYED relay read (attributed to mnemosyne). Falls back to a node-direct
+      // read if the relay/key fails, so the display never blanks (Pythia down or a
+      // dead key must not turn every account "observational").
+      try {
+        const res = await post({ code, ...(data ? { data } : {}) });
+        if (!res.ok) throw new Error(`relay read HTTP ${res.status}`);
+        return await res.json();
+      } catch {
+        return nodeCodeRead(cfg.nodeUrl, code);
+      }
     },
   });
 }
@@ -302,14 +309,14 @@ export function createCodexDirectPythiaSigningClient(
       }
       return toSubmitResult(body);
     },
-    async read(cfg, code, data) {
-      const res = await fetchImpl(`${pythiaBase(cfg)}/stoachain/read`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ code, ...(data ? { data } : {}) }),
-      });
-      if (!res.ok) throw new Error(`Codex read via Pythia failed (HTTP ${res.status})`);
-      return res.json();
+    async read(cfg, code) {
+      // Pythia HARD-GATES reads (401 without a key), and a public consumer has no
+      // key + cannot send the `x-pythia-key` header from a browser (Pythia CORS
+      // allows only Content-Type/Accept). So a consumer display read goes
+      // NODE-DIRECT — §6a's keyed rule is physically unreachable for a public
+      // surface. (Only the operator `/admin/codex`, which has the server-held key,
+      // reads through Pythia keyed.)
+      return nodeCodeRead(cfg.nodeUrl, code);
     },
   });
 }
@@ -339,34 +346,33 @@ export function createCodexRelayPactReader(
   return async (pactCode) => {
     const cfg = await resolveConfig();
     if (cfg.mode === "direct-node") return nodeCodeRead(cfg.nodeUrl, pactCode);
-    const res = await fetchImpl(relayPath, {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ code: pactCode }),
-    });
-    if (!res.ok) throw new Error(`Codex read via Pythia relay failed (HTTP ${res.status})`);
-    return res.json();
+    // KEYED relay read (attributed to mnemosyne), with a node-direct fallback so a
+    // relay/key failure never blanks the display.
+    try {
+      const res = await fetchImpl(relayPath, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ code: pactCode }),
+      });
+      if (!res.ok) throw new Error(`relay read HTTP ${res.status}`);
+      return await res.json();
+    } catch {
+      return nodeCodeRead(cfg.nodeUrl, pactCode);
+    }
   };
 }
 
-/** Consumer (public) codex reader → KEYLESS browser-direct to Pythia's `/read`
- *  (falls back to node only if no Pythia gateway is configured, so a display never
- *  hard-fails a public visitor). */
+/** Consumer (public) codex reader → NODE-DIRECT. Pythia hard-gates reads (401
+ *  without a key) and a public visitor has no key + can't send the header from a
+ *  browser, so its display reads cannot go through Pythia — they read the node
+ *  directly (as they did before v0.14.0, and as localhost/OuronetUI do). */
 export function createCodexDirectPythiaPactReader(opts: SigningClientOptions = {}): PactReader {
   const fetchImpl = opts.fetchImpl ?? ((input, init) => fetch(input, init));
   const resolveConfig = opts.resolveConfig ?? makeDefaultConfigResolver(fetchImpl);
 
   return async (pactCode) => {
     const cfg = await resolveConfig();
-    const url = cfg.pythiaUrl.replace(/\/+$/, "");
-    if (cfg.mode === "direct-node" || !url) return nodeCodeRead(cfg.nodeUrl, pactCode);
-    const res = await fetchImpl(`${url}/stoachain/read`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ code: pactCode }),
-    });
-    if (!res.ok) throw new Error(`Codex read via Pythia failed (HTTP ${res.status})`);
-    return res.json();
+    return nodeCodeRead(cfg.nodeUrl, pactCode);
   };
 }

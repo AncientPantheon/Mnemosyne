@@ -24,16 +24,18 @@ describe("direct-node exists only behind the admin Network Fallback", () => {
     expect(src).toMatch(/createStoaChainConnection/);
   });
 
-  it("the codex clients route SEND + DISPLAY reads through Pythia; only the signed simulate is node-direct", () => {
+  it("the codex clients route SEND (+ operator display reads) through Pythia; simulate + consumer reads node-direct", () => {
     const src = read("app", "codex", "codexRelaySigningClient.ts");
     // Metered SEND through Pythia (default) — node only under the fallback.
     expect(src).toMatch(/stoachain\/send/);
     expect(src).toMatch(/mode === "direct-node"/);
-    // DISPLAY reads (no signers) route through Pythia's KEYED /read (organs/06 §6a).
-    expect(src).toMatch(/stoachain\/read/);
-    // The lane split: only a signed-tx SIMULATE (declares signers) stays node-direct /local.
+    // The lane split discriminator (a signed simulate declares signers → node /local).
     expect(src).toMatch(/commandHasSigners/);
     expect(src).toMatch(/api\/v1\/local/);
+    // Operator display reads go through the KEYED relay; a public consumer (no key,
+    // Pythia hard-gates keyless reads) reads node-direct.
+    expect(src).toMatch(/RELAY_PATH|relayPath/);
+    expect(src).toMatch(/nodeCodeRead/);
   });
 
   it("the Khronoton runtime routes through Pythia and branches to a node only on the fallback mode", () => {

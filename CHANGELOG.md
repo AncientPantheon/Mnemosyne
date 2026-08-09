@@ -9,6 +9,22 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.14.1] — 2026-08-09
+
+### Fixed
+
+- **Smart/Ouronet accounts showed "observational" (inactive) though they're activated** — a v0.14.0
+  regression. v0.14.0 routed the **public `/codex`** display reads *keyless* to Pythia's `/read`, but
+  Pythia **hard-gates reads** (a keyless request → `401 "a valid connector API key is required"`), so
+  every status/registration read failed and the codex fell back to "observational." A public visitor has
+  no key and the browser can't send `x-pythia-key` (Pythia CORS allows only `Content-Type`/`Accept`), so
+  a consumer read simply cannot go through Pythia. Fixes:
+  - **Consumer `/codex` reads → node-direct** again (as before v0.14.0 / localhost / OuronetUI).
+  - **Operator `/admin/codex` reads → KEYED relay `/read`** (attributed to `mnemosyne`) **with a
+    node-direct fallback** so a relay/key failure never blanks the display.
+  The signed-tx SIMULATE (declares signers) stays node-direct; SEND stays through Pythia. The keyed,
+  attributed read path is the operator surface (which holds the server-side connector key).
+
 ## [0.14.0] — 2026-08-09
 
 ### Fixed — display reads now route through Pythia (metered + attributed) (`organs/06` §6a)

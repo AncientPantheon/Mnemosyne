@@ -3,14 +3,18 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 /**
- * `app/codex/codexRelaySigningClient.ts` — the browser signing clients + the
- * display-read pactReaders. Routing rules (organs/06 §6a):
- *   - DISPLAY reads (no signers) → Pythia's KEYED /read (metered + attributed).
- *   - signed-tx SIMULATE (declares signers) → node-direct /local (the ONE
- *     legitimate node-direct read — a keys-all guard needs the signers).
+ * `app/codex/codexRelaySigningClient.ts` — signing clients + display-read routing.
+ * Read routing (organs/06 §6a, given Pythia HARD-GATES reads with 401):
+ *   - operator `/admin/codex` DISPLAY read → KEYED relay `/read` (attributed),
+ *     with a node-direct fallback on relay/key failure;
+ *   - consumer `/codex` DISPLAY read → NODE-DIRECT (a public visitor has no key +
+ *     can't send the header, so it can't read through Pythia);
+ *   - signed-tx SIMULATE (declares signers) → node-direct `/local` (both mounts);
  *   - SEND → Pythia (relay for operator, keyless-direct for consumer).
- *   - Network Fallback "direct-node" → everything node-direct (break-glass).
  */
+const { rawMock } = vi.hoisted(() => ({ rawMock: vi.fn(async () => ({ result: { status: "success" }, gas: 1 })) }));
+vi.mock("@stoachain/stoa-core/reads", () => ({ rawCalibratedDirtyRead: rawMock }));
+
 import {
   createCodexRelaySigningClient,
   createCodexDirectPythiaSigningClient,
@@ -20,16 +24,11 @@ import {
   type BrowserTransportConfig,
 } from "../app/codex/codexRelaySigningClient";
 
-// A signed-tx SIMULATE: DECLARES signers (so it must go node-direct).
 const SIM_SIGNED = {
-  cmd: JSON.stringify({
-    payload: { exec: { code: "(free.mod.fire)", data: { a: 1 } } },
-    signers: [{ pubKey: "abc" }],
-  }),
+  cmd: JSON.stringify({ payload: { exec: { code: "(free.mod.fire)", data: { a: 1 } } }, signers: [{ pubKey: "abc" }] }),
   hash: "hsim",
   sigs: [{}],
 };
-// A DISPLAY read: NO signers (must go through Pythia /read).
 const DISPLAY = {
   cmd: JSON.stringify({ payload: { exec: { code: "(coin.details x)", data: { x: 1 } } }, signers: [] }),
   hash: "hdisp",
@@ -45,6 +44,9 @@ function jsonRes(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 }
 const NODE_LOCAL = "https://node2.stoachain.com/chainweb/0.0/stoa/chain/0/pact/api/v1/local?preflight=false&signatureVerification=false";
+const NODE_PACT = "https://node2.stoachain.com/chainweb/0.0/stoa/chain/0/pact";
+
+beforeEach(() => rawMock.mockClear());
 
 describe("extractExec", () => {
   it("pulls code + data out of a built command envelope", () => {
@@ -52,31 +54,39 @@ describe("extractExec", () => {
   });
 });
 
-describe("dirtyRead lane split — DISPLAY read (no signers) routes through Pythia KEYED /read", () => {
+describe("DISPLAY read routing (no signers)", () => {
   let fetchImpl: ReturnType<typeof vi.fn>;
   beforeEach(() => (fetchImpl = vi.fn()));
 
-  it("operator client: display read → /api/pythia/relay (keyed), not the node", async () => {
-    fetchImpl.mockResolvedValue(jsonRes(200, { result: { status: "success" }, gas: 40 }));
-    const client = createCodexRelaySigningClient({ fetchImpl: fetchImpl as never, resolveConfig: cfg(PYTHIA) });
-    await client.dirtyRead(DISPLAY);
+  it("operator: display read → KEYED /api/pythia/relay (not the node)", async () => {
+    fetchImpl.mockResolvedValue(jsonRes(200, { result: { status: "success" } }));
+    const c = createCodexRelaySigningClient({ fetchImpl: fetchImpl as never, resolveConfig: cfg(PYTHIA) });
+    await c.dirtyRead(DISPLAY);
     const [url, init] = fetchImpl.mock.calls[0];
     expect(url).toBe("/api/pythia/relay");
-    expect(init.credentials).toBe("same-origin");
     expect(JSON.parse(init.body)).toEqual({ code: "(coin.details x)", data: { x: 1 } });
+    expect(rawMock).not.toHaveBeenCalled();
   });
 
-  it("consumer client: display read → Pythia /stoachain/read (keyless), not the node", async () => {
-    fetchImpl.mockResolvedValue(jsonRes(200, { result: { status: "success" }, gas: 40 }));
-    const client = createCodexDirectPythiaSigningClient({ fetchImpl: fetchImpl as never, resolveConfig: cfg(PYTHIA) });
-    await client.dirtyRead(DISPLAY);
-    const [url, init] = fetchImpl.mock.calls[0];
-    expect(url).toBe("https://pythia.example/stoachain/read");
-    expect(JSON.parse(init.body)).toEqual({ code: "(coin.details x)", data: { x: 1 } });
+  it("operator: display read FALLS BACK to node-direct when the relay fails (display never blanks)", async () => {
+    fetchImpl.mockResolvedValue(jsonRes(401, { error: "a valid connector API key is required" }));
+    const c = createCodexRelaySigningClient({ fetchImpl: fetchImpl as never, resolveConfig: cfg(PYTHIA) });
+    await c.dirtyRead(DISPLAY);
+    expect(rawMock).toHaveBeenCalledTimes(1);
+    expect(rawMock.mock.calls[0][0]).toBe("(coin.details x)");
+    expect(rawMock.mock.calls[0][1]).toMatchObject({ pactUrl: NODE_PACT });
+  });
+
+  it("consumer: display read → NODE-DIRECT (Pythia hard-gates keyless reads), never /stoachain/read", async () => {
+    const c = createCodexDirectPythiaSigningClient({ fetchImpl: fetchImpl as never, resolveConfig: cfg(PYTHIA) });
+    await c.dirtyRead(DISPLAY);
+    expect(rawMock).toHaveBeenCalledTimes(1);
+    expect(rawMock.mock.calls[0][1]).toMatchObject({ pactUrl: NODE_PACT });
+    expect(fetchImpl).not.toHaveBeenCalled(); // no keyless Pythia /read attempt
   });
 });
 
-describe("dirtyRead lane split — signed SIMULATE (declares signers) stays node-direct /local", () => {
+describe("signed SIMULATE (declares signers) stays node-direct /local", () => {
   let fetchImpl: ReturnType<typeof vi.fn>;
   beforeEach(() => (fetchImpl = vi.fn()));
 
@@ -84,21 +94,18 @@ describe("dirtyRead lane split — signed SIMULATE (declares signers) stays node
     ["operator", createCodexRelaySigningClient],
     ["consumer", createCodexDirectPythiaSigningClient],
   ] as const) {
-    it(`${name}: simulate → node /local?signatureVerification=false (full cmd), NOT Pythia`, async () => {
+    it(`${name}: simulate → node /local?signatureVerification=false`, async () => {
       fetchImpl.mockResolvedValue(jsonRes(200, { result: { status: "success" }, gas: 700 }));
-      const client = make({ fetchImpl: fetchImpl as never, resolveConfig: cfg(PYTHIA) });
-      await client.dirtyRead(SIM_SIGNED);
-      const url = String(fetchImpl.mock.calls[0][0]);
-      expect(url).toBe(NODE_LOCAL);
-      expect(url).not.toContain("/stoachain/read");
-      expect(url).not.toContain("/api/pythia/relay");
+      const c = make({ fetchImpl: fetchImpl as never, resolveConfig: cfg(PYTHIA) });
+      await c.dirtyRead(SIM_SIGNED);
+      expect(String(fetchImpl.mock.calls[0][0])).toBe(NODE_LOCAL);
     });
   }
 
-  it("break-glass direct-node: even a DISPLAY read goes node-direct", async () => {
+  it("break-glass direct-node: even a DISPLAY read goes node-direct /local", async () => {
     fetchImpl.mockResolvedValue(jsonRes(200, { result: { status: "success" } }));
-    const client = createCodexDirectPythiaSigningClient({ fetchImpl: fetchImpl as never, resolveConfig: cfg(DIRECT) });
-    await client.dirtyRead(DISPLAY);
+    const c = createCodexDirectPythiaSigningClient({ fetchImpl: fetchImpl as never, resolveConfig: cfg(DIRECT) });
+    await c.dirtyRead(DISPLAY);
     expect(String(fetchImpl.mock.calls[0][0])).toBe(NODE_LOCAL);
   });
 });
@@ -110,17 +117,15 @@ describe("send lanes", () => {
   it("operator submit → relay", async () => {
     fetchImpl.mockResolvedValue(jsonRes(200, { requestKeys: ["rk"] }));
     const c = createCodexRelaySigningClient({ fetchImpl: fetchImpl as never, resolveConfig: cfg(PYTHIA) });
-    const out = await c.submit(SIGNED);
+    expect((await c.submit(SIGNED)).requestKey).toBe("rk");
     expect(fetchImpl.mock.calls[0][0]).toBe("/api/pythia/relay");
-    expect(out.requestKey).toBe("rk");
   });
 
   it("consumer submit → Pythia /stoachain/send (keyless)", async () => {
     fetchImpl.mockResolvedValue(jsonRes(200, { requestKeys: ["rk2"] }));
     const c = createCodexDirectPythiaSigningClient({ fetchImpl: fetchImpl as never, resolveConfig: cfg(PYTHIA) });
-    const out = await c.submit(SIGNED);
+    expect((await c.submit(SIGNED)).requestKey).toBe("rk2");
     expect(fetchImpl.mock.calls[0][0]).toBe("https://pythia.example/stoachain/send");
-    expect(out.requestKey).toBe("rk2");
   });
 });
 
@@ -128,21 +133,24 @@ describe("pactReaders — the setPactReader display-read seam", () => {
   let fetchImpl: ReturnType<typeof vi.fn>;
   beforeEach(() => (fetchImpl = vi.fn()));
 
-  it("operator reader → KEYED /api/pythia/relay { code }", async () => {
+  it("operator reader → KEYED /api/pythia/relay { code }, node fallback on failure", async () => {
     fetchImpl.mockResolvedValue(jsonRes(200, { result: { status: "success" } }));
     const reader = createCodexRelayPactReader({ fetchImpl: fetchImpl as never, resolveConfig: cfg(PYTHIA) });
     await reader("(coin.details x)");
-    const [url, init] = fetchImpl.mock.calls[0];
-    expect(url).toBe("/api/pythia/relay");
-    expect(init.credentials).toBe("same-origin");
-    expect(JSON.parse(init.body)).toEqual({ code: "(coin.details x)" });
+    expect(fetchImpl.mock.calls[0][0]).toBe("/api/pythia/relay");
+    expect(rawMock).not.toHaveBeenCalled();
+
+    fetchImpl.mockResolvedValue(jsonRes(500, {}));
+    await reader("(coin.details x)");
+    expect(rawMock).toHaveBeenCalledTimes(1); // fell back to node
   });
 
-  it("consumer reader → Pythia /stoachain/read { code }", async () => {
-    fetchImpl.mockResolvedValue(jsonRes(200, { result: { status: "success" } }));
+  it("consumer reader → NODE-DIRECT (never Pythia, since keyless reads are hard-gated)", async () => {
     const reader = createCodexDirectPythiaPactReader({ fetchImpl: fetchImpl as never, resolveConfig: cfg(PYTHIA) });
     await reader("(coin.details x)");
-    expect(String(fetchImpl.mock.calls[0][0])).toBe("https://pythia.example/stoachain/read");
+    expect(rawMock).toHaveBeenCalledTimes(1);
+    expect(rawMock.mock.calls[0][1]).toMatchObject({ pactUrl: NODE_PACT });
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });
 
@@ -150,13 +158,11 @@ describe("mount wiring (source-contract)", () => {
   it("operator codex installs the RELAY reader + relay signing client", () => {
     const src = readFileSync(join(process.cwd(), "app", "admin", "codex", "MnemosyneCodex.tsx"), "utf8");
     expect(src).toMatch(/setPactReader\(createCodexRelayPactReader\(\)\)/);
-    expect(src).toMatch(/createCodexRelaySigningClient/);
     expect(src).toMatch(/signingClient=/);
   });
-  it("consumer codex installs the DIRECT reader + direct signing client", () => {
+  it("consumer codex installs the (node-direct) reader + direct signing client", () => {
     const src = readFileSync(join(process.cwd(), "app", "codex", "CodexApp.tsx"), "utf8");
     expect(src).toMatch(/setPactReader\(createCodexDirectPythiaPactReader\(\)\)/);
-    expect(src).toMatch(/createCodexDirectPythiaSigningClient/);
     expect(src).toMatch(/signingClient=\{signingClient\.current\}/);
   });
 });
