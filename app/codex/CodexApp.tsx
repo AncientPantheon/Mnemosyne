@@ -41,9 +41,11 @@ import {
   useCodex,
   useCodexAuth,
   useCodexBackup,
+  useCodexLifecycle,
 } from "@ancientpantheon/codex/hooks";
 import { MemoryCodexAdapter } from "@ancientpantheon/codex/ouronet";
 import { setPactReader } from "@stoachain/stoa-core/reads";
+import { KadenaWalletBuilder } from "@stoachain/stoa-core/wallet";
 import {
   createCodexDirectPythiaSigningClient,
   createCodexDirectPythiaPactReader,
@@ -60,10 +62,14 @@ import { CodexShell } from "./CodexShell";
 import { UnlockScreen } from "./UnlockScreen";
 import "./app.css";
 
+/** The three Stoa seed types a new codex's prime seed can be derived under. */
+export type SeedType = "koala" | "chainweaver" | "eckowallet";
+
 /** What the App is currently rendering: the load screen, or a mounted codex. */
 type LoadedState =
   | { kind: "idle" }
-  | { kind: "encrypted"; adapter: MemoryCodexAdapter; backupText: string };
+  | { kind: "encrypted"; adapter: MemoryCodexAdapter; backupText: string }
+  | { kind: "creating"; adapter: MemoryCodexAdapter; seedType: SeedType; password: string };
 
 /**
  * The dashboard — the real shipped shell inside a slim chrome (title + export +
@@ -168,6 +174,130 @@ function EncryptedSession({
   return <Dashboard onReset={onReset} />;
 }
 
+const CREATE_TTL_MINUTES = 60;
+
+/**
+ * Mounted inside an EMPTY <CodexProvider> to CREATE a brand-new codex from
+ * scratch. On mount (once, when the store is ready): sets the password, generates
+ * a fresh mnemonic of the chosen Stoa seed type, and `kickstart`s the codex — the
+ * package derives the double-Apollo identity, the CodexGuard, the duoPrime kadena
+ * keys (pos0 payment + pos1 guard), and the Prime Ouronet account (UNACTIVATED;
+ * on-chain deploy is a later step). All local — no secret leaves the device.
+ * Then shows the recovery phrase (the mnemonic) ONCE before the dashboard.
+ */
+function CreateSession({
+  seedType,
+  password,
+  onReset,
+}: {
+  seedType: SeedType;
+  password: string;
+  onReset: () => void;
+}): ReactElement {
+  const { authenticate } = useCodexAuth();
+  const { kickstart } = useCodexLifecycle();
+  const { downloadAsJson } = useCodexBackup();
+  const { isReady } = useCodex();
+  const [phrase, setPhrase] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [entered, setEntered] = useState(false);
+  const started = useRef(false);
+
+  useEffect(() => {
+    if (!isReady || started.current) return;
+    started.current = true;
+    void (async () => {
+      try {
+        // Password FIRST: kickstart reads the cached password to encrypt secrets.
+        authenticate(password, CREATE_TTL_MINUTES);
+        // 12-word BIP39 — the format the Kadena wallets (Chainweaver / eckoWALLET,
+        // and Koala) accept, so the generated seed can later be imported into the
+        // chosen wallet type.
+        const mnemonic = await KadenaWalletBuilder.generateMnemonic(12);
+        await kickstart({
+          codexIdSeed: { mode: "words", value: mnemonic },
+          codexPrimeSeed: { source: "reuse-codexid-whole" },
+          duoPrime: { mode: "kadena-seed", seedType, mnemonic },
+        });
+        setPhrase(mnemonic);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : String(err));
+      }
+    })();
+  }, [isReady, authenticate, kickstart, password, seedType]);
+
+  if (error !== null) {
+    return (
+      <StatusScreen>
+        <p className="cxpg-error" role="alert">
+          Could not create the codex: {error}
+        </p>
+        <button type="button" className="cxpg-btn cxpg-btn--primary" onClick={onReset}>
+          Back
+        </button>
+      </StatusScreen>
+    );
+  }
+  if (phrase === null) {
+    return (
+      <StatusScreen>
+        <p className="cxpg-status">Creating your codex…</p>
+      </StatusScreen>
+    );
+  }
+  if (entered) {
+    return <Dashboard onReset={onReset} />;
+  }
+  const words = phrase.split(/\s+/);
+  return (
+    <StatusScreen>
+      <h1 className="cxpg-title">Save your recovery phrase</h1>
+      <p className="cxpg-mnemo-warn" role="alert">
+        These <strong>{words.length} words</strong> are the ONLY way to recover this codex — a
+        <code> {seedType} </code> Stoa seed. Write them down and keep them offline. Anyone with the
+        phrase controls the codex; if you lose it, the codex is unrecoverable.
+      </p>
+      <ol className="cxpg-mnemo-grid">
+        {words.map((w, i) => (
+          <li key={i} className="cxpg-mnemo-word">
+            <span className="cxpg-mnemo-idx">{i + 1}</span>
+            {w}
+          </li>
+        ))}
+      </ol>
+      <div className="cxpg-mnemo-actions">
+        <button
+          type="button"
+          className="cxpg-btn cxpg-btn--ghost cxpg-btn--sm"
+          onClick={() => void navigator.clipboard?.writeText(phrase)}
+        >
+          Copy phrase
+        </button>
+        <button
+          type="button"
+          className="cxpg-btn cxpg-btn--ghost cxpg-btn--sm"
+          onClick={() => void downloadAsJson()}
+        >
+          Download codex (.json)
+        </button>
+      </div>
+      <label className="cxpg-mnemo-confirm">
+        <input type="checkbox" checked={saved} onChange={(e) => setSaved(e.target.checked)} />
+        I have written down my recovery phrase and understand it cannot be shown again.
+      </label>
+      <button
+        type="button"
+        className="cxpg-btn cxpg-btn--primary"
+        disabled={!saved}
+        onClick={() => setEntered(true)}
+      >
+        Open Codex
+      </button>
+    </StatusScreen>
+  );
+}
+
 export function CodexApp({ codexVersion = "unknown" }: { codexVersion?: string } = {}): ReactElement {
   const [loaded, setLoaded] = useState<LoadedState>({ kind: "idle" });
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -238,6 +368,13 @@ export function CodexApp({ codexVersion = "unknown" }: { codexVersion?: string }
     [],
   );
 
+  // Create a brand-new codex from scratch: mount an EMPTY adapter; CreateSession
+  // sets the password + kickstarts the prime seed/identity post-mount.
+  const createCodex = useCallback((seedType: SeedType, password: string) => {
+    setLoadError(null);
+    setLoaded({ kind: "creating", adapter: new MemoryCodexAdapter("dev"), seedType, password });
+  }, []);
+
   let content: ReactElement;
   if (loadError !== null) {
     content = (
@@ -254,12 +391,13 @@ export function CodexApp({ codexVersion = "unknown" }: { codexVersion?: string }
     content = (
       <LoadCodexScreen
         onUploadBackup={loadEncrypted}
+        onCreate={createCodex}
         onBack={goHome}
         codexVersion={codexVersion}
       />
     );
   } else {
-    // Mount empty -> restore -> unlock -> dashboard, under the Mnemosyne host bar.
+    // Mount empty -> (restore | create) -> unlock -> dashboard, under the host bar.
     content = (
       <>
         <MnemosyneBar
@@ -271,7 +409,11 @@ export function CodexApp({ codexVersion = "unknown" }: { codexVersion?: string }
           deviceVariant="dev"
           signingClient={signingClient.current}
         >
-          <EncryptedSession backupText={loaded.backupText} onReset={reset} />
+          {loaded.kind === "creating" ? (
+            <CreateSession seedType={loaded.seedType} password={loaded.password} onReset={reset} />
+          ) : (
+            <EncryptedSession backupText={loaded.backupText} onReset={reset} />
+          )}
         </CodexProvider>
       </>
     );
@@ -359,15 +501,31 @@ function StatusScreen({ children }: { children: ReactNode }): ReactElement {
  * `.json` you exported from your wallet. No demo/fixture shortcuts; you always
  * load a real codex.
  */
+const SEED_TYPES: { value: SeedType; label: string }[] = [
+  { value: "koala", label: "Koala" },
+  { value: "chainweaver", label: "Chainweaver" },
+  { value: "eckowallet", label: "eckoWALLET" },
+];
+
 function LoadCodexScreen({
   onUploadBackup,
+  onCreate,
   onBack,
   codexVersion,
 }: {
   onUploadBackup: (event: ChangeEvent<HTMLInputElement>) => void;
+  onCreate: (seedType: SeedType, password: string) => void;
   onBack: () => void;
   codexVersion: string;
 }): ReactElement {
+  const [mode, setMode] = useState<"load" | "create">("load");
+  const [seedType, setSeedType] = useState<SeedType>("koala");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+
+  const mismatch = confirm.length > 0 && password !== confirm;
+  const canCreate = password.length >= 8 && password === confirm;
+
   return (
     <div className="cxpg-app cxpg-landing">
       {/* Leave without loading a codex, back to the Mnemosyne site (item 3). */}
@@ -387,22 +545,93 @@ function LoadCodexScreen({
           Your multi-chain key vault — local &amp; offline.
         </p>
 
-        <label htmlFor="codex-file" className="cxpg-upload">
-          <span className="cxpg-upload-icon" aria-hidden="true">
-            ⭳
-          </span>
-          <span className="cxpg-upload-title">Load your Codex</span>
-          <span className="cxpg-upload-hint">
-            Choose the <code>.json</code> you exported from your wallet
-          </span>
-          <input
-            id="codex-file"
-            className="cxpg-file-input"
-            type="file"
-            accept="application/json,.json"
-            onChange={onUploadBackup}
-          />
-        </label>
+        <div className="cxpg-tabs" role="tablist" aria-label="Load or create">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "load"}
+            className={`cxpg-tab${mode === "load" ? " cxpg-tab--active" : ""}`}
+            onClick={() => setMode("load")}
+          >
+            Load a Codex
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "create"}
+            className={`cxpg-tab${mode === "create" ? " cxpg-tab--active" : ""}`}
+            onClick={() => setMode("create")}
+          >
+            Create a new Codex
+          </button>
+        </div>
+
+        {mode === "load" ? (
+          <label htmlFor="codex-file" className="cxpg-upload">
+            <span className="cxpg-upload-icon" aria-hidden="true">
+              ⭳
+            </span>
+            <span className="cxpg-upload-title">Load your Codex</span>
+            <span className="cxpg-upload-hint">
+              Choose the <code>.json</code> you exported from your wallet
+            </span>
+            <input
+              id="codex-file"
+              className="cxpg-file-input"
+              type="file"
+              accept="application/json,.json"
+              onChange={onUploadBackup}
+            />
+          </label>
+        ) : (
+          <form
+            className="cxpg-create"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (canCreate) onCreate(seedType, password);
+            }}
+          >
+            <fieldset className="cxpg-seedtype">
+              <legend className="cxpg-create-label">Stoa seed type</legend>
+              {SEED_TYPES.map((s) => (
+                <label key={s.value} className="cxpg-seedtype-opt">
+                  <input
+                    type="radio"
+                    name="seedType"
+                    value={s.value}
+                    checked={seedType === s.value}
+                    onChange={() => setSeedType(s.value)}
+                  />
+                  {s.label}
+                </label>
+              ))}
+            </fieldset>
+            <p className="cxpg-create-hint">
+              A fresh seed of this type is generated (its first two keys), and the Prime Ouronet account
+              is derived from the same words — <strong>unactivated</strong>.
+            </p>
+            <input
+              className="cxpg-input"
+              type="password"
+              placeholder="Codex password (min 8 chars)"
+              value={password}
+              autoComplete="new-password"
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <input
+              className="cxpg-input"
+              type="password"
+              placeholder="Confirm password"
+              value={confirm}
+              autoComplete="new-password"
+              onChange={(e) => setConfirm(e.target.value)}
+            />
+            {mismatch ? <p className="cxpg-error">Passwords don&rsquo;t match.</p> : null}
+            <button type="submit" className="cxpg-btn cxpg-btn--primary" disabled={!canCreate}>
+              Create Codex
+            </button>
+          </form>
+        )}
 
         <p className="cxpg-note">Nothing leaves this device — no account, no cloud.</p>
         <p className="cxpg-note cxpg-engine-badge">

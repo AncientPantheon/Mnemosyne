@@ -9,6 +9,26 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.15.0] — 2026-08-09
+
+### Added — create a new Codex from scratch on `/codex`
+
+`/codex` previously only LOADED an existing codex (upload a `.json`). Added a "Create a new Codex" flow:
+
+- The load screen now has **Load / Create** tabs. Create asks for a **Stoa seed type**
+  (koala / chainweaver / eckoWALLET) + a password.
+- On create, Mnemosyne generates a fresh **12-word** mnemonic (`KadenaWalletBuilder.generateMnemonic`,
+  fully local) and `useCodexLifecycle().kickstart`s the codex from that ONE seed: the prime Stoa seed's
+  first two keys (pos0 payment + pos1 guard, seedType-aware) AND the **Prime Ouronet account**
+  (`reuse-codexid-whole`), **unactivated** (on-chain deploy stays a separate step).
+- Password is set (`authenticate`) **before** kickstart (which reads the cached password to encrypt).
+- The **recovery phrase is shown once** on a dedicated screen (Copy / Download `.json`), gated behind a
+  "I've saved my recovery phrase" confirmation before the dashboard — the codex is in-memory, so the
+  phrase + exported `.json` are the only recovery.
+
+No secret leaves the device — generation + kickstart are entirely local, mirroring the existing
+upload flow's `MemoryCodexAdapter` mount.
+
 ## [0.14.1] — 2026-08-09
 
 ### Fixed

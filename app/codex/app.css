@@ -664,3 +664,108 @@ body {
   gap: 0.6rem;
   margin-top: 0.3rem;
 }
+
+/* ── Load / Create tabs + create form + recovery-phrase display ───────────── */
+.cxpg-tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0.25rem 0 1rem;
+}
+.cxpg-tab {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--codex-accent-strong);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--codex-accent);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.cxpg-tab--active {
+  background: var(--codex-accent);
+  color: #06121a;
+  border-color: var(--codex-accent);
+}
+.cxpg-create {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  text-align: left;
+}
+.cxpg-create-label {
+  font-size: 0.85rem;
+  color: var(--codex-accent);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.cxpg-seedtype {
+  display: flex;
+  gap: 0.75rem;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+.cxpg-seedtype-opt {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.cxpg-create-hint {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  margin: 0;
+  line-height: 1.4;
+}
+.cxpg-mnemo-warn {
+  border: 1px solid #e0a53a;
+  border-left: 4px solid #e0a53a;
+  border-radius: 6px;
+  background: rgba(224, 165, 58, 0.12);
+  color: #f0c070;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  text-align: left;
+}
+.cxpg-mnemo-grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+  padding: 0;
+  margin: 0.75rem 0;
+}
+.cxpg-mnemo-word {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--codex-accent-strong);
+  border-radius: 6px;
+  background: #060912;
+  font-family: var(--cxpg-font, monospace);
+  font-size: 0.85rem;
+}
+.cxpg-mnemo-idx {
+  opacity: 0.5;
+  font-size: 0.72rem;
+  min-width: 1.1rem;
+}
+.cxpg-mnemo-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 0.6rem;
+}
+.cxpg-mnemo-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  text-align: left;
+  margin: 0.4rem 0 0.9rem;
+  line-height: 1.4;
+}
