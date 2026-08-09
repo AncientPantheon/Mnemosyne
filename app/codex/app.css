@@ -808,3 +808,105 @@ body {
   justify-content: center;
   font-weight: 700;
 }
+
+/* ── Create-codex seed wizard (OuronetUI CreateStoaChainSeedModal parity) ──── */
+/* The nested generate/restore + seed-type pickers are a tighter pill-tab set. */
+.cxpg-tabs--seed {
+  margin: 0 0 0.3rem;
+}
+.cxpg-seedtype-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+  width: 100%;
+}
+.cxpg-seedtype-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.5rem 0.4rem;
+  border: 1px solid var(--codex-accent-strong);
+  border-radius: 8px;
+  background: transparent;
+  color: #8a94a6;
+  font: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.cxpg-seedtype-btn--on {
+  background: var(--codex-accent);
+  color: #06121a;
+  border-color: var(--codex-accent);
+}
+.cxpg-seedtype-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.cxpg-seedtype-words {
+  font-size: 0.68rem;
+  opacity: 0.75;
+}
+/* The generated-word grid inside the wizard is denser than the recovery screen. */
+.cxpg-mnemo-grid--sm {
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.3rem;
+  margin: 0.25rem 0;
+}
+.cxpg-mnemo-grid--sm .cxpg-mnemo-word {
+  font-size: 0.78rem;
+  padding: 0.3rem 0.4rem;
+}
+.cxpg-status--sm {
+  font-size: 0.85rem;
+  opacity: 0.7;
+  text-align: center;
+  margin: 0.6rem 0;
+}
+.cxpg-restore {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.cxpg-restore-area {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 5rem;
+  resize: vertical;
+  padding: 0.7rem;
+  border: 1px solid var(--codex-accent-strong);
+  border-radius: 8px;
+  background: #060912;
+  color: inherit;
+  font-family: var(--cxpg-font, monospace);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.cxpg-restore-count {
+  font-size: 0.78rem;
+  color: #8a94a6;
+}
+.cxpg-restore-count--ok {
+  color: #7ce6a8;
+}
+.cxpg-keyprev {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--codex-accent-strong);
+  border-radius: 8px;
+  background: #060912;
+}
+.cxpg-keyprev-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.6;
+}
+.cxpg-keyprev-value {
+  font-family: var(--cxpg-font, monospace);
+  font-size: 0.78rem;
+  word-break: break-all;
+  color: var(--codex-accent);
+}

@@ -9,6 +9,29 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.15.4] — 2026-08-09
+
+### Changed
+
+- **"Create a new Codex" now uses OuronetUI's seed interface** (parity with `CreateStoaChainSeedModal`),
+  instead of silently auto-generating a phrase. You now:
+  - toggle **Generate new** vs **Restore existing**;
+  - pick the **Stoa seed type** (Koala 24-word / Chainweaver 12 / eckoWALLET 12) from labelled buttons
+    that show each type's word count, and read a one-line description;
+  - in generate mode, see the **word grid** with a **"↻ New"** reroll and **Copy** button — click for
+    another set of seed words;
+  - in restore mode, **type the words** into a textarea with a live `n / N words` counter;
+  - watch a **live Key #0 preview** derive from the phrase (`createWalletPairFromMnemonic`) — it validates
+    the seed and gates Create until the phrase is well-formed;
+  - keep the **password-requirements checklist** (≥ 8 chars, upper, lower, number, symbol + match).
+- **Restored seeds skip the recovery-phrase screen** (you already hold the words); generated seeds still
+  show it once, gated behind the save-confirmation, before the dashboard.
+
+### Fixed
+
+- The post-create recovery screen's **"Copy phrase"** button referenced an undefined `phrase` variable;
+  it now copies the actual `mnemonic`.
+
 ## [0.15.3] — 2026-08-09
 
 ### Changed

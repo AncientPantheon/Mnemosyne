@@ -21,7 +21,7 @@ describe("create-a-new-codex flow", () => {
 
   it("drives kickstart with ONE mnemonic → prime seed (pos0/pos1) + prime Ouronet (reuse-codexid-whole)", () => {
     const src = app();
-    // A fresh mnemonic is generated locally (no secret leaves the device).
+    // A fresh mnemonic is generated locally in the wizard (no secret leaves the device).
     expect(src).toMatch(/KadenaWalletBuilder\.generateMnemonic\(/);
     expect(src).toMatch(/useCodexLifecycle/);
     // The exact v3 kickstart shape the operator specified: one seed drives both.
@@ -74,5 +74,28 @@ describe("create-a-new-codex flow", () => {
     // The button is truly disabled until every rule + the confirm match pass.
     expect(src).toMatch(/const canCreate = rules\.every\(\(r\) => r\.ok\) && matchOk/);
     expect(src).toMatch(/disabled=\{!canCreate\}/);
+  });
+
+  it("brings OuronetUI's seed interface: generate/restore, seed-type picker, reroll, live Key #0 preview", () => {
+    const src = app();
+    // Generate a fresh seed OR restore one by typing the words (mode toggle).
+    expect(src).toMatch(/genMode/);
+    expect(src).toMatch(/Generate new/);
+    expect(src).toMatch(/Restore existing/);
+    // Seed types carry their word counts (koala 24 / chainweaver + eckoWALLET 12).
+    expect(src).toMatch(/words: 24/);
+    expect(src).toMatch(/words: 12/);
+    expect(src).toMatch(/\{o\.words\} words/);
+    // "New" reroll regenerates a mnemonic of the chosen type.
+    expect(src).toMatch(/genMnemonic\(seedType\)/);
+    // Restore mode: a textarea + live word counter.
+    expect(src).toMatch(/cxpg-restore-area/);
+    expect(src).toMatch(/\{words\.length\} \/ \{option\.words\} words/);
+    // Live Key #0 preview validates the phrase (createWalletPairFromMnemonic).
+    expect(src).toMatch(/createWalletPairFromMnemonic\(""/);
+    expect(src).toMatch(/Key #0 preview/);
+    // A valid seed is part of the Create gate; restored seeds skip the phrase screen.
+    expect(src).toMatch(/&& wordsOk/);
+    expect(src).toMatch(/genMode === "generate"\)/);
   });
 });
