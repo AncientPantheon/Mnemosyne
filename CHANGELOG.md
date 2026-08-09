@@ -9,6 +9,14 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.15.6] — 2026-08-09
+
+### Changed
+
+- **Seed-type description moved onto its own line below the selectors** (OuronetUI layout), instead of
+  being crammed to the right of the Koala/Chainweaver/eckoWALLET buttons. The descriptions are now
+  concise one-liners (e.g. "24-word BIP39 seed (Koala Wallet).").
+
 ## [0.15.5] — 2026-08-09
 
 ### Changed

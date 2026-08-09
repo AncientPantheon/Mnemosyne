@@ -68,9 +68,9 @@ export type SeedType = "koala" | "chainweaver" | "eckowallet";
 /** Seed types + their mnemonic word counts (matches codex-ouronet's
  *  CreateStoaChainSeedModal: koala = 24-word BIP39, chainweaver/eckoWALLET = 12). */
 const SEED_TYPE_OPTIONS: { value: SeedType; label: string; words: 12 | 24; desc: string }[] = [
-  { value: "koala", label: "Koala", words: 24, desc: "24-word BIP39 mnemonic (256-bit). Standard Koala Wallet seed." },
-  { value: "chainweaver", label: "Chainweaver", words: 12, desc: "12-word StoaChain Chainweaver mnemonic." },
-  { value: "eckowallet", label: "eckoWALLET", words: 12, desc: "12-word mnemonic — same derivation as Chainweaver." },
+  { value: "koala", label: "Koala", words: 24, desc: "24-word BIP39 seed (Koala Wallet)." },
+  { value: "chainweaver", label: "Chainweaver", words: 12, desc: "12-word Chainweaver seed." },
+  { value: "eckowallet", label: "eckoWALLET", words: 12, desc: "12-word seed (same as Chainweaver)." },
 ];
 
 /** What the App is currently rendering: the load screen, or a mounted codex. */

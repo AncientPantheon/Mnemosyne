@@ -715,17 +715,19 @@ body {
 }
 .cxpg-seedtype {
   display: flex;
-  gap: 0.75rem;
+  flex-direction: column;
+  gap: 0.35rem;
   border: none;
   padding: 0;
   margin: 0;
+  min-width: 0;
 }
-.cxpg-seedtype-opt {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.9rem;
-  cursor: pointer;
+.cxpg-seedtype .cxpg-create-label {
+  margin-bottom: 0.1rem;
+}
+/* The one-line seed-type description sits BELOW the selector row (OuronetUI). */
+.cxpg-seedtype .cxpg-create-hint {
+  text-align: center;
 }
 .cxpg-create-hint {
   font-size: 0.74rem;
