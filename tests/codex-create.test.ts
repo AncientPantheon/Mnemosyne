@@ -61,4 +61,18 @@ describe("create-a-new-codex flow", () => {
     expect(src).toMatch(/Create a new Codex/);
     expect(src).toMatch(/onCreate/);
   });
+
+  it("gates Create behind a live password-requirements checklist (disabled until all rules pass)", () => {
+    const src = app();
+    // A visible checklist of concrete rules that tick as they're met.
+    expect(src).toMatch(/cxpg-pwrules/);
+    expect(src).toMatch(/At least 8 characters/);
+    expect(src).toMatch(/uppercase/i);
+    expect(src).toMatch(/lowercase/i);
+    expect(src).toMatch(/number/i);
+    expect(src).toMatch(/symbol/i);
+    // The button is truly disabled until every rule + the confirm match pass.
+    expect(src).toMatch(/const canCreate = rules\.every\(\(r\) => r\.ok\) && matchOk/);
+    expect(src).toMatch(/disabled=\{!canCreate\}/);
+  });
 });

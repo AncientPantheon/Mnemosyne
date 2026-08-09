@@ -769,3 +769,42 @@ body {
   margin: 0.4rem 0 0.9rem;
   line-height: 1.4;
 }
+
+/* ── Password requirements checklist + disabled button ───────────────────── */
+.cxpg-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.4);
+}
+.cxpg-pwrules {
+  list-style: none;
+  margin: 0.1rem 0 0.2rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--codex-accent-strong);
+  border-radius: 8px;
+  background: #060912;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.cxpg-pwrule {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: 0.82rem;
+  color: #8a94a6;
+  transition: color 0.15s ease;
+}
+.cxpg-pwrule--ok {
+  color: #7ce6a8;
+}
+.cxpg-pwrule--bad {
+  color: #e8756a;
+}
+.cxpg-pwrule-mark {
+  display: inline-flex;
+  width: 1.05rem;
+  justify-content: center;
+  font-weight: 700;
+}

@@ -523,20 +523,18 @@ function LoadCodexScreen({
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [reveal, setReveal] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
 
-  const submitCreate = () => {
-    if (password.length < 8) {
-      setFormError("Password must be at least 8 characters.");
-      return;
-    }
-    if (password !== confirm) {
-      setFormError("Passwords don't match.");
-      return;
-    }
-    setFormError(null);
-    onCreate(seedType, password);
-  };
+  // Live password policy — each rule ticks as it's met; the Create button stays
+  // disabled until ALL pass (incl. the confirm match).
+  const rules: { label: string; ok: boolean }[] = [
+    { label: "At least 8 characters", ok: password.length >= 8 },
+    { label: "An uppercase letter (A–Z)", ok: /[A-Z]/.test(password) },
+    { label: "A lowercase letter (a–z)", ok: /[a-z]/.test(password) },
+    { label: "A number (0–9)", ok: /[0-9]/.test(password) },
+    { label: "A symbol (e.g. ! @ # $)", ok: /[^A-Za-z0-9]/.test(password) },
+  ];
+  const matchOk = confirm.length > 0 && password === confirm;
+  const canCreate = rules.every((r) => r.ok) && matchOk;
 
   return (
     <div className="cxpg-app cxpg-landing">
@@ -600,7 +598,7 @@ function LoadCodexScreen({
             className="cxpg-create"
             onSubmit={(e) => {
               e.preventDefault();
-              submitCreate();
+              if (canCreate) onCreate(seedType, password);
             }}
           >
             <fieldset className="cxpg-seedtype">
@@ -629,10 +627,7 @@ function LoadCodexScreen({
                 placeholder="Codex password (min 8 chars)"
                 value={password}
                 autoComplete="new-password"
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (formError) setFormError(null);
-                }}
+                onChange={(e) => setPassword(e.target.value)}
               />
               <button
                 type="button"
@@ -645,23 +640,43 @@ function LoadCodexScreen({
                 <EyeIcon off={reveal} />
               </button>
             </div>
+
+            <ul className="cxpg-pwrules" aria-label="Password requirements">
+              {rules.map((r) => (
+                <li
+                  key={r.label}
+                  className={`cxpg-pwrule${r.ok ? " cxpg-pwrule--ok" : ""}`}
+                >
+                  <span className="cxpg-pwrule-mark" aria-hidden="true">
+                    {r.ok ? "✓" : "○"}
+                  </span>
+                  {r.label}
+                </li>
+              ))}
+            </ul>
+
             <input
               className="cxpg-input"
               type={reveal ? "text" : "password"}
               placeholder="Confirm password"
               value={confirm}
               autoComplete="new-password"
-              onChange={(e) => {
-                setConfirm(e.target.value);
-                if (formError) setFormError(null);
-              }}
+              onChange={(e) => setConfirm(e.target.value)}
             />
-            {formError ? (
-              <p className="cxpg-error" role="alert">
-                {formError}
+            {confirm.length > 0 ? (
+              <p className={`cxpg-pwrule${matchOk ? " cxpg-pwrule--ok" : " cxpg-pwrule--bad"}`}>
+                <span className="cxpg-pwrule-mark" aria-hidden="true">
+                  {matchOk ? "✓" : "✕"}
+                </span>
+                {matchOk ? "Passwords match" : "Passwords don't match"}
               </p>
             ) : null}
-            <button type="submit" className="cxpg-btn cxpg-btn--primary">
+
+            <button
+              type="submit"
+              className="cxpg-btn cxpg-btn--primary"
+              disabled={!canCreate}
+            >
               Create Codex
             </button>
           </form>

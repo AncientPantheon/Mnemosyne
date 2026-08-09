@@ -9,6 +9,15 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.15.3] — 2026-08-09
+
+### Changed
+
+- **"Create a new Codex" now has a live password-requirements checklist.** Five rules (≥ 8 chars,
+  uppercase, lowercase, number, symbol) each **tick as they're met**, plus a passwords-match indicator.
+  The **Create button is genuinely disabled** (and now *looks* disabled — greyed, `not-allowed` cursor,
+  which was the missing `:disabled` style) until every rule passes.
+
 ## [0.15.2] — 2026-08-09
 
 ### Fixed
