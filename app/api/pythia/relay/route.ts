@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server";
 
 import { requireAncient } from "@/lib/auth/guard";
-import { getGatedPythiaClient } from "@/lib/pythia/connectorClient";
+import { getGatedPythiaClient, withConnectorSelfHeal } from "@/lib/pythia/connectorClient";
 
 export const dynamic = "force-dynamic";
 
@@ -41,31 +41,42 @@ export async function POST(request: NextRequest) {
     return badRequest("a JSON body is required");
   }
 
-  const client = getGatedPythiaClient();
+  const cmds = body.cmds;
+  const code = body.code;
+  const requestKeys = body.requestKeys;
 
   try {
+    // Each gated call is wrapped in withConnectorSelfHeal (§7e): a dead ephemeral
+    // key that comes back as a body OR a re-thrown error triggers a re-mint +
+    // one retry. `getGatedPythiaClient()` is re-resolved INSIDE the thunk so the
+    // retry binds to the rebuilt connector.
+
     // ── send: a SIGNED broadcast ──────────────────────────────────────────
-    if (Array.isArray(body.cmds)) {
-      if (body.cmds.length === 0) return badRequest("`cmds` must be non-empty");
-      const result = await client.send({ cmds: body.cmds });
+    if (Array.isArray(cmds)) {
+      if (cmds.length === 0) return badRequest("`cmds` must be non-empty");
+      const result = await withConnectorSelfHeal(() => getGatedPythiaClient().send({ cmds }));
       const noTx = noTxSender(result);
       if (noTx) return noTx;
       return Response.json(result, { headers: NO_STORE });
     }
 
     // ── read: a keyless dirty read (Pact `local`) for gas / simulation ─────
-    if (typeof body.code === "string") {
-      const result = await client.read({
-        code: body.code,
-        ...(body.data !== undefined ? { data: body.data as object } : {}),
-      });
+    if (typeof code === "string") {
+      const result = await withConnectorSelfHeal(() =>
+        getGatedPythiaClient().read({
+          code,
+          ...(body.data !== undefined ? { data: body.data as object } : {}),
+        }),
+      );
       return Response.json(result, { headers: NO_STORE });
     }
 
     // ── poll: tx status by request key ────────────────────────────────────
-    if (Array.isArray(body.requestKeys)) {
-      if (body.requestKeys.length === 0) return badRequest("`requestKeys` must be non-empty");
-      const result = await client.poll({ requestKeys: body.requestKeys as string[] });
+    if (Array.isArray(requestKeys)) {
+      if (requestKeys.length === 0) return badRequest("`requestKeys` must be non-empty");
+      const result = await withConnectorSelfHeal(() =>
+        getGatedPythiaClient().poll({ requestKeys: requestKeys as string[] }),
+      );
       return Response.json(result, { headers: NO_STORE });
     }
 

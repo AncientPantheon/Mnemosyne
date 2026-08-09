@@ -27,8 +27,12 @@ const {
   PythiaClientMock,
   DualLinkConnectorMock,
   keyProviderFn,
+  asKeySourceFn,
+  keySource,
 } = vi.hoisted(() => {
   const keyProviderFn = vi.fn(() => "mock-key-provider-closure");
+  const keySource = { get: vi.fn(), invalidate: vi.fn(async () => {}) };
+  const asKeySourceFn = vi.fn(() => keySource);
   return {
     readAdminSettingsMock: vi.fn(() => ({ pythiaUrl: "http://pythia.test" })),
     readConnectorStateMock: vi.fn(),
@@ -39,9 +43,13 @@ const {
     DualLinkConnectorMock: vi.fn().mockImplementation((options: unknown) => ({
       __options: options,
       keyProvider: keyProviderFn,
+      asKeySource: asKeySourceFn,
+      invalidate: vi.fn(async () => {}),
     })),
     PythiaClientMock: vi.fn().mockImplementation((options: unknown) => ({ __options: options })),
     keyProviderFn,
+    asKeySourceFn,
+    keySource,
   };
 });
 
@@ -94,6 +102,7 @@ beforeEach(() => {
   DualLinkConnectorMock.mockClear();
   PythiaClientMock.mockClear();
   keyProviderFn.mockClear();
+  asKeySourceFn.mockClear();
 });
 
 async function loadModule() {
@@ -150,11 +159,13 @@ describe("getGatedPythiaClient", () => {
     // Mnemosyne dials the real gateway — it must NOT inject an in-process fetch.
     expect(connectorOpts.fetchImpl).toBeUndefined();
 
-    // The client is wired with the connector's own keyProvider() closure.
-    expect(keyProviderFn).toHaveBeenCalledTimes(1);
+    // The client is wired with the connector's REFRESHABLE key source
+    // (asKeySource, not a pre-called keyProvider) so PythiaClient can self-heal a
+    // dead ephemeral key on a 401 (organs/06 §7c).
+    expect(asKeySourceFn).toHaveBeenCalledTimes(1);
     const clientOpts = PythiaClientMock.mock.calls[0][0] as Record<string, unknown>;
     expect(clientOpts.baseUrl).toBe("http://pythia.test");
-    expect(clientOpts.pythiaKey).toBe("mock-key-provider-closure");
+    expect(clientOpts.pythiaKey).toBe(keySource);
   });
 });
 

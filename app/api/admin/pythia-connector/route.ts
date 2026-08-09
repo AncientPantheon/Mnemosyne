@@ -4,6 +4,7 @@ import { type NextRequest } from "next/server";
 import { requireAncient } from "@/lib/auth/guard";
 import { loadCodexSnapshot, ouroAccountsOf } from "@/lib/pythia/codexSnapshot";
 import { tickPythiaConnectorOnce } from "@/lib/pythia/connectorLoop";
+import { resetGatedConnector } from "@/lib/pythia/connectorClient";
 import { clearConnectorState, writeConnectorState } from "@/lib/pythia/connectorStatus";
 
 export const dynamic = "force-dynamic";
@@ -83,6 +84,10 @@ export async function POST(request: NextRequest) {
     linkedAt: new Date().toISOString(),
   });
 
+  // Drop any memoized connector so a re-link (even with the SAME key) rebuilds
+  // and re-mints, never reusing a stale/dead ephemeral secret (`organs/06` §7e).
+  resetGatedConnector();
+
   // Kick off proving immediately (fire-and-forget) so activation starts on the
   // paste rather than waiting for the background loop's next tick — mirrors
   // Pythia's `link()` closure driving an immediate tick on a fresh paste.
@@ -96,5 +101,7 @@ export async function DELETE(request: NextRequest) {
   if (!gate.ok) return gate.response;
 
   clearConnectorState();
+  // Drop the memoized connector so a subsequent re-link re-mints from scratch.
+  resetGatedConnector();
   return Response.json({ ok: true }, { headers: NO_STORE });
 }

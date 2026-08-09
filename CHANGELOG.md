@@ -9,6 +9,30 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.13.0] — 2026-08-04
+
+### Added — ephemeral-key self-heal (mandatory, `organs/06` §7)
+
+The gated `x-pythia-key` is ephemeral and NOT durable — a Pythia gateway restart/deploy wipes its
+in-memory key store, so every gated call 401s while the connector still shows the key "active." Mnemosyne
+had neither the linkage nor a self-heal, so a Pythia deploy would silently break writes for up to the
+~6 h TTL. Now both layers from §7:
+
+- **§7c linkage:** bumped `@ancientpantheon/pythia-client` to `^3.1.0` and wired
+  `getGatedPythiaClient()` with the **refreshable key source** `connector.asKeySource()` (`{ get,
+  invalidate }`) instead of a pre-called `keyProvider()`. PythiaClient's transport now
+  invalidates → re-mints → retries once on a clean `401 { invalid or expired connector key }`.
+- **§7e consumer-side wrapper (required because Mnemosyne PROXIES gated calls):** the key-miss usually
+  reaches us as a returned **body** or a re-thrown app error, not a clean transport 401. Added
+  `isConnectorKeyMiss` (match by message, both directions), `resetGatedConnector` (drop the memoized
+  dead-secret connector), `healGatedConnector` (reset + force re-mint, single-flighted), and
+  `withConnectorSelfHeal(fn)` (heal → retry exactly once, no loop). Every gated proxy call —
+  `/api/pythia/relay` (send/read/poll) and the Khronoton runtime's submit/poll — is wrapped; the
+  connector is reset on link/unlink so a re-link always re-mints.
+
+Redundant on purpose: the gateway's persisted store + the transport heal + this body-level wrapper each
+recover a gateway restart independently.
+
 ## [0.12.3] — 2026-08-04
 
 ### Fixed

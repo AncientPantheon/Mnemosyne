@@ -57,6 +57,7 @@ vi.mock("../lib/pythia/connectorStatus", () => ({
 
 vi.mock("../lib/pythia/connectorClient", () => ({
   getDualLinkConnector: getDualLinkConnectorMock,
+  resetGatedConnector: vi.fn(),
 }));
 
 vi.mock("../lib/pythia/connectorLoop", () => ({

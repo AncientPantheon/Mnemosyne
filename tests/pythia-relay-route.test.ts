@@ -20,6 +20,9 @@ const { getGatedPythiaClientMock, sendMock, readMock, pollMock } = vi.hoisted(()
 
 vi.mock("../lib/pythia/connectorClient", () => ({
   getGatedPythiaClient: getGatedPythiaClientMock,
+  // Pass-through: the self-heal logic is unit-tested in pythia-connector-selfheal.test.ts;
+  // here we only exercise the route's own op/validation/no-tx-sender branching.
+  withConnectorSelfHeal: (fn: () => Promise<unknown>) => fn(),
 }));
 
 import { POST } from "../app/api/pythia/relay/route";

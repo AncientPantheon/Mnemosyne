@@ -5,7 +5,7 @@ import type {
   ListenResult,
 } from "@ancientpantheon/khronoton-core/server";
 
-import { getGatedPythiaClient } from "@/lib/pythia/connectorClient";
+import { getGatedPythiaClient, withConnectorSelfHeal } from "@/lib/pythia/connectorClient";
 import {
   resolveServerTransport,
   pactBaseUrl,
@@ -61,6 +61,9 @@ export interface PythiaRoutedRuntimeOptions {
   sleep?: (ms: number) => Promise<void>;
   /** Injected clock (tests). Defaults to `Date.now`. */
   now?: () => number;
+  /** Body-level self-heal wrapper (§7e). Defaults to `withConnectorSelfHeal`; tests
+   *  inject a pass-through. */
+  selfHeal?: <T>(fn: () => Promise<T>) => Promise<T>;
 }
 
 const DEFAULT_POLL_INTERVAL_MS = 3_000;
@@ -80,6 +83,7 @@ export function routeChainRuntimeThroughPythia(
   const resolveTransport = opts.resolveTransport ?? (() => resolveServerTransport());
   const pollIntervalMs = opts.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
   const maxListenMs = opts.maxListenMs ?? DEFAULT_MAX_LISTEN_MS;
+  const selfHeal = opts.selfHeal ?? withConnectorSelfHeal;
   const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const now = opts.now ?? (() => Date.now());
 
@@ -99,7 +103,6 @@ export function routeChainRuntimeThroughPythia(
       // Pythia's own `meterChainRuntime` does. The simulate needs the command's
       // declared signers (a `keys-all` guard fails without them), and Pythia's
       // `/read` strips signers; it is unmetered plumbing (`organs/06` §6) either way.
-      const gateway = getGateway();
       const nodeClient = base.createClient(url);
       return {
         dirtyRead(tx: unknown): Promise<DirtyReadResult> {
@@ -107,7 +110,10 @@ export function routeChainRuntimeThroughPythia(
         },
 
         async submit(tx: unknown): Promise<{ requestKey: string }> {
-          const res = await gateway.send({ cmds: [tx] });
+          // §7e: self-heal a dead ephemeral key (body OR throw) + retry once. The
+          // gateway is re-resolved inside the thunk so the retry binds to the
+          // rebuilt connector.
+          const res = await selfHeal(() => getGateway().send({ cmds: [tx] }));
           const requestKey = firstRequestKey(res);
           if (!requestKey) {
             throw new Error("Pythia /stoachain/send returned no requestKey");
@@ -122,7 +128,7 @@ export function routeChainRuntimeThroughPythia(
           }
           const deadline = now() + maxListenMs;
           for (;;) {
-            const pr = (await gateway.poll({ requestKeys: [requestKey] })) as {
+            const pr = (await selfHeal(() => getGateway().poll({ requestKeys: [requestKey] }))) as {
               results?: Record<string, { status?: string }>;
             };
             const status = pr?.results?.[requestKey]?.status;
