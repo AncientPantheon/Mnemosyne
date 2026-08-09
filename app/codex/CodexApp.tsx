@@ -523,9 +523,20 @@ function LoadCodexScreen({
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [reveal, setReveal] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const mismatch = confirm.length > 0 && password !== confirm;
-  const canCreate = password.length >= 8 && password === confirm;
+  const submitCreate = () => {
+    if (password.length < 8) {
+      setFormError("Password must be at least 8 characters.");
+      return;
+    }
+    if (password !== confirm) {
+      setFormError("Passwords don't match.");
+      return;
+    }
+    setFormError(null);
+    onCreate(seedType, password);
+  };
 
   return (
     <div className="cxpg-app cxpg-landing">
@@ -589,7 +600,7 @@ function LoadCodexScreen({
             className="cxpg-create"
             onSubmit={(e) => {
               e.preventDefault();
-              if (canCreate) onCreate(seedType, password);
+              submitCreate();
             }}
           >
             <fieldset className="cxpg-seedtype">
@@ -618,7 +629,10 @@ function LoadCodexScreen({
                 placeholder="Codex password (min 8 chars)"
                 value={password}
                 autoComplete="new-password"
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (formError) setFormError(null);
+                }}
               />
               <button
                 type="button"
@@ -637,10 +651,17 @@ function LoadCodexScreen({
               placeholder="Confirm password"
               value={confirm}
               autoComplete="new-password"
-              onChange={(e) => setConfirm(e.target.value)}
+              onChange={(e) => {
+                setConfirm(e.target.value);
+                if (formError) setFormError(null);
+              }}
             />
-            {mismatch ? <p className="cxpg-error">Passwords don&rsquo;t match.</p> : null}
-            <button type="submit" className="cxpg-btn cxpg-btn--primary" disabled={!canCreate}>
+            {formError ? (
+              <p className="cxpg-error" role="alert">
+                {formError}
+              </p>
+            ) : null}
+            <button type="submit" className="cxpg-btn cxpg-btn--primary">
               Create Codex
             </button>
           </form>

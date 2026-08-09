@@ -9,6 +9,15 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.15.2] — 2026-08-09
+
+### Fixed
+
+- **"Create Codex" button did nothing** — it was silently `disabled` when the password was under 8 chars
+  (and the disabled button still looked active), so a 7-char password gave no feedback. The button is
+  now always clickable and validates on submit with a clear inline error ("Password must be at least 8
+  characters." / "Passwords don't match."), cleared as you type.
+
 ## [0.15.1] — 2026-08-09
 
 ### Fixed
