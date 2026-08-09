@@ -9,6 +9,15 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.15.5] — 2026-08-09
+
+### Changed
+
+- **Create-codex wizard is now compact** — it was far too tall. Tightened to OuronetUI's density:
+  the **password-requirements checklist is a 2-column grid** (five rules in ~three rows, not five),
+  smaller word-grid cells + fonts, denser seed-type buttons, trimmed hints, and slightly tighter card
+  padding. Same controls and gating — just a much shorter form.
+
 ## [0.15.4] — 2026-08-09
 
 ### Changed

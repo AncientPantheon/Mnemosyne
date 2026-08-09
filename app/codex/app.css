@@ -162,7 +162,7 @@ body {
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 20px;
-  padding: 40px 36px;
+  padding: 30px 32px;
   text-align: center;
   box-shadow:
     0 30px 80px -40px #000000cc,
@@ -193,7 +193,7 @@ body {
 }
 
 .cxpg-subtitle {
-  margin: 8px 0 28px;
+  margin: 6px 0 18px;
   color: var(--ink-soft);
   font-size: 14.5px;
 }
@@ -690,8 +690,22 @@ body {
 .cxpg-create {
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
+  gap: 0.45rem;
   text-align: left;
+}
+/* The create wizard packs a lot in — keep every control compact so the whole
+ * form stays a modest height (OuronetUI CreateStoaChainSeed parity). */
+.cxpg-create .cxpg-input {
+  font-size: 13.5px;
+  padding: 9px 12px;
+}
+.cxpg-create .cxpg-tabs,
+.cxpg-create .cxpg-tabs--seed {
+  margin: 0;
+}
+.cxpg-create .cxpg-tab {
+  padding: 0.4rem 0.6rem;
+  font-size: 0.85rem;
 }
 .cxpg-create-label {
   font-size: 0.85rem;
@@ -714,10 +728,10 @@ body {
   cursor: pointer;
 }
 .cxpg-create-hint {
-  font-size: 0.8rem;
-  opacity: 0.8;
+  font-size: 0.74rem;
+  opacity: 0.75;
   margin: 0;
-  line-height: 1.4;
+  line-height: 1.35;
 }
 .cxpg-mnemo-warn {
   border: 1px solid #e0a53a;
@@ -725,9 +739,9 @@ body {
   border-radius: 6px;
   background: rgba(224, 165, 58, 0.12);
   color: #f0c070;
-  padding: 0.6rem 0.8rem;
-  font-size: 0.88rem;
-  line-height: 1.45;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
   text-align: left;
 }
 .cxpg-mnemo-grid {
@@ -758,7 +772,7 @@ body {
   display: flex;
   gap: 0.5rem;
   justify-content: center;
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.2rem;
 }
 .cxpg-mnemo-confirm {
   display: flex;
@@ -778,21 +792,22 @@ body {
 }
 .cxpg-pwrules {
   list-style: none;
-  margin: 0.1rem 0 0.2rem;
-  padding: 0.5rem 0.7rem;
+  margin: 0;
+  padding: 0.4rem 0.6rem;
   border: 1px solid var(--codex-accent-strong);
   border-radius: 8px;
   background: #060912;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  /* Two compact columns so five rules fit in ~three rows, not five. */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.15rem 0.7rem;
 }
 .cxpg-pwrule {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.35rem;
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.72rem;
   color: #8a94a6;
   transition: color 0.15s ease;
 }
@@ -824,8 +839,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.15rem;
-  padding: 0.5rem 0.4rem;
+  gap: 0.1rem;
+  padding: 0.35rem 0.35rem;
   border: 1px solid var(--codex-accent-strong);
   border-radius: 8px;
   background: transparent;
@@ -840,28 +855,33 @@ body {
   border-color: var(--codex-accent);
 }
 .cxpg-seedtype-name {
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 600;
 }
 .cxpg-seedtype-words {
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   opacity: 0.75;
 }
 /* The generated-word grid inside the wizard is denser than the recovery screen. */
 .cxpg-mnemo-grid--sm {
   grid-template-columns: repeat(4, 1fr);
-  gap: 0.3rem;
-  margin: 0.25rem 0;
+  gap: 0.25rem;
+  margin: 0.1rem 0;
 }
 .cxpg-mnemo-grid--sm .cxpg-mnemo-word {
-  font-size: 0.78rem;
-  padding: 0.3rem 0.4rem;
+  font-size: 0.72rem;
+  padding: 0.22rem 0.35rem;
+  gap: 0.25rem;
+}
+.cxpg-mnemo-grid--sm .cxpg-mnemo-idx {
+  font-size: 0.62rem;
+  min-width: 0.9rem;
 }
 .cxpg-status--sm {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   opacity: 0.7;
   text-align: center;
-  margin: 0.6rem 0;
+  margin: 0.4rem 0;
 }
 .cxpg-restore {
   display: flex;
@@ -892,8 +912,8 @@ body {
 .cxpg-keyprev {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-  padding: 0.6rem 0.7rem;
+  gap: 0.15rem;
+  padding: 0.4rem 0.6rem;
   border: 1px solid var(--codex-accent-strong);
   border-radius: 8px;
   background: #060912;

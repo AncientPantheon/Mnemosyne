@@ -722,8 +722,7 @@ function CreateCodexForm({
       ) : null}
 
       <p className="cxpg-create-hint">
-        The Prime Ouronet account is derived from the same words —{" "}
-        <strong>unactivated</strong> (its on-chain deploy is a later step).
+        Prime Ouronet account derived from the same words — <strong>unactivated</strong>.
       </p>
 
       <div className="cxpg-input-wrap">
