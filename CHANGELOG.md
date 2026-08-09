@@ -9,6 +9,19 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.15.1] — 2026-08-09
+
+### Fixed
+
+- **"Activate Account — a valid connector API key is required"** — consumer transactions failed. Pythia
+  now HARD-GATES **every** gated endpoint (read, send, AND poll) with `401` when keyless — not just
+  reads. A public `/codex` visitor has no key and can't send `x-pythia-key` from a browser, so its
+  **send** (like its reads) can't go through Pythia. Consumer transactions now broadcast **node-direct**;
+  the operator `/admin/codex` keeps the KEYED relay send **with a node-direct fallback** so a relay/key
+  hiccup never blocks a tx. Net: the public consumer surface is fully node-direct (the only keyless
+  option); Pythia-metered traffic is the operator surface, which holds the server-side connector key.
+- **Password field on "Create a new Codex" gained a show/hide (eye) toggle**, matching the unlock screen.
+
 ## [0.15.0] — 2026-08-09
 
 ### Added — create a new Codex from scratch on `/codex`

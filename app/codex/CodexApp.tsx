@@ -59,7 +59,7 @@ setPactReader(createCodexDirectPythiaPactReader());
 
 import { CodexShell } from "./CodexShell";
 
-import { UnlockScreen } from "./UnlockScreen";
+import { UnlockScreen, EyeIcon } from "./UnlockScreen";
 import "./app.css";
 
 /** The three Stoa seed types a new codex's prime seed can be derived under. */
@@ -522,6 +522,7 @@ function LoadCodexScreen({
   const [seedType, setSeedType] = useState<SeedType>("koala");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [reveal, setReveal] = useState(false);
 
   const mismatch = confirm.length > 0 && password !== confirm;
   const canCreate = password.length >= 8 && password === confirm;
@@ -610,17 +611,29 @@ function LoadCodexScreen({
               A fresh seed of this type is generated (its first two keys), and the Prime Ouronet account
               is derived from the same words — <strong>unactivated</strong>.
             </p>
+            <div className="cxpg-input-wrap">
+              <input
+                className="cxpg-input cxpg-input--eye"
+                type={reveal ? "text" : "password"}
+                placeholder="Codex password (min 8 chars)"
+                value={password}
+                autoComplete="new-password"
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button
+                type="button"
+                className="cxpg-eye"
+                aria-label={reveal ? "Hide password" : "Show password"}
+                aria-pressed={reveal}
+                onClick={() => setReveal((v) => !v)}
+                tabIndex={-1}
+              >
+                <EyeIcon off={reveal} />
+              </button>
+            </div>
             <input
               className="cxpg-input"
-              type="password"
-              placeholder="Codex password (min 8 chars)"
-              value={password}
-              autoComplete="new-password"
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <input
-              className="cxpg-input"
-              type="password"
+              type={reveal ? "text" : "password"}
               placeholder="Confirm password"
               value={confirm}
               autoComplete="new-password"

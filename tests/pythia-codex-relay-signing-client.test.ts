@@ -110,22 +110,31 @@ describe("signed SIMULATE (declares signers) stays node-direct /local", () => {
   });
 });
 
-describe("send lanes", () => {
+const NODE_SEND = "https://node2.stoachain.com/chainweb/0.0/stoa/chain/0/pact/api/v1/send";
+
+describe("send lanes (Pythia hard-gates keyless sends → 401)", () => {
   let fetchImpl: ReturnType<typeof vi.fn>;
   beforeEach(() => (fetchImpl = vi.fn()));
 
-  it("operator submit → relay", async () => {
+  it("operator submit → KEYED relay, node fallback on failure", async () => {
     fetchImpl.mockResolvedValue(jsonRes(200, { requestKeys: ["rk"] }));
     const c = createCodexRelaySigningClient({ fetchImpl: fetchImpl as never, resolveConfig: cfg(PYTHIA) });
     expect((await c.submit(SIGNED)).requestKey).toBe("rk");
     expect(fetchImpl.mock.calls[0][0]).toBe("/api/pythia/relay");
+
+    fetchImpl.mockReset();
+    fetchImpl.mockResolvedValueOnce(jsonRes(500, {})); // relay fails
+    fetchImpl.mockResolvedValueOnce(jsonRes(200, { requestKeys: ["rk-node"] })); // node fallback
+    expect((await c.submit(SIGNED)).requestKey).toBe("rk-node");
+    expect(String(fetchImpl.mock.calls[1][0])).toBe(NODE_SEND);
   });
 
-  it("consumer submit → Pythia /stoachain/send (keyless)", async () => {
+  it("consumer submit → NODE-DIRECT /send (a public visitor has no key; Pythia gates keyless)", async () => {
     fetchImpl.mockResolvedValue(jsonRes(200, { requestKeys: ["rk2"] }));
     const c = createCodexDirectPythiaSigningClient({ fetchImpl: fetchImpl as never, resolveConfig: cfg(PYTHIA) });
     expect((await c.submit(SIGNED)).requestKey).toBe("rk2");
-    expect(fetchImpl.mock.calls[0][0]).toBe("https://pythia.example/stoachain/send");
+    expect(String(fetchImpl.mock.calls[0][0])).toBe(NODE_SEND);
+    expect(String(fetchImpl.mock.calls[0][0])).not.toContain("/stoachain/send");
   });
 });
 

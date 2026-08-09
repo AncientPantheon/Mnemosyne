@@ -250,15 +250,22 @@ export function createCodexRelaySigningClient(
     });
 
   return makeSigningClient(fetchImpl, resolveConfig, {
-    async submit(_cfg, signed) {
-      const res = await post({ cmds: [signed] });
-      const body = await jsonOrNull(res);
-      noTxSenderThrow(res.status, body);
-      if (!res.ok) {
-        const error = (body as { error?: unknown } | null)?.error;
-        throw new Error(typeof error === "string" ? error : `Pythia relay failed (HTTP ${res.status})`);
+    async submit(cfg, signed) {
+      // KEYED relay send (attributed to mnemosyne, self-healed server-side). Falls
+      // back to a node-direct send if the relay/key fails, so a transaction is
+      // never blocked by a Pythia hiccup.
+      try {
+        const res = await post({ cmds: [signed] });
+        const body = await jsonOrNull(res);
+        noTxSenderThrow(res.status, body);
+        if (!res.ok) {
+          const error = (body as { error?: unknown } | null)?.error;
+          throw new Error(typeof error === "string" ? error : `relay send HTTP ${res.status}`);
+        }
+        return toSubmitResult(body);
+      } catch {
+        return nodeSubmit(fetchImpl, cfg.nodeUrl || DEFAULT_SIM_NODE, signed);
       }
-      return toSubmitResult(body);
     },
     async read(cfg, code, data) {
       // KEYED relay read (attributed to mnemosyne). Falls back to a node-direct
@@ -283,31 +290,13 @@ export function createCodexDirectPythiaSigningClient(
   const fetchImpl = opts.fetchImpl ?? ((input, init) => fetch(input, init));
   const resolveConfig = opts.resolveConfig ?? makeDefaultConfigResolver(fetchImpl);
 
-  function pythiaBase(cfg: BrowserTransportConfig): string {
-    const url = cfg.pythiaUrl.replace(/\/+$/, "");
-    if (!url) {
-      throw new Error(
-        "No Pythia gateway is configured, so the operation cannot be routed through Pythia. " +
-          "The operator must set the Pythia connector URL (or enable the Network Fallback).",
-      );
-    }
-    return url;
-  }
-
   return makeSigningClient(fetchImpl, resolveConfig, {
     async submit(cfg, signed) {
-      const res = await fetchImpl(`${pythiaBase(cfg)}/stoachain/send`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ cmds: [signed] }),
-      });
-      const body = await jsonOrNull(res);
-      noTxSenderThrow(res.status, body);
-      if (!res.ok) {
-        const error = (body as { error?: unknown } | null)?.error;
-        throw new Error(typeof error === "string" ? error : `Pythia send failed (HTTP ${res.status})`);
-      }
-      return toSubmitResult(body);
+      // Pythia HARD-GATES sends (401 without a key), and a public visitor has no
+      // key + can't send the header from a browser. So a consumer transaction
+      // broadcasts NODE-DIRECT (unmetered — the only keyless option). Only the
+      // operator surface, which holds the server-side key, sends through Pythia.
+      return nodeSubmit(fetchImpl, cfg.nodeUrl || DEFAULT_SIM_NODE, signed);
     },
     async read(cfg, code) {
       // Pythia HARD-GATES reads (401 without a key), and a public consumer has no

@@ -18,7 +18,7 @@ import { useCodexAuth } from "@ancientpantheon/codex/hooks";
 
 const DEFAULT_TTL_MINUTES = 30;
 
-function EyeIcon({ off }: { off: boolean }): ReactElement {
+export function EyeIcon({ off }: { off: boolean }): ReactElement {
   return off ? (
     <svg
       width="18"
