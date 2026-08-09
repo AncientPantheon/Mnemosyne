@@ -9,6 +9,27 @@ See [docs/RELEASING.md](docs/RELEASING.md) for the release procedure.
 The running version is shown on the landing header (`v{{MNEMOSYNE_VERSION}}`), read
 from `package.json`.
 
+## [0.14.0] — 2026-08-09
+
+### Fixed — display reads now route through Pythia (metered + attributed) (`organs/06` §6a)
+
+Mnemosyne's Apollo never appeared in Pythia's `/pyth` byConsumer despite an active connector: the codex's
+data-display reads bypassed Pythia entirely. Two causes, both fixed:
+
+- **`pactRead` was un-routed.** codex-ouronet display reads (account/balance/table/"read to show") go
+  through `pactRead`, which routes to whatever `setPactReader` installed — and Mnemosyne never installed
+  one, so it fell to the default **node-direct** reader. Now each codex mount installs a Pythia reader at
+  boot: the operator `/admin/codex` → KEYED `/api/pythia/relay` `/read` (attributed to `mnemosyne`); the
+  public `/codex` → keyless browser-direct to Pythia's `/read`.
+- **The signing client's `dirtyRead` was node-direct for ALL reads.** Split it by signers: a DISPLAY read
+  (no signers) routes through Pythia's KEYED `/read`; only a signed-tx SIMULATE (declares signers, whose
+  keys-all guard needs them on a signer-aware `/local`) stays node-direct — the one legitimate node-direct
+  read.
+
+Break-glass Network Fallback ("direct-node") still reads node-direct. Audited: no other Mnemosyne
+chain-read site exists (Khronoton uses its own runtime; `codexSnapshot` reads the sealed codex, not the
+chain). Bumped `@stoachain/stoa-core` usage to import `setPactReader`/`PactReader` (already a `^4.3.0` dep).
+
 ## [0.13.1] — 2026-08-08
 
 ### Docs

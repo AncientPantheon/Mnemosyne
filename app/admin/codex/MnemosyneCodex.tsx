@@ -43,7 +43,18 @@ import {
 } from "@ancientpantheon/codex/hooks";
 import { MnemosyneServerCodexAdapter } from "@/lib/codex-dropin/MnemosyneServerCodexAdapter";
 import { CodexShell } from "../../codex/CodexShell";
-import { createCodexRelaySigningClient } from "../../codex/codexRelaySigningClient";
+import { setPactReader } from "@stoachain/stoa-core/reads";
+import {
+  createCodexRelaySigningClient,
+  createCodexRelayPactReader,
+} from "../../codex/codexRelaySigningClient";
+
+// Route EVERY codex display read (`pactRead`) through Pythia's KEYED relay `/read`
+// so this operator surface is metered + attributed to Mnemosyne's Apollo — not
+// node-direct (the default reader), which would bypass Pythia entirely
+// (`organs/06` §6a). Installed at module load, before the codex renders, so no
+// read races the default reader. Break-glass Network Fallback still goes node-direct.
+setPactReader(createCodexRelayPactReader());
 import { CodexPortabilityControls } from "./CodexPortabilityControls";
 import "../../codex/app.css";
 

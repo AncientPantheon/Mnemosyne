@@ -21,9 +21,27 @@
 // as its `clientOverride`; the strategy calls only `dirtyRead(cmd)` + `submit(signed)`.
 // ============================================================================
 
+import { rawCalibratedDirtyRead, type PactReader } from "@stoachain/stoa-core/reads";
+
 import { extractExec } from "@/lib/pythia/pactExec";
 
 export { extractExec };
+
+/** True when a built command DECLARES signers — i.e. it is a signed-tx SIMULATE
+ *  whose keys-all/guard needs those signers on a signer-aware `/local`. A plain
+ *  DISPLAY read carries NO signers and must route through Pythia (`organs/06` §6a).
+ *  The one legitimate node-direct read is the simulate; everything else is Pythia's. */
+function commandHasSigners(cmd: unknown): boolean {
+  const envelope = (cmd ?? {}) as { cmd?: unknown };
+  const raw = typeof envelope.cmd === "string" ? envelope.cmd : typeof cmd === "string" ? cmd : "";
+  if (!raw) return false;
+  try {
+    const parsed = JSON.parse(raw) as { signers?: unknown };
+    return Array.isArray(parsed.signers) && parsed.signers.length > 0;
+  } catch {
+    return false;
+  }
+}
 
 /** Pythia's KEYED relay endpoint on Mnemosyne (ancient-gated). */
 const RELAY_PATH = "/api/pythia/relay";
@@ -177,6 +195,9 @@ const DEFAULT_SIM_NODE = "https://node2.stoachain.com";
 interface PythiaLane {
   /** How this mount SENDS in `pythia` mode (relay for operator, direct for consumer). */
   submit(cfg: BrowserTransportConfig, signed: SignedCommand): Promise<{ requestKey: string; raw: unknown }>;
+  /** How this mount runs a KEYED display READ in `pythia` mode (relay for operator,
+   *  direct for consumer). Code-only, no signers — Pythia serves + meters it. */
+  read(cfg: BrowserTransportConfig, code: string, data?: object): Promise<unknown>;
 }
 
 function makeSigningClient(
@@ -186,14 +207,19 @@ function makeSigningClient(
 ): CodexPactSigningClient {
   return {
     async dirtyRead(cmd) {
-      // The pre-fire SIMULATE is a node-direct `/local` of the FULL command in
-      // BOTH modes — it must carry the tx's declared signers so a `keys-all`
-      // keyset guard passes. This is unmetered plumbing per `organs/06` §6 (Pythia's
-      // OWN automaton likewise simulates node-direct via `meterChainRuntime`, which
-      // passes `dirtyRead` through and meters only `submit`). Routing it through
-      // Pythia's signer-stripping `/read` would fail every guarded deploy.
       const cfg = await resolveConfig();
-      return nodeDirtyRead(fetchImpl, cfg.nodeUrl || DEFAULT_SIM_NODE, cmd);
+      // TWO lanes (organs/06 §6a):
+      //  - a signed-tx SIMULATE (declares signers) — or the break-glass fallback —
+      //    goes node-direct via a signer-aware `/local` (the ONE legitimate
+      //    node-direct read: a keys-all guard needs the tx's signers, which Pythia's
+      //    signer-stripping `/read` can't carry);
+      //  - a DISPLAY read (no signers) routes through Pythia's KEYED `/read`, so it's
+      //    metered + attributed to this consumer.
+      if (cfg.mode === "direct-node" || commandHasSigners(cmd)) {
+        return nodeDirtyRead(fetchImpl, cfg.nodeUrl || DEFAULT_SIM_NODE, cmd);
+      }
+      const { code, data } = extractExec(cmd);
+      return pythia.read(cfg, code, data);
     },
     async submit(signed) {
       const cfg = await resolveConfig();
@@ -234,6 +260,11 @@ export function createCodexRelaySigningClient(
       }
       return toSubmitResult(body);
     },
+    async read(_cfg, code, data) {
+      const res = await post({ code, ...(data ? { data } : {}) });
+      if (!res.ok) throw new Error(`Codex read via Pythia relay failed (HTTP ${res.status})`);
+      return res.json();
+    },
   });
 }
 
@@ -271,5 +302,71 @@ export function createCodexDirectPythiaSigningClient(
       }
       return toSubmitResult(body);
     },
+    async read(cfg, code, data) {
+      const res = await fetchImpl(`${pythiaBase(cfg)}/stoachain/read`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ code, ...(data ? { data } : {}) }),
+      });
+      if (!res.ok) throw new Error(`Codex read via Pythia failed (HTTP ${res.status})`);
+      return res.json();
+    },
   });
+}
+
+// ── DISPLAY-READ ROUTING (setPactReader) — every codex `pactRead` flows here ──
+// codex-ouronet interaction reads (account/balance/table/"read to show") call
+// `pactRead(code, options)`, which routes through the reader installed via
+// `setPactReader`. UNINSTALLED, it falls to the default NODE-DIRECT reader,
+// bypassing Pythia — so the consumer is invisible in `/pyth` byConsumer despite an
+// active connector (`organs/06` §6a). These factories route those code reads
+// (no signers) through Pythia's KEYED `/read`; only the break-glass Network
+// Fallback goes node-direct.
+
+/** Break-glass: a signer-less code read straight to the configured node. */
+function nodeCodeRead(nodeUrl: string, pactCode: string): Promise<unknown> {
+  return rawCalibratedDirtyRead(pactCode, { pactUrl: `${nodePactBase(nodeUrl || DEFAULT_SIM_NODE)}` });
+}
+
+/** Operator (admin) codex reader → KEYED via the Mnemosyne relay. */
+export function createCodexRelayPactReader(
+  opts: SigningClientOptions & { relayPath?: string } = {},
+): PactReader {
+  const fetchImpl = opts.fetchImpl ?? ((input, init) => fetch(input, init));
+  const resolveConfig = opts.resolveConfig ?? makeDefaultConfigResolver(fetchImpl);
+  const relayPath = opts.relayPath ?? RELAY_PATH;
+
+  return async (pactCode) => {
+    const cfg = await resolveConfig();
+    if (cfg.mode === "direct-node") return nodeCodeRead(cfg.nodeUrl, pactCode);
+    const res = await fetchImpl(relayPath, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ code: pactCode }),
+    });
+    if (!res.ok) throw new Error(`Codex read via Pythia relay failed (HTTP ${res.status})`);
+    return res.json();
+  };
+}
+
+/** Consumer (public) codex reader → KEYLESS browser-direct to Pythia's `/read`
+ *  (falls back to node only if no Pythia gateway is configured, so a display never
+ *  hard-fails a public visitor). */
+export function createCodexDirectPythiaPactReader(opts: SigningClientOptions = {}): PactReader {
+  const fetchImpl = opts.fetchImpl ?? ((input, init) => fetch(input, init));
+  const resolveConfig = opts.resolveConfig ?? makeDefaultConfigResolver(fetchImpl);
+
+  return async (pactCode) => {
+    const cfg = await resolveConfig();
+    const url = cfg.pythiaUrl.replace(/\/+$/, "");
+    if (cfg.mode === "direct-node" || !url) return nodeCodeRead(cfg.nodeUrl, pactCode);
+    const res = await fetchImpl(`${url}/stoachain/read`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ code: pactCode }),
+    });
+    if (!res.ok) throw new Error(`Codex read via Pythia failed (HTTP ${res.status})`);
+    return res.json();
+  };
 }

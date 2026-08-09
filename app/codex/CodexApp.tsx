@@ -43,7 +43,17 @@ import {
   useCodexBackup,
 } from "@ancientpantheon/codex/hooks";
 import { MemoryCodexAdapter } from "@ancientpantheon/codex/ouronet";
-import { createCodexDirectPythiaSigningClient } from "./codexRelaySigningClient";
+import { setPactReader } from "@stoachain/stoa-core/reads";
+import {
+  createCodexDirectPythiaSigningClient,
+  createCodexDirectPythiaPactReader,
+} from "./codexRelaySigningClient";
+
+// Route EVERY codex display read (`pactRead`) through Pythia's public `/read`
+// instead of node-direct (the default reader), so a consumer's reads are metered
+// (`organs/06` §6a). Keyless browser-direct (a public visitor has no operator
+// key); break-glass Network Fallback goes node-direct. Installed at module load.
+setPactReader(createCodexDirectPythiaPactReader());
 
 import { CodexShell } from "./CodexShell";
 
